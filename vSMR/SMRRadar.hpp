@@ -163,6 +163,18 @@ public:
 	inline virtual bool IsCorrelated(CFlightPlan fp, CRadarTarget rt)
 	{
 
+		if (CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["enable"].GetBool()) {
+			if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
+			{
+				return true;
+			}
+			if (!rt.GetPosition().GetTransponderC())
+			{
+				return false;
+			}
+			return true;
+		}
+
 		if (CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool())
 		{
 			if (fp.IsValid())

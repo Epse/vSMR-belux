@@ -11,6 +11,16 @@ Features:
 
 Find out all you need to know on the wiki: <https://github.com/pierr3/vSMR/wiki>
 
+### Belux additions
+The plugin was slightly modified for the Belux vACC.
+Features:
+* Different font size and weight for the first line (callsign).
+* Changed speed threshold when taxing to switch tag information (gate, rwy) with groundspeed from 25 to 50 knots.
+* Implemented gate field from Belux plugin in the tag
+* Added pro_mode_belux filter: only show tag when AC is squawking mode C.
+* Removed green tag background color when on runway
+* Set symbol brightness to 70 by default (making it more easy to spot the secondary track symbol).
+
 ### Release
 
 This is the latest stable release, which has been tested and the one you should use for day to day use.

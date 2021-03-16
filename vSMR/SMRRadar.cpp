@@ -172,17 +172,20 @@ void CSMRRadar::LoadCustomFont() {
 	const Value& FSizes = CurrentConfig->getActiveProfile()["font"]["sizes"];
 	string font_name = CurrentConfig->getActiveProfile()["font"]["font_name"].GetString();
 	wstring buffer = wstring(font_name.begin(), font_name.end());
-	Gdiplus::FontStyle fontStyle = Gdiplus::FontStyleRegular;
-	if (strcmp(CurrentConfig->getActiveProfile()["font"]["weight"].GetString(), "Bold") == 0)
-		fontStyle = Gdiplus::FontStyleBold;
-	if (strcmp(CurrentConfig->getActiveProfile()["font"]["weight"].GetString(), "Italic") == 0)
-		fontStyle = Gdiplus::FontStyleItalic;
+	int titleOffset = CurrentConfig->getActiveProfile()["font"]["title_offset"].GetInt();
 
-	customFonts[1] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["one"].GetInt()), fontStyle, Gdiplus::UnitPixel);
-	customFonts[2] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["two"].GetInt()), fontStyle, Gdiplus::UnitPixel);
-	customFonts[3] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["three"].GetInt()), fontStyle, Gdiplus::UnitPixel);
-	customFonts[4] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["four"].GetInt()), fontStyle, Gdiplus::UnitPixel);
-	customFonts[5] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["five"].GetInt()), fontStyle, Gdiplus::UnitPixel);
+
+	customFonts[1] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["one"].GetInt()), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+	customFonts[2] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["two"].GetInt()), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+	customFonts[3] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["three"].GetInt()), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+	customFonts[4] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["four"].GetInt()), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+	customFonts[5] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["five"].GetInt()), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+
+	customFonts[11] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["one"].GetInt()+ titleOffset), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+	customFonts[12] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["two"].GetInt()+ titleOffset), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+	customFonts[13] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["three"].GetInt()+ titleOffset), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+	customFonts[14] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["four"].GetInt()+ titleOffset), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
+	customFonts[15] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["five"].GetInt()+ titleOffset), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
 }
 
 void CSMRRadar::LoadProfile(string profileName) {
@@ -1330,7 +1333,7 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 			break;
 
 		case FLIGHT_PLAN_STATE_ASSUMED:
-			callsign = "[" + callsign + "]";
+			callsign = callsign;
 			break;
 
 		}
@@ -1370,7 +1373,7 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 
 	// ----- Departure runway that changes for overspeed -------
 	string seprwy = deprwy;
-	if (rt.GetPosition().GetReportedGS() > 25)
+	if (rt.GetPosition().GetReportedGS() > 50)
 		seprwy = std::to_string(rt.GetPosition().GetReportedGS());
 
 	// ----- Arrival runway -------
@@ -1380,25 +1383,18 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 
 	// ----- Speed that changes to arrival runway -----
 	string srvrwy = speed;
-	if (rt.GetPosition().GetReportedGS() < 25)
+	if (rt.GetPosition().GetReportedGS() < 50)
 		srvrwy = arvrwy;
 
 	// ----- Gate -------
 	string gate;
-	if (useSpeedForGates)
-		gate = std::to_string(fp.GetControllerAssignedData().GetAssignedSpeed());
-	else
-		gate = fp.GetControllerAssignedData().GetScratchPadString();
-
-	replaceAll(gate, "STAND=", "");
-	gate = gate.substr(0, 4);
-
+	gate = fp.GetControllerAssignedData().GetFlightStripAnnotation(3);
 	if (gate.size() == 0 || gate == "0" || !isAcCorrelated)
 		gate = "NoGate";
 
 	// ----- Gate that changes to speed -------
 	string sate = gate;
-	if (rt.GetPosition().GetReportedGS() > 25)
+	if (rt.GetPosition().GetReportedGS() > 50)
 		sate = speed;
 
 	// ----- Flightlevel -------
@@ -1474,12 +1470,6 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 			gstat = fp.GetGroundState();
 	}
 
-	// ----- UK Controller Plugin / Assigned Stand -------
-	string uk_stand;
-	uk_stand = fp.GetControllerAssignedData().GetFlightStripAnnotation(3);
-	if (uk_stand.length() == 0)
-		uk_stand = "NoGate";
-
 	// ----- Generating the replacing map -----
 	map<string, string> TagReplacingMap;
 
@@ -1511,10 +1501,10 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 			speed = std::to_string(rt.GetGS());
 		}
 
-		if (isAirborne && !isAcCorrelated && IsPrimary)
-		{
-			callsign = TagReplacingMap["systemid"];
-		}
+		//if (isAirborne && !isAcCorrelated && IsPrimary)
+		//{
+		//	callsign = TagReplacingMap["systemid"];
+		//}
 	}
 
 	TagReplacingMap["callsign"] = callsign;
@@ -1537,7 +1527,6 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	TagReplacingMap["origin"] = origin;
 	TagReplacingMap["dest"] = dest;
 	TagReplacingMap["groundstatus"] = gstat;
-	TagReplacingMap["uk_stand"] = uk_stand;
 
 	return TagReplacingMap;
 }
@@ -2039,14 +2028,16 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		bool AcisCorrelated = IsCorrelated(fp, rt);
 
-		if (!AcisCorrelated && reportedGs < 3)
+		if (!AcisCorrelated && (reportedGs < 3 && (!CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["enable"].GetBool() && !CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["easy_mode"].GetBool())))
 			isAcDisplayed = false;
 
 		if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
 			isAcDisplayed = false;
 
-		if (!isAcDisplayed)
+		if (!isAcDisplayed) {
 			continue;
+		}
+
 
 		// Getting the tag center/offset
 
@@ -2090,13 +2081,15 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			}
 		}
 
-		if (!AcisCorrelated && reportedGs >= 3)
+		if (!AcisCorrelated && 
+			((CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["enable"].GetBool() && CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["easy_mode"].GetBool())
+		    || (reportedGs >= 3)))
 		{
 			TagType = TagTypes::Uncorrelated;
 			ColorTagType = TagTypes::Uncorrelated;
 		}
 
-		map<string, string> TagReplacingMap = GenerateTagData(rt, fp, IsCorrelated(fp, rt), CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool(), GetPlugIn()->GetTransitionAltitude(), CurrentConfig->getActiveProfile()["labels"]["use_aspeed_for_gate"].GetBool(), getActiveAirport());
+		map<string, string> TagReplacingMap = GenerateTagData(rt, fp, IsCorrelated(fp, rt), CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool() || CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["enable"].GetBool(), GetPlugIn()->GetTransitionAltitude(), CurrentConfig->getActiveProfile()["labels"]["use_aspeed_for_gate"].GetBool(), getActiveAirport());
 
 		// ----- Generating the clickable map -----
 		map<string, int> TagClickableMap;
@@ -2145,6 +2138,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!LabelLines.IsArray())
 			return;
 
+
+		int lineid = 0;
 		for (unsigned int i = 0; i < LabelLines.Size(); i++)
 		{
 
@@ -2167,15 +2162,20 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				lineStringArray.push_back(element);
 
 				wstring wstr = wstring(element.begin(), element.end());
+				Gdiplus::Font* font = customFonts[currentFontSize];
+				if (lineid == 0 && strcmp(Utils::getEnumString(TagType).c_str(),"uncorrelated") != 0) {
+					font = customFonts[currentFontSize+10];
+				}
+
 				graphics.MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
-					customFonts[currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
+					font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
 				TempTagWidth += (int) mesureRect.GetRight();
 
 				if (j != line.Size() - 1)
 					TempTagWidth += (int) blankWidth;
 			}
-
+			lineid += 1;
 			TagWidth = max(TagWidth, TempTagWidth);
 
 			ReplacedLabelLines.push_back(lineStringArray);
@@ -2198,7 +2198,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		Color TagBackgroundColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(),
 			definedBackgroundColor,
-			CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]),
+			//CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]),
+			definedBackgroundColor,
 			CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_one"]),
 			CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_two"]));
 
@@ -2207,8 +2208,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		if (rimcasLabelOnly)
 			TagBackgroundColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(),
-			definedBackgroundColor,
-			CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]));
+				definedBackgroundColor,
+				definedBackgroundColor);
+			//CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]));
 
 		TagBackgroundColor = ColorManager->get_corrected_color("label", TagBackgroundColor);
 
@@ -2285,6 +2287,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		TagBackgroundRect = oldCrectSave;
 
 		// Clickable zones
+		lineid = 0;
 		int heightOffset = 0;
 		for (auto&& line : ReplacedLabelLines)
 		{
@@ -2296,7 +2299,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 					color = &SquawkErrorColor;
 
 				if (RimcasInstance->getAlert(rt.GetCallsign()) != CRimcas::NoAlert)
-					color = &RimcasTextColor;
+					color = &FontColor;
 
 				// Ground tag colors
 				if (strcmp(element.c_str(), "PUSH") == 0)
@@ -2309,13 +2312,18 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				RectF mRect(0, 0, 0, 0);
 
 				wstring welement = wstring(element.begin(), element.end());
+				Gdiplus::Font* font = customFonts[currentFontSize];
+				if (lineid == 0 && strcmp(Utils::getEnumString(TagType).c_str(), "uncorrelated") != 0) {
+					font = customFonts[currentFontSize+ 10];
+					//color = &SquawkErrorColor;
+				}
 
-				graphics.DrawString(welement.c_str(), wcslen(welement.c_str()), customFonts[currentFontSize],
+				graphics.DrawString(welement.c_str(), wcslen(welement.c_str()), font,
 					PointF(Gdiplus::REAL(TagBackgroundRect.left + widthOffset), Gdiplus::REAL(TagBackgroundRect.top + heightOffset)),
 					&Gdiplus::StringFormat(), color);
 
 
-				graphics.MeasureString(welement.c_str(), wcslen(welement.c_str()), customFonts[currentFontSize],
+				graphics.MeasureString(welement.c_str(), wcslen(welement.c_str()), font,
 					PointF(0, 0), &Gdiplus::StringFormat(), &mRect);
 
 				CRect ItemRect(TagBackgroundRect.left + widthOffset, TagBackgroundRect.top + heightOffset,
@@ -2326,7 +2334,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				widthOffset += (int)mRect.GetRight();
 				widthOffset += blankWidth;
 			}
-
+			lineid += 1;
 			heightOffset += oneLineHeight;
 		}
 

@@ -133,6 +133,9 @@ public:
 	bool ReleaseInProgress = false;
 	bool AcquireInProgress = false;
 
+	bool belux_promode = false;
+	bool belux_promode_easy = false;
+
 	multimap<string, string> DistanceTools;
 	bool DistanceToolActive = false;
 	pair<string, string> ActiveDistance;
@@ -163,7 +166,7 @@ public:
 	inline virtual bool IsCorrelated(CFlightPlan fp, CRadarTarget rt)
 	{
 
-		if (CurrentConfig->getActiveProfile()["filters"]["pro_mode_belux"]["enable"].GetBool()) {
+		if (belux_promode) {
 			if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
 			{
 				return true;

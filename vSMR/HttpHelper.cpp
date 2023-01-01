@@ -29,7 +29,7 @@ std::string HttpHelper::downloadStringFromURL(std::string url) {
 	{
 		downloadedContents = "";
 		// Tell libcurl the URL 
-		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		// Tell libcurl what function to call when it has data 
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HttpHelper::handle_data);
 		// Do it! 

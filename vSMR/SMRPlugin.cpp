@@ -6,7 +6,7 @@ string Logger::DLL_PATH;
 
 bool HoppieConnected = false;
 bool ConnectionMessage = false;
-bool FailedToConnectMessage = false;
+std::string FailedToConnectMessage = "";
 
 string logonCode = "";
 string logonCallsign = "EGKK";
@@ -81,7 +81,12 @@ void datalinkLogin(void * arg) {
 		ConnectionMessage = true;
 	}
 	else {
-		FailedToConnectMessage = true;
+		if (httpHelper->getLastErrorMessage().length() < 1) {
+			FailedToConnectMessage = raw;
+		}
+		else {
+			FailedToConnectMessage = httpHelper->getLastErrorMessage();
+		}
 	}
 };
 
@@ -625,9 +630,10 @@ void CSMRPlugin::OnTimer(int Counter)
 		ConnectionMessage = false;
 	}
 
-	if (FailedToConnectMessage) {
-		DisplayUserMessage("CPDLC", "Server", "Could not login! Callsign probably in use.", true, true, false, true, false);
-		FailedToConnectMessage = false;
+	if (FailedToConnectMessage.length() != 0) {
+		std::string message = "Could not log in! Error: " + FailedToConnectMessage;
+		DisplayUserMessage("CPDLC", "Server", message.c_str(), true, true, false, true, false);
+		FailedToConnectMessage = "";
 	}
 
 	if (((clock() - timer) / CLOCKS_PER_SEC) > 10 && HoppieConnected) {

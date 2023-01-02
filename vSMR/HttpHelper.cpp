@@ -34,10 +34,24 @@ std::string HttpHelper::downloadStringFromURL(std::string url) {
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HttpHelper::handle_data);
 		// Do it! 
 		CURLcode res = curl_easy_perform(curl);
+		if (res != CURLE_OK) {
+			lastErrorMessage = curl_easy_strerror(res);
+		}
+		else {
+			lastErrorMessage = "";
+		}
+
 		curl_easy_cleanup(curl);
 		return downloadedContents;
 	}
+
+	lastErrorMessage = "could not initialize curl";
+
 	return "";
+}
+
+std::string HttpHelper::getLastErrorMessage() {
+	return lastErrorMessage;
 }
 
 HttpHelper::~HttpHelper() {

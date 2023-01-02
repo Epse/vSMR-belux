@@ -12,7 +12,7 @@
 #include "SMRRadar.hpp"
 #include "Logger.h"
 
-#define MY_PLUGIN_NAME      "Belux vSMR"
+#define MY_PLUGIN_NAME      "vSMR"
 #define MY_PLUGIN_VERSION   "@appveyor_build"
 #define MY_PLUGIN_DEVELOPER "Pierre Ferran, Even Rognlien, Lionel Bischof, Daniel Lange, Juha Holopainen, Keanu Czirjak"
 #define MY_PLUGIN_COPYRIGHT "GPL v3"

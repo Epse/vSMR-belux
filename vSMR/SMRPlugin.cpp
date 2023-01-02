@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SMRPlugin.hpp"
+#include <time.h>
 
 bool Logger::ENABLED;
 string Logger::DLL_PATH;
@@ -166,7 +167,7 @@ void pollMessages(void * arg) {
 		if (message.type.find("telex") != std::string::npos || message.type.find("cpdlc") != std::string::npos) {
 			if (message.message.find("REQ") != std::string::npos || message.message.find("CLR") != std::string::npos || message.message.find("PDC") != std::string::npos || message.message.find("PREDEP") != std::string::npos || message.message.find("REQUEST") != std::string::npos) {
 				if (message.message.find("LOGON") != std::string::npos) {
-					tmessage = "UNABLE";
+					tmessage = "/data2/9/1/NE/UNABLE DUE TO AIRSPACE";
 					ttype = "CPDLC";
 					tdest = DatalinkToSend.callsign;
 					_beginthread(sendDatalinkMessage, 0, NULL);
@@ -208,7 +209,7 @@ void sendDatalinkClearance(void * arg) {
 	messageId++;
 	url += std::to_string(messageId);
 	url += "//R/";
-	url += "CLR TO @";
+	url += "CLRD TO @";
 	url += DatalinkToSend.destination;
 	url += "@ RWY @";
 	url += DatalinkToSend.rwy;
@@ -636,6 +637,34 @@ void CSMRPlugin::OnTimer(int Counter)
 	if (((clock() - timer) / CLOCKS_PER_SEC) > 10 && HoppieConnected) {
 		_beginthread(pollMessages, 0, NULL);
 		timer = clock();
+
+		// We auto-reject any DCL requests for those without valid flight plan, because they don't show up in the DEP list
+		for (auto &element : AircraftDemandingClearance) {
+			auto flightPlan = this->FlightPlanSelect(element.c_str());
+			if (flightPlan.IsValid() && flightPlan.GetState() != 0) {
+				continue;
+			}
+
+			// Send denial message
+			time_t rawtime;
+			struct tm ptm;
+			time(&rawtime);
+			gmtime_s(&ptm, &rawtime);
+
+			// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
+			const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
+			char timedate[bufLength];
+			int year = (1900 + ptm.tm_year) % 100;
+			snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
+			tmessage = "/data2/2//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + element + "@ RCD REJECTED @REVERT TO VOICE PROCEDURES";
+			ttype = "CPDLC";
+			tdest = element;
+
+			_beginthread(sendDatalinkMessage, 0, NULL);
+			
+			// Remove from list
+			AircraftDemandingClearance.erase(std::remove(AircraftDemandingClearance.begin(), AircraftDemandingClearance.end(), element), AircraftDemandingClearance.end());
+		}
 	}
 
 	for (auto &ac : AircraftWilco)

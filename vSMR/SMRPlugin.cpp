@@ -53,6 +53,7 @@ string tdest;
 string ttype;
 
 unsigned int messageId = 0;
+unsigned int dclCounter = 0;
 
 clock_t timer;
 
@@ -70,9 +71,13 @@ vector<CSMRRadar*> RadarScreensOpened;
 /*
 This might be subject to race conditions, but MIN is not critical so who even cares
 */
-int getMessageId() {
+unsigned int getMessageId() {
 	messageId = (messageId + 1) % 64;
 	return messageId;
+}
+
+unsigned int getDCLCounter() {
+	return ++dclCounter;
 }
 
 void datalinkLogin(void * arg) {
@@ -100,7 +105,6 @@ void datalinkLogin(void * arg) {
 };
 
 void sendDatalinkMessage(void * arg) {
-
 	string raw;
 	string url = baseUrlDatalink;
 	url += "?logon=";
@@ -204,13 +208,58 @@ void pollMessages(void * arg) {
 
 };
 
+std::string buildCPDLCTimeDate() {
+	time_t rawtime;
+	struct tm ptm;
+	time(&rawtime);
+	gmtime_s(&ptm, &rawtime);
+
+	// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
+	const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
+	char timedate[bufLength];
+	int year = (1900 + ptm.tm_year) % 100;
+	snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
+	return std::string(timedate);
+}
+
+std::string buildDCLBody(DatalinkPacket &data) {
+	std::stringstream message;
+	message << "/data2/" << getMessageId()
+		<< "//" // No MRN necessary
+		<< "WU/" // Wilco / Unable response required. See ICAO 9705 Table 2.3.7-3 for more options.
+		<< "CLD " + buildCPDLCTimeDate() + " "
+		<< logonCallsign << " "
+		<< "PDC " << std::setfill('0') << std::setw(3) << std::to_string(getDCLCounter()) << " "
+		<< data.callsign << " "
+		<< "CLRD TO "
+		<< "@" << data.destination << "@ "
+		<< "OFF @" << data.rwy << "@ "
+		<< "VIA @" << data.sid << "@ "
+		<< "CLIMB @" << data.climb << "@ "
+		<< "SQUAWK @" << data.squawk << "@ ";
+
+	if (data.ctot != "no" && data.ctot.size() > 3) {
+		message << "CTOT @";
+		message << data.ctot;
+		message << "@ ";
+	}
+	if (data.asat != "no" && data.asat.size() > 3) {
+		message << "TSAT @";
+		message << data.asat;
+		message << "@ ";
+	}
+	message << "NEXT FREQ @" << (data.freq != "no" && data.freq.size() > 5 ? data.freq : myfrequency) << "@";
+	if (data.message != "no" && data.message.size() > 1) {
+		message << " " << data.message;
+	}
+
+	return message.str();
+}
+
 void sendDatalinkClearance(void * arg) {
 	/*
 	Ideally, a message would look like this:
  	/data2/11//WU/CLD 1012 230103 EDDF PDC 004 @DLH8PP@ CLRD TO @LSZH@ OFF @18@ VIA @ANEKI1L@ CLIMB @4000 FT@ SQUAWK @1000@ NEXT FREQ @119.900@ ATIS @F@ REQ STARTUP ON @119.900@
-
-	Or one with a free-text comment:
-	/data2/5//WU/CLD 0909 230103 EDDF PDC 002 @DLH454@ CLRD TO @KSFO@ OFF @25C@ VIA @MARUN3W@ CLIMB @FL070@ SQUAWK @2013@ ADT @0000@ NEXT FREQ @119.900@ ATIS @C || HAPPY NEW YEAR ||@ REQ STARTUP ON @119.900@
 
 	With 11 being the message ID, '1012 230103' being the usual time/date, EDDF being the current airport, 004 being a simple counter counting up the PDC's globally (separate from MID)
 
@@ -223,43 +272,8 @@ void sendDatalinkClearance(void * arg) {
 	url += logonCallsign;
 	url += "&to=";
 	url += DatalinkToSend.callsign;
-	url += "&type=CPDLC&packet=/data2/";
-	url += std::to_string(getMessageId());
-	url += "//R/";
-	url += "CLD TO @";
-	url += DatalinkToSend.destination;
-	url += "@ RWY @";
-	url += DatalinkToSend.rwy;
-	url += "@ DEP @";
-	url += DatalinkToSend.sid;
-	url += "@ INIT CLB @";
-	url += DatalinkToSend.climb;
-	url += "@ SQUAWK @";
-	url += DatalinkToSend.squawk;
-	url += "@ ";
-	if (DatalinkToSend.ctot != "no" && DatalinkToSend.ctot.size() > 3) {
-		url += "CTOT @";
-		url += DatalinkToSend.ctot;
-		url += "@ ";
-	}
-	if (DatalinkToSend.asat != "no" && DatalinkToSend.asat.size() > 3) {
-		url += "TSAT @";
-		url += DatalinkToSend.asat;
-		url += "@ ";
-	}
-	if (DatalinkToSend.freq != "no" && DatalinkToSend.freq.size() > 5) {
-		url += "WHEN RDY CALL FREQ @";
-		url += DatalinkToSend.freq;
-		url += "@";
-	}
-	else {
-		url += "WHEN RDY CALL @";
-		url += myfrequency;
-		url += "@";
-	}
-	url += " IF UNABLE CALL VOICE ";
-	if (DatalinkToSend.message != "no" && DatalinkToSend.message.size() > 1)
-		url += DatalinkToSend.message;
+	url += "&type=CPDLC&packet=";
+	url += buildDCLBody(DatalinkToSend);
 
 	size_t start_pos = 0;
 	while ((start_pos = url.find(" ", start_pos)) != std::string::npos) {
@@ -283,24 +297,15 @@ void sendDatalinkClearance(void * arg) {
 };
 
 std::string buildDCLStatusMessage(std::string callsign, std::string status) {
-	time_t rawtime;
-	struct tm ptm;
-	time(&rawtime);
-	gmtime_s(&ptm, &rawtime);
-
-	// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
-	const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
-	char timedate[bufLength];
-	int year = (1900 + ptm.tm_year) % 100;
-	snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
 	/*
 	For future reference:
 	- The 1 after /data2/ is a message ID. It increments every time this station sends a message to that destination.
 	- Between the double slashes may optionally be a message ID sent by the receiver that this is a response to
+	- The NE means no response required. 
 
 	More info at https://www.diva-portal.org/smash/get/diva2:1345445/FULLTEXT01.pdf
 	*/
-	return "/data2/" + std::to_string(getMessageId()) + "//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + callsign + "@ " + status;
+	return "/data2/" + std::to_string(getMessageId()) + "//NE/DEPART REQUEST STATUS . FSM " + buildCPDLCTimeDate() + " " + logonCallsign + " @" + callsign + "@ " + status;
 }
 
 std::string buildRevertToVoiceMessage(std::string callsign) {

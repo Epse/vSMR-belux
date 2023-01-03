@@ -52,7 +52,7 @@ string tmessage;
 string tdest;
 string ttype;
 
-int messageId = 0;
+unsigned int messageId = 0;
 
 clock_t timer;
 
@@ -66,6 +66,14 @@ using namespace SMRPluginSharedData;
 char recv_buf[1024];
 
 vector<CSMRRadar*> RadarScreensOpened;
+
+/*
+This might be subject to race conditions, but MIN is not critical so who even cares
+*/
+int getMessageId() {
+	messageId = (messageId + 1) % 64;
+	return messageId;
+}
 
 void datalinkLogin(void * arg) {
 	string raw;
@@ -197,6 +205,16 @@ void pollMessages(void * arg) {
 };
 
 void sendDatalinkClearance(void * arg) {
+	/*
+	Ideally, a message would look like this:
+ 	/data2/11//WU/CLD 1012 230103 EDDF PDC 004 @DLH8PP@ CLRD TO @LSZH@ OFF @18@ VIA @ANEKI1L@ CLIMB @4000 FT@ SQUAWK @1000@ NEXT FREQ @119.900@ ATIS @F@ REQ STARTUP ON @119.900@
+
+	Or one with a free-text comment:
+	/data2/5//WU/CLD 0909 230103 EDDF PDC 002 @DLH454@ CLRD TO @KSFO@ OFF @25C@ VIA @MARUN3W@ CLIMB @FL070@ SQUAWK @2013@ ADT @0000@ NEXT FREQ @119.900@ ATIS @C || HAPPY NEW YEAR ||@ REQ STARTUP ON @119.900@
+
+	With 11 being the message ID, '1012 230103' being the usual time/date, EDDF being the current airport, 004 being a simple counter counting up the PDC's globally (separate from MID)
+
+	*/
 	string raw;
 	string url = baseUrlDatalink;
 	url += "?logon=";
@@ -206,8 +224,7 @@ void sendDatalinkClearance(void * arg) {
 	url += "&to=";
 	url += DatalinkToSend.callsign;
 	url += "&type=CPDLC&packet=/data2/";
-	messageId++;
-	url += std::to_string(messageId);
+	url += std::to_string(getMessageId());
 	url += "//R/";
 	url += "CLD TO @";
 	url += DatalinkToSend.destination;
@@ -283,7 +300,7 @@ std::string buildDCLStatusMessage(std::string callsign, std::string status) {
 
 	More info at https://www.diva-portal.org/smash/get/diva2:1345445/FULLTEXT01.pdf
 	*/
-	return "/data2/1//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + callsign + "@ " + status;
+	return "/data2/" + std::to_string(getMessageId()) + "//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + callsign + "@ " + status;
 }
 
 std::string buildRevertToVoiceMessage(std::string callsign) {
@@ -312,7 +329,9 @@ CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PL
 	RegisterTagItemType("Datalink clearance", TAG_ITEM_DATALINK_STS);
 	RegisterTagItemFunction("Datalink menu", TAG_FUNC_DATALINK_MENU);
 
-	messageId = rand() % 10000 + 1789;
+	// I have no idea why the MIN started at a reandom offset, but let's just ignore that
+	//messageId = rand() % 10000 + 1789;
+	messageId = 0;
 
 	timer = clock();
 

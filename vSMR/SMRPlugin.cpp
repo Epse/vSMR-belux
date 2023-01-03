@@ -209,7 +209,7 @@ void sendDatalinkClearance(void * arg) {
 	messageId++;
 	url += std::to_string(messageId);
 	url += "//R/";
-	url += "CLRD TO @";
+	url += "CLD TO @";
 	url += DatalinkToSend.destination;
 	url += "@ RWY @";
 	url += DatalinkToSend.rwy;
@@ -264,6 +264,39 @@ void sendDatalinkClearance(void * arg) {
 		AircraftMessageSent.push_back(DatalinkToSend.callsign.c_str());
 	}
 };
+
+std::string buildDCLStatusMessage(std::string callsign, std::string status) {
+	time_t rawtime;
+	struct tm ptm;
+	time(&rawtime);
+	gmtime_s(&ptm, &rawtime);
+
+	// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
+	const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
+	char timedate[bufLength];
+	int year = (1900 + ptm.tm_year) % 100;
+	snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
+	/*
+	For future reference:
+	- The 1 after /data2/ is a message ID. It increments every time this station sends a message to that destination.
+	- Between the double slashes may optionally be a message ID sent by the receiver that this is a response to
+
+	More info at https://www.diva-portal.org/smash/get/diva2:1345445/FULLTEXT01.pdf
+	*/
+	return "/data2/1//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + callsign + "@ " + status;
+}
+
+std::string buildRevertToVoiceMessage(std::string callsign) {
+	return buildDCLStatusMessage(callsign, "RCD REJECTED @REVERT TO VOICE PROCEDURES");
+}
+
+std::string buildStandbyMessage(std::string callsign) {
+	/*
+	Should look like:
+	/data2/1//NE/DEPART REQUEST STATUS . FSM 1925 230102 EBBR @AFR1604@ RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY
+	*/
+	return buildDCLStatusMessage(callsign, "RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY");
+}
 
 CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PLUGIN_NAME, MY_PLUGIN_VERSION, MY_PLUGIN_DEVELOPER, MY_PLUGIN_COPYRIGHT)
 {
@@ -476,7 +509,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 
 		if (FlightPlan.IsValid()) {
 			AircraftStandby.push_back(FlightPlan.GetCallsign());
-			tmessage = "STANDBY";
+			tmessage = buildStandbyMessage(FlightPlan.GetCallsign());
 			ttype = "CPDLC";
 			tdest = FlightPlan.GetCallsign();
 			_beginthread(sendDatalinkMessage, 0, NULL);
@@ -514,7 +547,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 		CFlightPlan FlightPlan = FlightPlanSelectASEL();
 
 		if (FlightPlan.IsValid()) {
-			tmessage = "UNABLE CALL ON FREQ";
+			tmessage = buildRevertToVoiceMessage(FlightPlan.GetCallsign());
 			ttype = "CPDLC";
 			tdest = FlightPlan.GetCallsign();
 
@@ -646,17 +679,7 @@ void CSMRPlugin::OnTimer(int Counter)
 			}
 
 			// Send denial message
-			time_t rawtime;
-			struct tm ptm;
-			time(&rawtime);
-			gmtime_s(&ptm, &rawtime);
-
-			// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
-			const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
-			char timedate[bufLength];
-			int year = (1900 + ptm.tm_year) % 100;
-			snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
-			tmessage = "/data2/2//NE/DEPART REQUEST STATUS . FSM " + std::string(timedate) + " " + logonCallsign + " @" + element + "@ RCD REJECTED @REVERT TO VOICE PROCEDURES";
+			tmessage = buildRevertToVoiceMessage(element);
 			ttype = "CPDLC";
 			tdest = element;
 

@@ -2050,6 +2050,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!rt.IsValid())
 			continue;
 
+		bool is_asel = strcmp(rt.GetCallsign(), GetPlugIn()->FlightPlanSelectASEL().GetCallsign()) == 0;
+
 		CRadarTargetPositionData RtPos = rt.GetPosition();
 		POINT acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 		CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());

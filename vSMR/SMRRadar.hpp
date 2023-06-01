@@ -20,6 +20,7 @@
 #include "Logger.h"
 #include <filesystem>
 #include <iostream>
+#include "UIHelpers.hpp"
 
 using namespace std;
 using namespace Gdiplus;

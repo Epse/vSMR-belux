@@ -7,12 +7,12 @@ string Logger::DLL_PATH;
 
 bool HoppieConnected = false;
 bool ConnectionMessage = false;
-std::string FailedToConnectMessage = "";
+std::string FailedToConnectMessage;
 
-string logonCode = "";
+string logonCode;
 string logonCallsign = "EGKK";
 
-HttpHelper * httpHelper = NULL;
+HttpHelper * httpHelper = nullptr;
 
 bool BLINK = false;
 
@@ -119,7 +119,7 @@ void sendDatalinkMessage(void * arg) {
 	url += tmessage;
 
 	size_t start_pos = 0;
-	while ((start_pos = url.find(" ", start_pos)) != std::string::npos) {
+	while ((start_pos = url.find(' ', start_pos)) != std::string::npos) {
 		url.replace(start_pos, string(" ").length(), "%20");
 		start_pos += string("%20").length();
 	}
@@ -137,7 +137,7 @@ void sendDatalinkMessage(void * arg) {
 };
 
 void pollMessages(void * arg) {
-	string raw = "";
+	string raw;
 	string url = baseUrlDatalink;
 	url += "?logon=";
 	url += logonCode;
@@ -182,7 +182,7 @@ void pollMessages(void * arg) {
 					tmessage = "/data2/9/1/NE/UNABLE DUE TO AIRSPACE";
 					ttype = "CPDLC";
 					tdest = DatalinkToSend.callsign;
-					_beginthread(sendDatalinkMessage, 0, NULL);
+					_beginthread(sendDatalinkMessage, 0, nullptr);
 				} else {
 					if (PlaySoundClr) {
 						AFX_MANAGE_STATE(AfxGetStaticModuleState());
@@ -210,19 +210,19 @@ void pollMessages(void * arg) {
 
 std::string buildCPDLCTimeDate() {
 	time_t rawtime;
-	struct tm ptm;
+	tm ptm{};
 	time(&rawtime);
 	gmtime_s(&ptm, &rawtime);
 
 	// 2 digits for hour, 2 for minutes, 2 for year, 2 for month, 2 for day and one for space between and one for nul
-	const size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
+	constexpr size_t bufLength = 2 * 2 + 3 * 2 + 1 + 1;
 	char timedate[bufLength];
-	int year = (1900 + ptm.tm_year) % 100;
+	const int year = (1900 + ptm.tm_year) % 100;
 	snprintf(timedate, bufLength, "%02d%02d %02d%02d%02d", ptm.tm_hour, ptm.tm_min, year, ptm.tm_mon + 1, ptm.tm_mday);
-	return std::string(timedate);
+	return { timedate };
 }
 
-std::string buildDCLBody(DatalinkPacket &data) {
+std::string buildDCLBody(const DatalinkPacket &data) {
 	std::stringstream message;
 	message << "/data2/" << getMessageId()
 		<< "//" // No MRN necessary
@@ -276,7 +276,7 @@ void sendDatalinkClearance(void * arg) {
 	url += buildDCLBody(DatalinkToSend);
 
 	size_t start_pos = 0;
-	while ((start_pos = url.find(" ", start_pos)) != std::string::npos) {
+	while ((start_pos = url.find(' ', start_pos)) != std::string::npos) {
 		url.replace(start_pos, string(" ").length(), "%20");
 		start_pos += string("%20").length();
 	}
@@ -296,7 +296,7 @@ void sendDatalinkClearance(void * arg) {
 	}
 };
 
-std::string buildDCLStatusMessage(std::string callsign, std::string status) {
+std::string buildDCLStatusMessage(const std::string& callsign, const std::string& status) {
 	/*
 	For future reference:
 	- The 1 after /data2/ is a message ID. It increments every time this station sends a message to that destination.
@@ -309,7 +309,7 @@ std::string buildDCLStatusMessage(std::string callsign, std::string status) {
 }
 
 std::string buildRevertToVoiceMessage(std::string callsign) {
-	return buildDCLStatusMessage(callsign, "RCD REJECTED @REVERT TO VOICE PROCEDURES");
+	return buildDCLStatusMessage(std::move(callsign), "RCD REJECTED @REVERT TO VOICE PROCEDURES");
 }
 
 std::string buildStandbyMessage(std::string callsign) {
@@ -317,7 +317,7 @@ std::string buildStandbyMessage(std::string callsign) {
 	Should look like:
 	/data2/1//NE/DEPART REQUEST STATUS . FSM 1925 230102 EBBR @AFR1604@ RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY
 	*/
-	return buildDCLStatusMessage(callsign, "RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY");
+	return buildDCLStatusMessage(std::move(callsign), "RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY");
 }
 
 CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PLUGIN_NAME, MY_PLUGIN_VERSION, MY_PLUGIN_DEVELOPER, MY_PLUGIN_COPYRIGHT)
@@ -340,23 +340,22 @@ CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PL
 
 	timer = clock();
 
-	if (httpHelper == NULL)
+	if (httpHelper == nullptr)
 		httpHelper = new HttpHelper();
 
 	const char * p_value;
 
-	if ((p_value = GetDataFromSettings("cpdlc_logon")) != NULL)
+	if ((p_value = GetDataFromSettings("cpdlc_logon")) != nullptr)
 		logonCallsign = p_value;
-	if ((p_value = GetDataFromSettings("cpdlc_password")) != NULL)
+	if ((p_value = GetDataFromSettings("cpdlc_password")) != nullptr)
 		logonCode = p_value;
-	if ((p_value = GetDataFromSettings("cpdlc_sound")) != NULL)
+	if ((p_value = GetDataFromSettings("cpdlc_sound")) != nullptr)
 		PlaySoundClr = bool(!!atoi(p_value));
 
 	char DllPathFile[_MAX_PATH];
-	string DllPath;
 
 	GetModuleFileNameA(HINSTANCE(&__ImageBase), DllPathFile, sizeof(DllPathFile));
-	DllPath = DllPathFile;
+	string DllPath = DllPathFile;
 	DllPath.resize(DllPath.size() - strlen("vSMR.dll"));
 	Logger::DLL_PATH = DllPath;
 }
@@ -387,7 +386,7 @@ bool CSMRPlugin::OnCompileCommand(const char * sCommandLine) {
 	{
 		if (ControllerMyself().IsController()) {
 			if (!HoppieConnected) {
-				_beginthread(datalinkLogin, 0, NULL);
+				_beginthread(datalinkLogin, 0, nullptr);
 			}
 			else {
 				HoppieConnected = false;
@@ -403,7 +402,7 @@ bool CSMRPlugin::OnCompileCommand(const char * sCommandLine) {
 	else if (startsWith(".smr poll", sCommandLine))
 	{
 		if (HoppieConnected) {
-			_beginthread(pollMessages, 0, NULL);
+			_beginthread(pollMessages, 0, nullptr);
 		}
 		return true;
 	}
@@ -536,7 +535,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 			tmessage = buildStandbyMessage(FlightPlan.GetCallsign());
 			ttype = "CPDLC";
 			tdest = FlightPlan.GetCallsign();
-			_beginthread(sendDatalinkMessage, 0, NULL);
+			_beginthread(sendDatalinkMessage, 0, nullptr);
 		}
 	}
 
@@ -555,7 +554,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 			AcarsMessage msg = PendingMessages[FlightPlan.GetCallsign()];
 			dia.m_Req = msg.message.c_str();
 
-			string toReturn = "";
+			string toReturn;
 
 			if (dia.DoModal() != IDOK)
 				return;
@@ -563,7 +562,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 			tmessage = dia.m_Message;
 			ttype = "TELEX";
 			tdest = FlightPlan.GetCallsign();
-			_beginthread(sendDatalinkMessage, 0, NULL);
+			_beginthread(sendDatalinkMessage, 0, nullptr);
 		}
 	}
 
@@ -583,7 +582,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 			}
 			PendingMessages.erase(DatalinkToSend.callsign);
 
-			_beginthread(sendDatalinkMessage, 0, NULL);
+			_beginthread(sendDatalinkMessage, 0, nullptr);
 		}
 
 	}
@@ -605,13 +604,13 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 			dia.m_SSR = FlightPlan.GetControllerAssignedData().GetSquawk();
 			string freq = std::to_string(ControllerMyself().GetPrimaryFrequency());
 			if (ControllerSelect(FlightPlan.GetCoordinatedNextController()).GetPrimaryFrequency() != 0)
-				string freq = std::to_string(ControllerSelect(FlightPlan.GetCoordinatedNextController()).GetPrimaryFrequency());
+				freq = std::to_string(ControllerSelect(FlightPlan.GetCoordinatedNextController()).GetPrimaryFrequency());
 			freq = freq.substr(0, 7);
 			dia.m_Freq = freq.c_str();
 			AcarsMessage msg = PendingMessages[FlightPlan.GetCallsign()];
 			dia.m_Req = msg.message.c_str();
 
-			string toReturn = "";
+			string toReturn;
 
 			int ClearedAltitude = FlightPlan.GetControllerAssignedData().GetClearedAltitude();
 			int Ta = GetTransitionAltitude();
@@ -651,7 +650,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 
 			myfrequency = std::to_string(ControllerMyself().GetPrimaryFrequency()).substr(0, 7);
 
-			_beginthread(sendDatalinkClearance, 0, NULL);
+			_beginthread(sendDatalinkClearance, 0, nullptr);
 
 		}
 
@@ -661,7 +660,7 @@ void CSMRPlugin::OnFunctionCall(int FunctionId, const char * sItemString, POINT 
 void CSMRPlugin::OnFlightPlanDisconnect(CFlightPlan FlightPlan)
 {
 	Logger::info(string(__FUNCSIG__));
-	CRadarTarget rt = RadarTargetSelect(FlightPlan.GetCallsign());
+	const CRadarTarget rt = RadarTargetSelect(FlightPlan.GetCallsign());
 
 	if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
 		ReleasedTracks.erase(std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()));
@@ -681,7 +680,7 @@ void CSMRPlugin::OnTimer(int Counter)
 	}
 
 	if (FailedToConnectMessage.length() != 0) {
-		std::string message = "Could not log in! Error: " + FailedToConnectMessage;
+		const std::string message = "Could not log in! Error: " + FailedToConnectMessage;
 		DisplayUserMessage("CPDLC", "Server", message.c_str(), true, true, false, true, false);
 		FailedToConnectMessage = "";
 	}
@@ -692,7 +691,7 @@ void CSMRPlugin::OnTimer(int Counter)
 	}
 
 	if (((clock() - timer) / CLOCKS_PER_SEC) > 10 && HoppieConnected) {
-		_beginthread(pollMessages, 0, NULL);
+		_beginthread(pollMessages, 0, nullptr);
 		timer = clock();
 
 		// We auto-reject any DCL requests for those without valid flight plan, because they don't show up in the DEP list
@@ -707,7 +706,7 @@ void CSMRPlugin::OnTimer(int Counter)
 			ttype = "CPDLC";
 			tdest = element;
 
-			_beginthread(sendDatalinkMessage, 0, NULL);
+			_beginthread(sendDatalinkMessage, 0, nullptr);
 			
 			// Remove from list
 			AircraftDemandingClearance.erase(std::remove(AircraftDemandingClearance.begin(), AircraftDemandingClearance.end(), element), AircraftDemandingClearance.end());
@@ -730,12 +729,12 @@ CRadarScreen * CSMRPlugin::OnRadarScreenCreated(const char * sDisplayName, bool 
 {
 	Logger::info(string(__FUNCSIG__));
 	if (!strcmp(sDisplayName, MY_PLUGIN_VIEW_AVISO)) {
-		CSMRRadar* rd = new CSMRRadar();
+		auto* rd = new CSMRRadar();
 		RadarScreensOpened.push_back(rd);
 		return rd;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 //---EuroScopePlugInExit-----------------------------------------------

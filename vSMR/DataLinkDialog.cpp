@@ -29,9 +29,7 @@ CDataLinkDialog::CDataLinkDialog(CWnd* pParent /*=NULL*/)
 
 }
 
-CDataLinkDialog::~CDataLinkDialog()
-{
-}
+CDataLinkDialog::~CDataLinkDialog() = default;
 
 void CDataLinkDialog::DoDataExchange(CDataExchange* pDX)
 {

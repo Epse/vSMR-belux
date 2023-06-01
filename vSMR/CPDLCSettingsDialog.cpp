@@ -19,9 +19,7 @@ CCPDLCSettingsDialog::CCPDLCSettingsDialog(CWnd* pParent /*=NULL*/)
 
 }
 
-CCPDLCSettingsDialog::~CCPDLCSettingsDialog()
-{
-}
+CCPDLCSettingsDialog::~CCPDLCSettingsDialog() = default;
 
 void CCPDLCSettingsDialog::DoDataExchange(CDataExchange* pDX)
 {

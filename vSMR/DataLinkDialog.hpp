@@ -10,8 +10,8 @@ class CDataLinkDialog : public CDialogEx
 	DECLARE_DYNAMIC(CDataLinkDialog)
 
 public:
-	CDataLinkDialog(CWnd* pParent = NULL);   // standard constructor
-	virtual ~CDataLinkDialog();
+	CDataLinkDialog(CWnd* pParent = nullptr);   // standard constructor
+	~CDataLinkDialog() override;
 
 	CString m_Callsign;
 	CString m_Aircraft;
@@ -31,7 +31,7 @@ public:
 	enum { IDD = IDD_DIALOG1 };
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	void DoDataExchange(CDataExchange* pDX) override;    // DDX/DDV support
 
 	DECLARE_MESSAGE_MAP()
 public:

@@ -11,9 +11,6 @@ private:
 	std::string lastErrorMessage;
 
 public:
-	HttpHelper();
-	std::string downloadStringFromURL(std::string url);
+	std::string downloadStringFromURL(const std::string& url);
 	std::string getLastErrorMessage();
-	~HttpHelper();
-
 };

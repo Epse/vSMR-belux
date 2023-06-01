@@ -17,10 +17,7 @@ END_MESSAGE_MAP()
 
 // CvSMRApp construction
 
-CvSMRApp::CvSMRApp()
-{
-
-}
+CvSMRApp::CvSMRApp() = default;
 
 
 // The one and only CvSMRApp object

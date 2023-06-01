@@ -1,3 +1,4 @@
+#pragma once
 #include "stdafx.h"
 #include <GdiPlus.h>
 #include <map>
@@ -9,7 +10,7 @@ using namespace std;
 class CColorManager
 {
 protected:
-	map<string, int> ColorSettings;
+	map<string, int> ColorSettings{};
 public:
 	CColorManager()
 	{
@@ -22,39 +23,36 @@ public:
 		ColorSettings.clear();
 	};
 
-	void update_brightness(string id, int value)
+	void update_brightness(const string& id, const int value)
 	{
 		ColorSettings[id] = min(bounds_high(), max(bounds_low(), value));
 	};
 
-	int get_brightness(string id)
+	int get_brightness(const string& id)
 	{
 		if (ColorSettings.find(id) != ColorSettings.end())
 			return ColorSettings[id];
 		return 100;
 	};
 
-	virtual Gdiplus::Color get_corrected_color(string id, Gdiplus::Color color)
+	virtual Gdiplus::Color get_corrected_color(const string id, const Gdiplus::Color color)
 	{
 		if (get_brightness(id) == 100)
 			return color;
 
-		COLORREF colorr = color.ToCOLORREF();
+		COLORREF colorref = color.ToCOLORREF();
 
-		int r, g, b;
-		r = GetRValue(colorr);
-		g = GetGValue(colorr);
-		b = GetBValue(colorr);
-		BYTE a = color.GetAlpha();
+		int r = GetRValue(colorref);
+		int g = GetGValue(colorref);
+		int b = GetBValue(colorref);
+		const BYTE a = color.GetAlpha();
 		
 
 		r = min(255, int((r*get_brightness(id))/100));
 		g = min(255, int((g*get_brightness(id))/100));
 		b = min(255, int((b*get_brightness(id))/100));
 
-		Gdiplus::Color out(a, r, g, b);
-
-		return out;
+		return Gdiplus::Color(a, r, g, b);
 	};
 
 	static int bounds_low()

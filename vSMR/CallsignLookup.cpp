@@ -5,9 +5,7 @@
 // CCallsignLookup Class by Even Rognlien, used with permission
 //
 
-CCallsignLookup::CCallsignLookup() {}
-
-void CCallsignLookup::readFile(string fileName)
+void CCallsignLookup::readFile(const string& fileName)
 {
 
 	ifstream myfile;
@@ -34,14 +32,10 @@ void CCallsignLookup::readFile(string fileName)
 	myfile.close();
 }
 
-string CCallsignLookup::getCallsign(string airlineCode) {
+string CCallsignLookup::getCallsign(const string& airlineCode) {
 
 	if (callsigns.find(airlineCode) == callsigns.end())
 		return "";
 
 	return callsigns.find(airlineCode)->second;
-}
-
-CCallsignLookup::~CCallsignLookup()
-{
 }

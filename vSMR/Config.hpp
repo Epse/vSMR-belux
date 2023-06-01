@@ -16,35 +16,35 @@ using namespace rapidjson;
 class CConfig
 {
 public:
-	CConfig(string configPath);
+	CConfig(const string& configPath);
 	virtual ~CConfig();
 
 	const Value& getActiveProfile();
-	bool isSidColorAvail(string sid, string airport);
-	Gdiplus::Color getSidColor(string sid, string airport);
-	const Value& getAirportMapIfAny(string airport);
-	bool isAirportMapAvail(string airport);
-	bool isCustomRunwayAvail(string airport, string name1, string name2);
+	bool isSidColorAvail(const string& sid, const string& airport);
+	Gdiplus::Color getSidColor(const string& sid, const string& airport);
+	const Value& getAirportMapIfAny(const string& airport);
+	bool isAirportMapAvail(const string& airport);
+	bool isCustomRunwayAvail(const string& airport, const string& name1, const string& name2);
 	bool isCustomCursorUsed();
 
-	Gdiplus::Color getConfigColor(const Value& config_path);
+	static Gdiplus::Color getConfigColor(const Value& config_path);
 	COLORREF getConfigColorRef(const Value& config_path);
 
 	vector<string> getAllProfiles();
 
-	inline int isItActiveProfile(string toTest) {
+	inline int isItActiveProfile(const string& toTest) {
 		if (active_profile == profiles[toTest])
 			return 1;
 		return 0;
 	};
 
-	inline void setActiveProfile(string newProfile) {
+	inline void setActiveProfile(const string& newProfile) {
 		active_profile = profiles[newProfile];
 	};
 
 	inline string getActiveProfileName() {
 		string name;
-		for (std::map<string, rapidjson::SizeType>::iterator it = profiles.begin(); it != profiles.end(); ++it)
+		for (auto it = profiles.begin(); it != profiles.end(); ++it)
 		{
 			if (it->second == active_profile) {
 				name = it->first;

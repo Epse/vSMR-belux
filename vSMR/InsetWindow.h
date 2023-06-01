@@ -23,7 +23,7 @@ public:
 
 	map<string, double> m_TagAngles;
 
-	virtual void render(HDC Hdc, CSMRRadar * radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> DistanceTools);
+	virtual void render(HDC Hdc, CSMRRadar * radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools);
 	virtual void setAirport(string icao);
 	virtual POINT projectPoint(CPosition pos);
 	virtual void OnClickScreenObject(const char * sItemString, POINT Pt, int Button);

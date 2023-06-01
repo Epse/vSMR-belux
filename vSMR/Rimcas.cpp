@@ -218,7 +218,7 @@ void CRimcas::OnRefreshEnd(CRadarScreen* instance, int threshold) {
 
 			auto AcOnRunwayRange = AcOnRunway.equal_range(it->first);
 
-			for (auto it2 = AcOnRunwayRange.first; it2 != AcOnRunwayRange.second; ++it2)
+			for (auto &it2 = AcOnRunwayRange.first; it2 != AcOnRunwayRange.second; ++it2)
 			{
 				if (isOnClosedRunway) {
 					AcColor[it2->second] = StageTwo;
@@ -233,7 +233,7 @@ void CRimcas::OnRefreshEnd(CRadarScreen* instance, int threshold) {
 						bool triggerStageTwo = false;
 						CRadarTarget rd1 = instance->GetPlugIn()->RadarTargetSelect(it2->second.c_str());
 						CRadarTargetPositionData currentRd1 = rd1.GetPosition();
-						for (auto it3 = AcOnRunwayRange.first; it3 != AcOnRunwayRange.second; ++it3)
+						for (auto &it3 = AcOnRunwayRange.first; it3 != AcOnRunwayRange.second; ++it3)
 						{
 							CRadarTarget rd2 = instance->GetPlugIn()->RadarTargetSelect(it3->second.c_str());
 

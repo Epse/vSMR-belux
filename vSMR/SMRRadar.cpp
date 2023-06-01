@@ -77,7 +77,7 @@ CSMRRadar::CSMRRadar()
 	possible_paths[1] = fs::path(DllPath).parent_path().parent_path() / fs::path("ICAO") / fs::path("ICAO_Airlines.txt");
 	possible_paths[2] = fs::path(DllPath).parent_path().parent_path().parent_path() / fs::path("ICAO") / fs::path("ICAO_Airlines.txt");
 
-	for (auto p : possible_paths) {
+	for (const auto &p : possible_paths) {
 		Logger::info("Trying to read callsigns from: " + p.string());
 		if (fs::exists(p)) {
 			Logger::info("Found callsign file!");
@@ -2794,7 +2794,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	Logger::info("Tag deconfliction loop");
 
-	for (const auto areas : tagAreas)
+	for (const auto &areas : tagAreas)
 	{
 		if (!CurrentConfig->getActiveProfile()["labels"]["auto_deconfliction"].GetBool())
 			break;
@@ -2821,7 +2821,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		bool isAntiClockwise = false;
 
-		for (const auto area2 : tagAreas)
+		for (const auto &area2 : tagAreas)
 		{
 			if (areas.first == area2.first)
 				continue;
@@ -2869,7 +2869,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 			bool isTagConflicing = false;
 
-			for (const auto area2 : tagAreas)
+			for (const auto &area2 : tagAreas)
 			{
 				if (areas.first == area2.first)
 					continue;

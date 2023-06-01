@@ -2281,11 +2281,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		graphics.FillRectangle(&TagBackgroundBrush, CopyRect(TagBackgroundRect));
 
 		// Hover border
-		if (mouseWithin(TagBackgroundRect) || IsTagBeingDragged(rt.GetCallsign()))
-		{
-			Pen pw(ColorManager->get_corrected_color("label", Color::White));
-			graphics.DrawRectangle(&pw, CopyRect(TagBackgroundRect));
-		}
+		//if (mouseWithin(TagBackgroundRect) || IsTagBeingDragged(rt.GetCallsign()))
+		//{
+		//	Pen pw(ColorManager->get_corrected_color("label", Color::White));
+		//	graphics.DrawRectangle(&pw, CopyRect(TagBackgroundRect));
+		//}
 
 		// Drawing the tag text
 

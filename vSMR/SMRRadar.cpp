@@ -2278,7 +2278,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		CRect TagBackgroundRect(TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2), TagCenter.x + (TagWidth / 2), TagCenter.y + (TagHeight / 2));
 		SolidBrush TagBackgroundBrush(TagBackgroundColor);
-		graphics.FillRectangle(&TagBackgroundBrush, CopyRect(TagBackgroundRect));
+		graphics.FillRectangle(
+			&TagBackgroundBrush,
+			TagCenter.x - TagWidth / 2,
+			TagCenter.y - TagHeight / 2,
+			TagWidth,
+			TagHeight
+		);
 
 		// Hover border
 		//if (mouseWithin(TagBackgroundRect) || IsTagBeingDragged(rt.GetCallsign()))

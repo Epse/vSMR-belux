@@ -2164,10 +2164,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		int blankWidth = (int)mesureRect.GetRight();
 
 		mesureRect = RectF(0, 0, 0, 0);
-		graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN"),
+		graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
 			customFonts[currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 		int oneLineHeight = (int)mesureRect.GetBottom();
-		graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN"),
+		graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
 			customFonts[currentFontSize+10], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 		int firstLineHeight = (int)mesureRect.GetBottom();
 
@@ -2264,6 +2264,12 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				definedBackgroundColor);
 		//CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]));
 
+		// Drawing the ASEL border
+		// TODO appears to not work for arrivals
+		if (is_asel && ColorTagType != TagTypes::Airborne) {
+			UIHelper::drawAselBorder(graphics, ColorManager, TagCenter, TagWidth, TagHeight);
+		}
+
 		TagBackgroundColor = ColorManager->get_corrected_color("label", TagBackgroundColor);
 
 		// Drawing the tag background
@@ -2271,6 +2277,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		CRect TagBackgroundRect(TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2), TagCenter.x + (TagWidth / 2), TagCenter.y + (TagHeight / 2));
 		SolidBrush TagBackgroundBrush(TagBackgroundColor);
 		graphics.FillRectangle(&TagBackgroundBrush, CopyRect(TagBackgroundRect));
+
+		// Hover border
 		if (mouseWithin(TagBackgroundRect) || IsTagBeingDragged(rt.GetCallsign()))
 		{
 			Pen pw(ColorManager->get_corrected_color("label", Color::White));
@@ -2279,6 +2287,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		// Drawing the tag text
 
+		// TODO these could be static along tags
 		SolidBrush FontColor(ColorManager->get_corrected_color("label",
 			CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["text_color"])));
 		SolidBrush SquawkErrorColor(ColorManager->get_corrected_color("label",
@@ -2290,6 +2299,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			CurrentConfig->getConfigColor(LabelsSettings["groundstatus_colors"]["taxi"])));
 		SolidBrush GroundDepaColor(ColorManager->get_corrected_color("label",
 			CurrentConfig->getConfigColor(LabelsSettings["groundstatus_colors"]["depa"])));
+		SolidBrush AselTextColor(ColorManager->get_corrected_color("label", Color(255, 255, 0)));
 
 
 		// Drawing the leader line
@@ -2347,6 +2357,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			for (auto&& element : line)
 			{
 				SolidBrush* color = &FontColor;
+
+				// TODO this feels like a bad spot
+				if (is_asel && ColorTagType == TagTypes::Airborne)
+				{
+					color = &AselTextColor;
+				}
+
 				if (TagReplacingMap["sqerror"].size() > 0 && strcmp(element.c_str(), TagReplacingMap["sqerror"].c_str()) == 0)
 					color = &SquawkErrorColor;
 

@@ -17,3 +17,13 @@ void UIHelper::drawAselBorder(Gdiplus::Graphics& graphics, CColorManager* colorM
 		tagHeight + (border_width)+border_padding * 2
 	);
 }
+
+string UIHelper::getEnumString(CSMRRadar::TagTypes type) {
+	if (type == CSMRRadar::TagTypes::Departure)
+		return "departure";
+	if (type == CSMRRadar::TagTypes::Arrival)
+		return "arrival";
+	if (type == CSMRRadar::TagTypes::Uncorrelated)
+		return "uncorrelated";
+	return "airborne";
+}

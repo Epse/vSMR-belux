@@ -1619,7 +1619,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		}
 		else {
-			smrCursor = (HCURSOR)::LoadCursor(NULL, IDC_ARROW);
+			smrCursor = (HCURSOR)::LoadCursor(nullptr, IDC_ARROW);
 		}
 
 		if (smrCursor != nullptr)
@@ -1658,21 +1658,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		return;
 
 	Logger::info("Phase != REFRESH_PHASE_BEFORE_TAGS");
-
-	struct Utils {
-		static RECT GetAreaFromText(const CDC* dc, const string& text, const POINT Pos) {
-			return { Pos.x, Pos.y, Pos.x + dc->GetTextExtent(text.c_str()).cx, Pos.y + dc->GetTextExtent(text.c_str()).cy };
-		}
-		static string getEnumString(TagTypes type) {
-			if (type == TagTypes::Departure)
-				return "departure";
-			if (type == TagTypes::Arrival)
-				return "arrival";
-			if (type == TagTypes::Uncorrelated)
-				return "uncorrelated";
-			return "airborne";
-		}
-	};
 
 	// Timer each seconds
 	clock_final = clock() - clock_init;
@@ -1752,38 +1737,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		const Value& CustomMap = CurrentConfig->getAirportMapIfAny(getActiveAirport());
 
-		vector<CPosition> def;
-		// Rimcas now ignores the defined runway polygon to ensure that the correct detection area is used, defined runway is now only used for closed runway
-		//			if (CurrentConfig->isCustomRunwayAvail(getActiveAirport(), runway_name, runway_name2)) {
-					//	const Value& Runways = CustomMap["runways"];
-					//
-					//		if (Runways.IsArray()) {
-					//		for (SizeType i = 0; i < Runways.Size(); i++) {
-					//			if (startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) ||
-					//				startsWith(runway_name2.c_str(), Runways[i]["runway_name"].GetString())) {
-					//
-					//				string path_name = "path";
-					//
-					//				if (isLVP)
-					//					path_name = "path_lvp";
-					//
-					//				const Value& Path = Runways[i][path_name.c_str()];
-					//				for (SizeType j = 0; j < Path.Size(); j++) {
-					//					CPosition position;
-					//					position.LoadFromStrings(Path[j][(SizeType)1].GetString(), Path[j][(SizeType)0].GetString());
-					//
-					//					def.push_back(position);
-					//				}
-					//	
-					//			}
-					//		}
-					//	}
-					//}
-					//else {
-		def = RimcasInstance->GetRunwayArea(Left, Right);
-		//}
-
-		RimcasInstance->AddRunwayArea(this, runway_name, runway_name2, def);
+		RimcasInstance->AddRunwayArea(this, runway_name, runway_name2, RimcasInstance->GetRunwayArea(Left, Right));
 
 		string RwName = runway_name + " / " + runway_name2;
 
@@ -1798,35 +1752,34 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 					if (Runways.IsArray()) {
 						for (SizeType i = 0; i < Runways.Size(); i++) {
-							if (startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) ||
-								startsWith(runway_name2.c_str(), Runways[i]["runway_name"].GetString())) {
+							if (!startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) && !startsWith(runway_name2.c_str(), Runways[i]["runway_name"].GetString()))
+								continue;
 
-								string path_name = "path";
+							string path_name = "path";
 
-								if (isLVP)
-									path_name = "path_lvp";
+							if (isLVP)
+								path_name = "path_lvp";
 
-								const Value& Path = Runways[i][path_name.c_str()];
+							const Value& Path = Runways[i][path_name.c_str()];
 
-								PointF lpPoints[5000];
+							PointF lpPoints[5000];
 
-								int k = 1;
-								int l = 0;
-								for (SizeType w = 0; w < Path.Size(); w++) {
-									CPosition position;
-									position.LoadFromStrings(Path[w][static_cast<SizeType>(1)].GetString(), Path[w][static_cast<SizeType>(0)].GetString());
+							int k = 1;
+							int l = 0;
+							for (SizeType w = 0; w < Path.Size(); w++) {
+								CPosition position;
+								position.LoadFromStrings(Path[w][static_cast<SizeType>(1)].GetString(), Path[w][static_cast<SizeType>(0)].GetString());
 
-									POINT cv = ConvertCoordFromPositionToPixel(position);
-									lpPoints[l] = { REAL(cv.x), REAL(cv.y) };
+								POINT cv = ConvertCoordFromPositionToPixel(position);
+								lpPoints[l] = { REAL(cv.x), REAL(cv.y) };
 
-									k++;
-									l++;
-								}
-
-								graphics.FillPolygon(&SolidBrush(Color(150, 0, 0)), lpPoints, k - 1);
-
-								break;
+								k++;
+								l++;
 							}
+
+							graphics.FillPolygon(&SolidBrush(Color(150, 0, 0)), lpPoints, k - 1);
+
+							break;
 						}
 					}
 
@@ -2176,7 +2129,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
 			customFonts[currentFontSize + 10], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
-		const Value& LabelLines = LabelsSettings[Utils::getEnumString(TagType).c_str()]["definition"];
+		const Value& LabelLines = LabelsSettings[UIHelper::getEnumString(TagType).c_str()]["definition"];
 		vector<vector<string>> ReplacedLabelLines;
 
 		if (!LabelLines.IsArray())
@@ -2219,7 +2172,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 				wstring wstr = wstring(element.begin(), element.end());
 				Gdiplus::Font* font = customFonts[currentFontSize];
-				if (lineid == 0 && strcmp(Utils::getEnumString(TagType).c_str(), "uncorrelated") != 0) {
+				if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0) {
 					font = customFonts[currentFontSize + 10];
 				}
 
@@ -2238,18 +2191,18 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 		//TagHeight = TagHeight - 2;
 
-		Color definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color"]);
+		Color definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()]["background_color"]);
 
 		if (ColorTagType == TagTypes::Departure) {
 			if (!TagReplacingMap["asid"].empty() && CurrentConfig->isSidColorAvail(TagReplacingMap["asid"], getActiveAirport())) {
 				definedBackgroundColor = CurrentConfig->getSidColor(TagReplacingMap["asid"], getActiveAirport());
 			}
-			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nosid_color")) {
-				definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nosid_color"]);
+			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()].HasMember("nosid_color")) {
+				definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()]["nosid_color"]);
 			}
 		}
-		if (TagReplacingMap["actype"] == "NoFPL" && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nofpl_color")) {
-			definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
+		if (TagReplacingMap["actype"] == "NoFPL" && LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()].HasMember("nofpl_color")) {
+			definedBackgroundColor = CurrentConfig->getConfigColor(LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
 		}
 
 		Color TagBackgroundColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(),
@@ -2298,7 +2251,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		// Drawing the tag text
 
 		SolidBrush FontColor(ColorManager->get_corrected_color("label",
-			CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["text_color"])));
+			CurrentConfig->getConfigColor(LabelsSettings[UIHelper::getEnumString(ColorTagType).c_str()]["text_color"])));
 
 		// Drawing the leader line
 		RECT TagBackRectData = TagBackgroundRect;
@@ -2385,7 +2338,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 				wstring welement = wstring(element.begin(), element.end());
 				Gdiplus::Font* font = customFonts[currentFontSize];
-				if (lineid == 0 && strcmp(Utils::getEnumString(TagType).c_str(), "uncorrelated") != 0) {
+				if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0) {
 					font = customFonts[currentFontSize + 10];
 					//color = &SquawkErrorColor;
 				}

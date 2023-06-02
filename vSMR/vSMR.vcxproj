@@ -138,6 +138,7 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="CPDLCSettingsDialog.cpp" />
     <ClCompile Include="DataLinkDialog.cpp" />
+    <ClCompile Include="GateTarget.cpp" />
     <ClCompile Include="HttpHelper.cpp" />
     <ClCompile Include="InsetWindow.cpp" />
     <ClCompile Include="Rimcas.cpp" />
@@ -157,6 +158,7 @@
     <ClInclude Include="Constant.hpp" />
     <ClInclude Include="CPDLCSettingsDialog.hpp" />
     <ClInclude Include="DataLinkDialog.hpp" />
+    <ClInclude Include="GateTarget.hpp" />
     <ClInclude Include="HttpHelper.hpp" />
     <ClInclude Include="InsetWindow.h" />
     <ClInclude Include="Logger.h" />

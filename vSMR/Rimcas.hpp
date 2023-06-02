@@ -18,13 +18,12 @@ using namespace EuroScopePlugIn;
 
 class CRimcas {
 public:
-	CRimcas();
 	virtual ~CRimcas();
 
 	const string string_false = "!NO";
 
 	struct RunwayAreaType {
-		string Name = "";
+		string Name;
 		vector<CPosition> Definition;
 		bool set = false;
 	};
@@ -46,13 +45,13 @@ public:
 
 	bool IsLVP = false;
 
-	int Is_Left(const POINT &p0, const POINT &p1, const POINT &point)
+	static int Is_Left(const POINT &p0, const POINT &p1, const POINT &point)
 	{
 		return ((p1.x - p0.x) * (point.y - p0.y) -
 			(point.x - p0.x) * (p1.y - p0.y));
 	}
 
-	bool Is_Inside(const POINT &point, const std::vector<POINT> &points_list)
+	static bool Is_Inside(const POINT &point, const std::vector<POINT> &points_list)
 	{
 		// The winding number counter.
 		int winding_number = 0;
@@ -60,7 +59,7 @@ public:
 		// Loop through all edges of the polygon.
 		typedef std::vector<POINT>::size_type size_type;
 
-		size_type size = points_list.size();
+		const size_type size = points_list.size();
 
 		for (size_type i = 0; i < size; ++i)             // Edge from point1 to points_list[i+1]
 		{
@@ -105,22 +104,22 @@ public:
 
 	string GetAcInRunwayArea(CRadarTarget Ac, CRadarScreen *instance);
 	string GetAcInRunwayAreaSoon(CRadarTarget Ac, CRadarScreen *instance, bool isCorrelated);
-	void AddRunwayArea(CRadarScreen *instance, string runway_name1, string runway_name2, vector<CPosition> Definition);
-	Color GetAircraftColor(string AcCallsign, Color StandardColor, Color OnRunwayColor, Color RimcasStageOne, Color RimcasStageTwo);
-	Color GetAircraftColor(string AcCallsign, Color StandardColor, Color OnRunwayColor);
+	void AddRunwayArea(CRadarScreen *instance, const string& runway_name1, const string& runway_name2, const vector<CPosition>& Definition);
+	Color GetAircraftColor(const string& AcCallsign, Color StandardColor, Color OnRunwayColor, Color RimcasStageOne, Color RimcasStageTwo);
+	Color GetAircraftColor(const string& AcCallsign, Color StandardColor, Color OnRunwayColor);
 
-	bool isAcOnRunway(string callsign);
+	bool isAcOnRunway(const string& callsign);
 
-	vector<CPosition> GetRunwayArea(CPosition Left, CPosition Right, float hwidth = 92.5f);
+	vector<CPosition> GetRunwayArea(const CPosition& Left, const CPosition& Right, float hwidth = 92.5f) const;
 
 	void OnRefreshBegin(bool isLVP);
 	void OnRefresh(CRadarTarget Rt, CRadarScreen *instance, bool isCorrelated);
 	void OnRefreshEnd(CRadarScreen *instance, int threshold);
 	void Reset();
 
-	RimcasAlertTypes getAlert(string callsign);
+	RimcasAlertTypes getAlert(const string& callsign);
 
-	void setCountdownDefinition(vector<int> data, vector<int> dataLVP)
+	void setCountdownDefinition(const vector<int>& data, const vector<int>& dataLVP)
 	{
 		CountdownDefinition = data;
 		std::sort(CountdownDefinition.begin(), CountdownDefinition.end(), std::greater<int>());
@@ -129,21 +128,21 @@ public:
 		std::sort(CountdownDefinitionLVP.begin(), CountdownDefinitionLVP.end(), std::greater<int>());
 	}
 
-	void toggleClosedRunway(string runway) {
+	void toggleClosedRunway(const string& runway) {
 		if (ClosedRunway.find(runway) == ClosedRunway.end())
 			ClosedRunway[runway] = true;
 		else
 			ClosedRunway[runway] = !ClosedRunway[runway];
 	}
 
-	void toggleMonitoredRunwayDep(string runway) {
+	void toggleMonitoredRunwayDep(const string& runway) {
 		if (MonitoredRunwayDep.find(runway) == MonitoredRunwayDep.end())
 			MonitoredRunwayDep[runway] = true;
 		else
 			MonitoredRunwayDep[runway] = !MonitoredRunwayDep[runway];
 	}
 
-	void toggleMonitoredRunwayArr(string runway) {
+	void toggleMonitoredRunwayArr(const string& runway) {
 		if (MonitoredRunwayArr.find(runway) == MonitoredRunwayArr.end())
 			MonitoredRunwayArr[runway] = true;
 		else

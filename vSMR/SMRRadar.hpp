@@ -154,7 +154,7 @@ public:
 		return ActiveAirport;
 	}
 
-	inline string setActiveAirport(string value) {
+	inline string setActiveAirport(const string& value) {
 		return ActiveAirport = value;
 	}
 
@@ -241,31 +241,31 @@ public:
 
 	//---OnAsrContentLoaded--------------------------------------------
 
-	virtual void OnAsrContentLoaded(bool Loaded);
+	void OnAsrContentLoaded(bool Loaded) override;
 
 	//---OnAsrContentToBeSaved------------------------------------------
 
-	virtual void OnAsrContentToBeSaved();
+	void OnAsrContentToBeSaved() override;
 
 	//---OnRefresh------------------------------------------------------
 
-	virtual void OnRefresh(HDC hDC, int Phase);
+	void OnRefresh(HDC hDC, int Phase) override;
 
 	//---OnClickScreenObject-----------------------------------------
 
-	virtual void OnClickScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area, int Button);
+	void OnClickScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area, int Button) override;
 
 	//---OnMoveScreenObject---------------------------------------------
 
-	virtual void OnMoveScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area, bool Released);
+	void OnMoveScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area, bool Released) override;
 
 	//---OnOverScreenObject---------------------------------------------
 
-	virtual void OnOverScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area);
+	void OnOverScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area) override;
 
 	//---OnCompileCommand-----------------------------------------
 
-	virtual bool OnCompileCommand(const char * sCommandLine);
+	bool OnCompileCommand(const char * sCommandLine) override;
 
 	//---RefreshAirportActivity---------------------------------------------
 
@@ -273,18 +273,18 @@ public:
 
 	//---OnRadarTargetPositionUpdate---------------------------------------------
 
-	virtual void OnRadarTargetPositionUpdate(CRadarTarget RadarTarget);
+	void OnRadarTargetPositionUpdate(CRadarTarget RadarTarget) override;
 
 	//---OnFlightPlanDisconnect---------------------------------------------
 
-	virtual void OnFlightPlanDisconnect(CFlightPlan FlightPlan);
+	void OnFlightPlanDisconnect(CFlightPlan FlightPlan) override;
 
 	virtual bool isVisible(CRadarTarget rt)
 	{
-		CRadarTargetPositionData RtPos = rt.GetPosition();
-		int radarRange = CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
-		int altitudeFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_alt"].GetInt();
-		int speedFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_spd"].GetInt();
+		const CRadarTargetPositionData RtPos = rt.GetPosition();
+		const int radarRange = CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
+		const int altitudeFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_alt"].GetInt();
+		const int speedFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_spd"].GetInt();
 		bool isAcDisplayed = true;
 
 		if (AirportPositions[getActiveAirport()].DistanceTo(RtPos.GetPosition()) > radarRange)
@@ -311,13 +311,13 @@ public:
 
 		CPosition newPos;
 
-		double d = (distance*0.00053996) / 60 * PI / 180;
-		double trk = DegToRad(heading);
-		double lat0 = DegToRad(origin.m_Latitude);
-		double lon0 = DegToRad(origin.m_Longitude);
+		const double d = (distance*0.00053996) / 60 * PI / 180;
+		const double trk = DegToRad(heading);
+		const double lat0 = DegToRad(origin.m_Latitude);
+		const double lon0 = DegToRad(origin.m_Longitude);
 
-		double lat = asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(trk));
-		double lon = cos(lat) == 0 ? lon0 : fmod(lon0 + asin(sin(trk) * sin(d) / cos(lat)) + PI, 2 * PI) - PI;
+		const double lat = asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(trk));
+		const double lon = cos(lat) == 0 ? lon0 : fmod(lon0 + asin(sin(trk) * sin(d) / cos(lat)) + PI, 2 * PI) - PI;
 
 		newPos.m_Latitude = RadToDeg(lat);
 		newPos.m_Longitude = RadToDeg(lon);
@@ -362,7 +362,7 @@ public:
 
 	//---OnFunctionCall-------------------------------------------------
 
-	virtual void OnFunctionCall(int FunctionId, const char * sItemString, POINT Pt, RECT Area);
+	void OnFunctionCall(int FunctionId, const char * sItemString, POINT Pt, RECT Area) override;
 
 	//---OnAsrContentToBeClosed-----------------------------------------
 
@@ -370,7 +370,7 @@ public:
 
 	//  This gets called before OnAsrContentToBeSaved()
 	// -> we can't delete CurrentConfig just yet otherwise we can't save the active profile
-	inline virtual void OnAsrContentToBeClosed(void)
+	inline void OnAsrContentToBeClosed(void) override
 	{
 		delete RimcasInstance;
 		//delete CurrentConfig;

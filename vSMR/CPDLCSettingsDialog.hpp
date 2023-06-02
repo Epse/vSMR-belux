@@ -9,7 +9,7 @@ class CCPDLCSettingsDialog : public CDialogEx
 	DECLARE_DYNAMIC(CCPDLCSettingsDialog)
 
 public:
-	CCPDLCSettingsDialog(CWnd* pParent = NULL);   // standard constructor
+	CCPDLCSettingsDialog(CWnd* pParent = nullptr);   // standard constructor
 	virtual ~CCPDLCSettingsDialog();
 
 	CString m_Logon;
@@ -20,7 +20,7 @@ public:
 	enum { IDD = IDD_DIALOG2 };
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	void DoDataExchange(CDataExchange* pDX) override;    // DDX/DDV support
 
 	DECLARE_MESSAGE_MAP()
 public:

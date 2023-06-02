@@ -15,9 +15,6 @@ private:
 
 public:
 
-	CCallsignLookup();
-	void readFile(string fileName);
-	string getCallsign(string airlineCode);
-
-	~CCallsignLookup();
+	void readFile(const string& fileName);
+	string getCallsign(const string& airlineCode);
 };

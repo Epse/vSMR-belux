@@ -23,7 +23,7 @@ public:
 
 // Overrides
 public:
-	virtual BOOL InitInstance();
-	CSMRPlugin * gpMyPlugin = NULL;
+	BOOL InitInstance() override;
+	CSMRPlugin * gpMyPlugin = nullptr;
 	DECLARE_MESSAGE_MAP()
 };

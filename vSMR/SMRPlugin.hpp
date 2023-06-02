@@ -30,26 +30,26 @@ public:
 
 	//---OnCompileCommand------------------------------------------
 
-	virtual bool OnCompileCommand(const char * sCommandLine);
+	bool OnCompileCommand(const char * sCommandLine) override;
 
 	//---OnFunctionCall------------------------------------------
 
-	virtual void OnFunctionCall(int FunctionId, const char * sItemString, POINT Pt, RECT Area);
+	void OnFunctionCall(int FunctionId, const char * sItemString, POINT Pt, RECT Area) override;
 
 	//---OnGetTagItem------------------------------------------
 
-	virtual void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int ItemCode, int TagData, char sItemString[16], int * pColorCode, COLORREF * pRGB, double * pFontSize);
+	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int ItemCode, int TagData, char sItemString[16], int * pColorCode, COLORREF * pRGB, double * pFontSize) override;
 
 	//---OnFlightPlanDisconnect------------------------------------------
 
-	virtual void OnFlightPlanDisconnect(CFlightPlan FlightPlan);
+	void OnFlightPlanDisconnect(CFlightPlan FlightPlan) override;
 
 	//---OnTimer------------------------------------------
 
-	virtual void OnTimer(int Counter);
+	void OnTimer(int Counter) override;
 
 	//---OnRadarScreenCreated------------------------------------------
 
-	virtual CRadarScreen * OnRadarScreenCreated(const char * sDisplayName, bool NeedRadarContent, bool GeoReferenced, bool CanBeSaved, bool CanBeCreated);
+	CRadarScreen * OnRadarScreenCreated(const char * sDisplayName, bool NeedRadarContent, bool GeoReferenced, bool CanBeSaved, bool CanBeCreated) override;
 };
 

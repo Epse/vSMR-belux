@@ -2,7 +2,7 @@
 #include "Config.hpp"
 #include <algorithm>
 
-CConfig::CConfig(string configPath)
+CConfig::CConfig(const string& configPath)
 {
 	config_path = configPath;
 	loadConfig();
@@ -20,11 +20,11 @@ void CConfig::loadConfig() {
 
 	if (document.Parse<0>(ss.str().c_str()).HasParseError()) {
 		AfxMessageBox("An error parsing vSMR configuration occurred.\nOnce fixed, reload the config by typing '.smr reload'", MB_OK);
-	
+
 		ASSERT(AfxGetMainWnd() != NULL);
 		AfxGetMainWnd()->SendMessage(WM_CLOSE);
 	}
-	
+
 	profiles.clear();
 
 	assert(document.IsArray());
@@ -41,7 +41,7 @@ const Value& CConfig::getActiveProfile() {
 	return document[active_profile];
 }
 
-bool CConfig::isSidColorAvail(string sid, string airport) {
+bool CConfig::isSidColorAvail(const string& sid, const string& airport) {
 	if (getActiveProfile().HasMember("maps"))
 	{
 		if (getActiveProfile()["maps"].HasMember(airport.c_str()))
@@ -67,7 +67,7 @@ bool CConfig::isSidColorAvail(string sid, string airport) {
 	return false;
 }
 
-Gdiplus::Color CConfig::getSidColor(string sid, string airport)
+Gdiplus::Color CConfig::getSidColor(const string& sid, const string& airport)
 {
 	if (getActiveProfile().HasMember("maps"))
 	{
@@ -91,31 +91,30 @@ Gdiplus::Color CConfig::getSidColor(string sid, string airport)
 			}
 		}
 	}
-	return Gdiplus::Color(0, 0, 0);
+	return { 0, 0, 0 };
 }
 
 Gdiplus::Color CConfig::getConfigColor(const Value& config_path) {
-	int r = config_path["r"].GetInt();
-	int g = config_path["g"].GetInt();
-	int b = config_path["b"].GetInt();
+	const int r = config_path["r"].GetInt();
+	const int g = config_path["g"].GetInt();
+	const int b = config_path["b"].GetInt();
 	int a = 255;
 	if (config_path.HasMember("a"))
 		a = config_path["a"].GetInt();
 
-	Gdiplus::Color Color(a, r, g, b);
-	return Color;
+	return Gdiplus::Color(a, r, g, b);
 }
 
 COLORREF CConfig::getConfigColorRef(const Value& config_path) {
-	int r = config_path["r"].GetInt();
-	int g = config_path["g"].GetInt();
-	int b = config_path["b"].GetInt();
+	const int r = config_path["r"].GetInt();
+	const int g = config_path["g"].GetInt();
+	const int b = config_path["b"].GetInt();
 
-	COLORREF Color(RGB(r, g, b));
+	const COLORREF Color(RGB(r, g, b));
 	return Color;
 }
 
-const Value& CConfig::getAirportMapIfAny(string airport) {
+const Value& CConfig::getAirportMapIfAny(const string& airport) {
 	if (getActiveProfile().HasMember("maps")) {
 		const Value& map_data = getActiveProfile()["maps"];
 		if (map_data.HasMember(airport.c_str())) {
@@ -126,7 +125,7 @@ const Value& CConfig::getAirportMapIfAny(string airport) {
 	return getActiveProfile();
 }
 
-bool CConfig::isAirportMapAvail(string airport) {
+bool CConfig::isAirportMapAvail(const string& airport) {
 	if (getActiveProfile().HasMember("maps")) {
 		if (getActiveProfile()["maps"].HasMember(airport.c_str())) {
 			return true;
@@ -136,7 +135,7 @@ bool CConfig::isAirportMapAvail(string airport) {
 }
 
 bool CConfig::isCustomCursorUsed() {
-	if (getActiveProfile().HasMember("cursor")) {		
+	if (getActiveProfile().HasMember("cursor")) {
 		if (strcmp(getActiveProfile()["cursor"].GetString(), "Default") == 0) {
 			return false;
 		}
@@ -144,19 +143,20 @@ bool CConfig::isCustomCursorUsed() {
 	return true; // by default use custom one so we don't break compatibility for old json settings that don't have the entry
 }
 
-bool CConfig::isCustomRunwayAvail(string airport, string name1, string name2) {
-	if (getActiveProfile().HasMember("maps")) {
-		if (getActiveProfile()["maps"].HasMember(airport.c_str())) {
-			if (getActiveProfile()["maps"][airport.c_str()].HasMember("runways") 
-				&& getActiveProfile()["maps"][airport.c_str()]["runways"].IsArray()) {
-				const Value& Runways = getActiveProfile()["maps"][airport.c_str()]["runways"];
-				for (SizeType i = 0; i < Runways.Size(); i++) {
-					if (startsWith(name1.c_str(), Runways[i]["runway_name"].GetString()) ||
-						startsWith(name2.c_str(), Runways[i]["runway_name"].GetString())) {
-						return true;
-					}
-				}
-			}
+auto CConfig::isCustomRunwayAvail(const string& airport, const string& name1, const string& name2) -> bool
+{
+	if (!getActiveProfile().HasMember("maps"))
+		return false;
+	if (!getActiveProfile()["maps"].HasMember(airport.c_str()))
+		return false;
+	if (!getActiveProfile()["maps"][airport.c_str()].HasMember("runways") || !getActiveProfile()["maps"][airport.c_str()]["runways"].IsArray())
+		return false;
+
+	const Value& Runways = getActiveProfile()["maps"][airport.c_str()]["runways"];
+	for (SizeType i = 0; i < Runways.Size(); i++) {
+		if (startsWith(name1.c_str(), Runways[i]["runway_name"].GetString()) ||
+			startsWith(name2.c_str(), Runways[i]["runway_name"].GetString())) {
+			return true;
 		}
 	}
 	return false;
@@ -164,13 +164,11 @@ bool CConfig::isCustomRunwayAvail(string airport, string name1, string name2) {
 
 vector<string> CConfig::getAllProfiles() {
 	vector<string> toR;
-	for (std::map<string, rapidjson::SizeType>::iterator it = profiles.begin(); it != profiles.end(); ++it)
+	for (auto it = profiles.begin(); it != profiles.end(); ++it)
 	{
 		toR.push_back(it->first);
 	}
 	return toR;
 }
 
-CConfig::~CConfig()
-{
-}
+CConfig::~CConfig() = default;

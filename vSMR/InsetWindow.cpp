@@ -7,23 +7,22 @@ CInsetWindow::CInsetWindow(int Id)
 	m_Id = Id;
 }
 
-CInsetWindow::~CInsetWindow()
-{
-}
+CInsetWindow::~CInsetWindow() = default;
 
-void CInsetWindow::setAirport(string icao)
+void CInsetWindow::setAirport(const string icao)
 {
 	this->icao = icao;
 }
 
-void CInsetWindow::OnClickScreenObject(const char * sItemString, POINT Pt, int Button)
+void CInsetWindow::OnClickScreenObject(const char* sItemString, POINT Pt, int Button)
 {
 	if (Button == EuroScopePlugIn::BUTTON_RIGHT)
 	{
 		if (m_TagAngles.find(sItemString) != m_TagAngles.end())
 		{
 			m_TagAngles[sItemString] = fmod(m_TagAngles[sItemString] + 45.0, 360.0);
-		} else
+		}
+		else
 		{
 			m_TagAngles[sItemString] = 45.0;
 		}
@@ -42,7 +41,7 @@ void CInsetWindow::OnClickScreenObject(const char * sItemString, POINT Pt, int B
 	}
 }
 
-bool CInsetWindow::OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Area, bool Released)
+bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area, bool Released)
 {
 	if (strcmp(sObjectId, "window") == 0) {
 		if (!this->m_Grip)
@@ -62,8 +61,8 @@ bool CInsetWindow::OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Are
 		}
 	}
 	if (strcmp(sObjectId, "resize") == 0) {
-		POINT TopLeft = { m_Area.left, m_Area.top };
-		POINT BottomRight = { Area.right, Area.bottom };
+		const POINT TopLeft = { m_Area.left, m_Area.top };
+		const POINT BottomRight = { Area.right, Area.bottom };
 
 		CRect newSize(TopLeft, BottomRight);
 		newSize.NormalizeRect();
@@ -87,8 +86,8 @@ bool CInsetWindow::OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Are
 		CRect appWindowRect(m_Area);
 		appWindowRect.NormalizeRect();
 
-		POINT TopLeft = { Area.left, Area.bottom + 1 };
-		POINT BottomRight = { TopLeft.x + appWindowRect.Width(), TopLeft.y + appWindowRect.Height() };
+		const POINT TopLeft = { Area.left, Area.bottom + 1 };
+		const POINT BottomRight = { TopLeft.x + appWindowRect.Width(), TopLeft.y + appWindowRect.Height() };
 		CRect newPos(TopLeft, BottomRight);
 		newPos.NormalizeRect();
 
@@ -109,10 +108,10 @@ POINT CInsetWindow::projectPoint(CPosition pos)
 	refPt.x += m_Offset.x;
 	refPt.y += m_Offset.y;
 
-	POINT out = {0, 0};
+	POINT out;
 
-	double dist = AptPositions[icao].DistanceTo(pos);
-	double dir = TrueBearing(AptPositions[icao], pos);
+	const double dist = AptPositions[icao].DistanceTo(pos);
+	const double dir = TrueBearing(AptPositions[icao], pos);
 
 
 	out.x = refPt.x + int(m_Scale * dist * sin(dir) + 0.5);
@@ -121,13 +120,14 @@ POINT CInsetWindow::projectPoint(CPosition pos)
 	if (m_Rotation != 0)
 	{
 		return rotate_point(out, m_Rotation, refPt);
-	} else
+	}
+	else
 	{
 		return out;
 	}
 }
 
-void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> DistanceTools)
+void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools)
 {
 	CDC dc;
 	dc.Attach(hDC);
@@ -146,15 +146,14 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 				return "uncorrelated";
 			return "airborne";
 		}
-		static RECT GetAreaFromText(CDC * dc, string text, POINT Pos) {
-			RECT Area = { Pos.x, Pos.y, Pos.x + dc->GetTextExtent(text.c_str()).cx, Pos.y + dc->GetTextExtent(text.c_str()).cy };
-			return Area;
+		static RECT GetAreaFromText(const CDC* dc, const string& text, const POINT Pos) {
+			return { Pos.x, Pos.y, Pos.x + dc->GetTextExtent(text.c_str()).cx, Pos.y + dc->GetTextExtent(text.c_str()).cy };
 		}
 
-		static RECT drawToolbarButton(CDC * dc, string letter, CRect TopBar, int left, POINT mouseLocation)
+		static RECT drawToolbarButton(CDC* dc, const string& letter, const CRect& TopBar, const int left, const POINT mouseLocation)
 		{
-			POINT TopLeft = { TopBar.right - left, TopBar.top + 2 };
-			POINT BottomRight = { TopBar.right - (left - 11), TopBar.bottom - 2 };
+			const POINT TopLeft = { TopBar.right - left, TopBar.top + 2 };
+			const POINT BottomRight = { TopBar.right - (left - 11), TopBar.bottom - 2 };
 			CRect Rect(TopLeft, BottomRight);
 			Rect.NormalizeRect();
 			CBrush ButtonBrush(RGB(60, 60, 60));
@@ -181,8 +180,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 	// We create the radar
 	dc.FillSolidRect(windowAreaCRect, qBackgroundColor);
 	radar_screen->AddScreenObject(m_Id, "window", m_Area, true, "");
-
-	auto scale = m_Scale;
 
 	POINT refPt = windowAreaCRect.CenterPoint();
 	refPt.x += m_Offset.x;
@@ -222,14 +219,15 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 				CPosition Threshold, OtherEnd;
 				if (rwy.IsElementActive(false, 0))
 				{
-					Threshold = EndOne; 
+					Threshold = EndOne;
 					OtherEnd = EndTwo;
-				} else
+				}
+				else
 				{
-					Threshold = EndTwo; 
+					Threshold = EndTwo;
 					OtherEnd = EndOne;
 				}
-					
+
 
 				double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
 				double lenght = double(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["extended_lines_length"].GetDouble()) * 1852.0;
@@ -266,7 +264,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 					}
 
 				}
-			} 
+			}
 
 			dc.SelectObject(&oldPen);
 		}
@@ -431,8 +429,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 		CSMRRadar::TagTypes ColorTagType = CSMRRadar::TagTypes::Departure;
 
 		if (fp.IsValid() && strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) == 0) {
-				TagType = CSMRRadar::TagTypes::Arrival;
-				ColorTagType = CSMRRadar::TagTypes::Arrival;
+			TagType = CSMRRadar::TagTypes::Arrival;
+			ColorTagType = CSMRRadar::TagTypes::Arrival;
 		}
 
 		if (reportedGs > 50) {
@@ -496,10 +494,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 				gdi->MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
 					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
-				TempTagWidth += (int) mesureRect.GetRight();
+				TempTagWidth += (int)mesureRect.GetRight();
 
 				if (j != line.Size() - 1)
-					TempTagWidth += (int) blankWidth;
+					TempTagWidth += (int)blankWidth;
 			}
 
 			TagWidth = max(TagWidth, TempTagWidth);
@@ -523,8 +521,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 				definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nosid_color"]);
 			}
 		}
-			if (TagReplacingMap["actype"] == "NoFPL" && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nofpl_color")) {
-				definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
+		if (TagReplacingMap["actype"] == "NoFPL" && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nofpl_color")) {
+			definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
 		}
 
 		Color TagBackgroundColor = radar_screen->RimcasInstance->GetAircraftColor(rt.GetCallsign(),
@@ -560,7 +558,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 				for (auto&& element : line)
 				{
 					SolidBrush* color = &FontColor;
-					if (TagReplacingMap["sqerror"].size() > 0 && strcmp(element.c_str(), TagReplacingMap["sqerror"].c_str()) == 0)
+					if (!TagReplacingMap["sqerror"].empty() && strcmp(element.c_str(), TagReplacingMap["sqerror"].c_str()) == 0)
 						color = &SquawkErrorColor;
 
 					if (radar_screen->RimcasInstance->getAlert(rt.GetCallsign()) != CRimcas::NoAlert)
@@ -625,7 +623,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 					wstring rimcasw = wstring(L"ALERT");
 					StringFormat stformat = new StringFormat();
 					stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
-					gdi->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), radar_screen->customFonts[radar_screen->currentFontSize], PointF(Gdiplus::REAL((TagBackgroundRect.left + TagBackgroundRect.right) / 2), Gdiplus::REAL(TagBackgroundRect.top)), &stformat, &RimcasTextColor);
+					gdi->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), radar_screen->customFonts[radar_screen->currentFontSize], PointF((static_cast<REAL>(TagBackgroundRect.left) + static_cast<REAL>(TagBackgroundRect.right)) / 2, static_cast<Gdiplus::REAL>(TagBackgroundRect.top)), &stformat, &RimcasTextColor);
 
 				}
 			}
@@ -641,7 +639,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 	}
 
 	// Distance tools here
-	for (auto&& kv : DistanceTools)
+	for (auto&& kv : distance_tools)
 	{
 		CRadarTarget one = radar_screen->GetPlugIn()->RadarTargetSelect(kv.first.c_str());
 		CRadarTarget two = radar_screen->GetPlugIn()->RadarTargetSelect(kv.second.c_str());
@@ -663,7 +661,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 			continue;
 
 		CPen Pen(PS_SOLID, 1, RGB(255, 255, 255));
-		CPen *oldPen = dc.SelectObject(&Pen);
+		CPen* oldPen = dc.SelectObject(&Pen);
 
 		POINT onePoint = projectPoint(one.GetPosition().GetPosition());
 		POINT twoPoint = projectPoint(two.GetPosition().GetPosition());
@@ -680,11 +678,11 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 		double Bearing = one.GetPosition().GetPosition().DirectionTo(two.GetPosition().GetPosition());
 
 		string distances = std::to_string(Distance);
-		size_t decimal_pos = distances.find(".");
+		size_t decimal_pos = distances.find('.');
 		distances = distances.substr(0, decimal_pos + 2);
 
 		string bearings = std::to_string(Bearing);
-		decimal_pos = bearings.find(".");
+		decimal_pos = bearings.find('.');
 		bearings = bearings.substr(0, decimal_pos + 2);
 
 		string text = bearings;
@@ -702,7 +700,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 
 			radar_screen->AddScreenObject(RIMCAS_DISTANCE_TOOL, string(kv.first + "," + kv.second).c_str(), ClickableRect, false, "");
 		}
-		
+
 		dc.SetTextColor(old_color);
 
 		dc.SelectObject(oldPen);
@@ -738,7 +736,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar * radar_screen, Graphics* gdi, POIN
 	radar_screen->AddScreenObject(m_Id, "topbar", TopBar, true, "");
 
 	string Toptext = "SRW " + std::to_string(m_Id - APPWINDOW_BASE);
-	dc.TextOutA(TopLeftText.x + (TopBar.right-TopBar.left) / 2 - dc.GetTextExtent("SRW 1").cx , TopLeftText.y, Toptext.c_str());
+	dc.TextOutA(TopLeftText.x + (TopBar.right - TopBar.left) / 2 - dc.GetTextExtent("SRW 1").cx, TopLeftText.y, Toptext.c_str());
 
 	// Range button
 	CRect RangeRect = Utils::drawToolbarButton(&dc, "Z", TopBar, 29, mouseLocation);

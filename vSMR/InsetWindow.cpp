@@ -137,12 +137,12 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	struct Utils
 	{
-		static string getEnumString(CSMRRadar::TagTypes type) {
-			if (type == CSMRRadar::TagTypes::Departure)
+		static string getEnumString(TagTypes type) {
+			if (type == TagTypes::Departure)
 				return "departure";
-			if (type == CSMRRadar::TagTypes::Arrival)
+			if (type == TagTypes::Arrival)
 				return "arrival";
-			if (type == CSMRRadar::TagTypes::Uncorrelated)
+			if (type == TagTypes::Uncorrelated)
 				return "uncorrelated";
 			return "airborne";
 		}
@@ -425,29 +425,29 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		// ----- Now the hard part, drawing (using gdi+) -------
 		//	
 
-		CSMRRadar::TagTypes TagType = CSMRRadar::TagTypes::Departure;
-		CSMRRadar::TagTypes ColorTagType = CSMRRadar::TagTypes::Departure;
+		TagTypes TagType = TagTypes::Departure;
+		TagTypes ColorTagType = TagTypes::Departure;
 
 		if (fp.IsValid() && strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) == 0) {
-			TagType = CSMRRadar::TagTypes::Arrival;
-			ColorTagType = CSMRRadar::TagTypes::Arrival;
+			TagType = TagTypes::Arrival;
+			ColorTagType = TagTypes::Arrival;
 		}
 
 		if (reportedGs > 50) {
-			TagType = CSMRRadar::TagTypes::Airborne;
+			TagType = TagTypes::Airborne;
 
 			// Is "use_departure_arrival_coloring" enabled? if not, then use the airborne colors
 			bool useDepArrColors = radar_screen->CurrentConfig->getActiveProfile()["labels"]["airborne"]["use_departure_arrival_coloring"].GetBool();
 			if (!useDepArrColors) {
-				ColorTagType = CSMRRadar::TagTypes::Airborne;
+				ColorTagType = TagTypes::Airborne;
 			}
 		}
 
 		bool AcisCorrelated = radar_screen->IsCorrelated(radar_screen->GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
 		if (!AcisCorrelated && reportedGs >= 3)
 		{
-			TagType = CSMRRadar::TagTypes::Uncorrelated;
-			ColorTagType = CSMRRadar::TagTypes::Uncorrelated;
+			TagType = TagTypes::Uncorrelated;
+			ColorTagType = TagTypes::Uncorrelated;
 		}
 
 		// First we need to figure out the tag size
@@ -512,7 +512,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		bool rimcasLabelOnly = radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
 
 		Color definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color"]);
-		if (TagType == CSMRRadar::TagTypes::Departure) {
+		if (TagType == TagTypes::Departure) {
 			if (!TagReplacingMap["sid"].empty() && radar_screen->CurrentConfig->isSidColorAvail(TagReplacingMap["sid"], radar_screen->getActiveAirport())) {
 				definedBackgroundColor = radar_screen->CurrentConfig->getSidColor(TagReplacingMap["sid"], radar_screen->getActiveAirport());
 			}

@@ -115,6 +115,8 @@ CSMRRadar::CSMRRadar()
 	this->CSMRRadar::LoadCustomFont();
 
 	this->CSMRRadar::RefreshAirportActivity();
+
+	gate_target = new GateTarget();
 }
 
 CSMRRadar::~CSMRRadar()
@@ -1991,6 +1993,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 #pragma endregion Drawing of the symbols
+
+	// Gate Targets
+	this->gate_target->OnRefresh(this, &graphics);
 
 	TimePopupData.clear();
 	AcOnRunway.clear();

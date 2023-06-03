@@ -1,19 +1,16 @@
 ﻿#include "stdafx.h"
 #include "GateTarget.hpp"
 
-std::optional<POINT> GateTarget::gateLocation(const std::string &gate)
+#include "SMRRadar.hpp"
+
+std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(const std::string &gate)
 {
 	// Eventually will do a lookup in a downloaded file, for now:
 	auto pos = EuroScopePlugIn::CPosition();
 	pos.m_Latitude = 50.90128055555555;
 	pos.m_Longitude = 4.476233333333334;
 
-	return this->radar_screen->ConvertCoordFromPositionToPixel(pos);
-}
-
-GateTarget::GateTarget(CSMRRadar* radar_screen)
-{
-	this->radar_screen = radar_screen;
+	return pos;
 }
 
 // TODO orientation???
@@ -26,22 +23,22 @@ void GateTarget::getIndicator(Gdiplus::Point* points, POINT target)
 	points[4] = { target.x + 10, target.y - 10 };
 }
 
-void GateTarget::OnRefresh(Gdiplus::Graphics* graphics)
+void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics)
 {
-	const EuroScopePlugIn::CFlightPlan fp = this->radar_screen->GetPlugIn()->FlightPlanSelectASEL();
+	const EuroScopePlugIn::CFlightPlan fp = radar_screen->GetPlugIn()->FlightPlanSelectASEL();
 	const std::string gate = fp.GetControllerAssignedData().GetFlightStripAnnotation(4);
 	if (gate.empty())
 		return;
 
-	if (strcmp(fp.GetFlightPlanData().GetDestination(), this->radar_screen->getActiveAirport().c_str()) != 0)
+	if (strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) != 0)
 		return;
 
 	const auto maybe_pos = this->gateLocation(gate);
 	if (!maybe_pos.has_value())
 		return;
-	const auto pos = maybe_pos.value;
+	const POINT pos = radar_screen->ConvertCoordFromPositionToPixel(maybe_pos.value());
 
-	const auto brush = Gdiplus::SolidBrush(Gdiplus::Color::Orange);
+	const auto brush = Gdiplus::SolidBrush(Gdiplus::Color(150, 255, 165, 0));
 	Gdiplus::Point points[GateTarget::POINTS_IN_INDICATOR];
 	this->getIndicator(points, pos);
 	graphics->FillPolygon(&brush, points, GateTarget::POINTS_IN_INDICATOR);

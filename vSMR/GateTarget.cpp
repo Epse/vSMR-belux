@@ -2,22 +2,70 @@
 #include "GateTarget.hpp"
 
 #include "SMRRadar.hpp"
+#include "HttpHelper.hpp"
+#include "rapidjson/document.h"
 
-std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(const std::string &gate)
+std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(const std::string& airport, const std::string& gate)
 {
-	// Eventually will do a lookup in a downloaded file, for now:
+	const Gate& gate_info = gates["airport"]["gate"];
+
+	if (gate_info.gate.empty())
+		return {}; // Auto-generated non-existent value
+
 	auto pos = EuroScopePlugIn::CPosition();
-	pos.m_Latitude = 50.90128055555555;
-	pos.m_Longitude = 4.476233333333334;
+	pos.m_Latitude = gate_info.latitude;
+	pos.m_Longitude = gate_info.longitude;
 
 	return pos;
+}
+
+/**
+ * \brief Fetches gate info from the internet and parses it
+ *
+ * Call this from _beginthread
+ */
+void GateTarget::loadGates()
+{
+	if (!gates.empty())
+		return;
+
+	const std::string url = "https://api.beluxvacc.org/belux-gate-manager-api/gates";
+
+	// Use HttpHelper to get https://api.beluxvacc.org/belux-gate-manager-api/gates
+	// Then use rapidjson to parse
+	// map that into gates
+	const auto httpHelper = new HttpHelper();
+	std::string gate_json;
+	gate_json.assign(httpHelper->downloadStringFromURL(url));
+
+	Document doc;
+	doc.Parse<0>(gate_json.c_str());
+
+	if (doc.HasParseError())
+	{
+		// IDK??
+		return;
+	}
+
+	for (SizeType i = 0; i < doc.Size(); i++)
+	{
+		const Value& val = doc[i];
+		const std::string airport = val["airport"].GetString();
+		const std::string gate_name = val["gate"].GetString();
+
+		const Gate gate{
+			airport, gate_name, val["apron"].GetString(), val["latitude"].GetDouble(), val["longitude"].GetDouble()
+		};
+
+		gates[airport][gate_name] = gate;
+	}
 }
 
 // TODO orientation???
 void GateTarget::getIndicator(Gdiplus::Point* points, POINT target)
 {
 	points[0] = points[5] = Gdiplus::Point{ target.x, target.y };
-	points[1] = {target.x - 10, target.y - 10};
+	points[1] = { target.x - 10, target.y - 10 };
 	points[2] = { target.x - 10, target.y - 10 - 20 };
 	points[3] = { target.x + 10, target.y - 10 - 20 };
 	points[4] = { target.x + 10, target.y - 10 };
@@ -26,14 +74,15 @@ void GateTarget::getIndicator(Gdiplus::Point* points, POINT target)
 void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics)
 {
 	const EuroScopePlugIn::CFlightPlan fp = radar_screen->GetPlugIn()->FlightPlanSelectASEL();
+	const std::string airport = radar_screen->getActiveAirport();
 	const std::string gate = fp.GetControllerAssignedData().GetFlightStripAnnotation(4);
 	if (gate.empty())
 		return;
 
-	if (strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) != 0)
+	if (strcmp(fp.GetFlightPlanData().GetDestination(), airport.c_str()) != 0)
 		return;
 
-	const auto maybe_pos = this->gateLocation(gate);
+	const auto maybe_pos = this->gateLocation(airport, gate);
 	if (!maybe_pos.has_value())
 		return;
 	const POINT pos = radar_screen->ConvertCoordFromPositionToPixel(maybe_pos.value());

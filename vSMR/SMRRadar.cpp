@@ -117,6 +117,7 @@ CSMRRadar::CSMRRadar()
 	this->CSMRRadar::RefreshAirportActivity();
 
 	gate_target = new GateTarget();
+	gate_target->loadGates();
 }
 
 CSMRRadar::~CSMRRadar()

@@ -218,7 +218,7 @@ void CRimcas::OnRefreshEnd(CRadarScreen* instance, int threshold) {
 
 			auto AcOnRunwayRange = AcOnRunway.equal_range(it->first);
 
-			for (auto &it2 = AcOnRunwayRange.first; it2 != AcOnRunwayRange.second; ++it2)
+			for (auto it2 = AcOnRunwayRange.first; it2 != AcOnRunwayRange.second; ++it2)
 			{
 				if (isOnClosedRunway) {
 					AcColor[it2->second] = StageTwo;

@@ -7,7 +7,7 @@
 
 std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(const std::string& airport, const std::string& gate)
 {
-	const Gate& gate_info = gates["airport"]["gate"];
+	const Gate& gate_info = gates[airport][gate];
 
 	if (gate_info.gate.empty())
 		return {}; // Auto-generated non-existent value
@@ -34,12 +34,26 @@ void GateTarget::loadGates()
 	// Use HttpHelper to get https://api.beluxvacc.org/belux-gate-manager-api/gates
 	// Then use rapidjson to parse
 	// map that into gates
+	/*
 	const auto httpHelper = new HttpHelper();
 	std::string gate_json;
 	gate_json.assign(httpHelper->downloadStringFromURL(url));
+	*/
+
+	char DllPathFile[_MAX_PATH];
+	GetModuleFileNameA(HINSTANCE(&__ImageBase), DllPathFile, sizeof(DllPathFile));
+	std::string DllPath = DllPathFile;
+	DllPath.resize(DllPath.size() - strlen("vSMR.dll"));
+	std::string gatePath = DllPath + "\\gates.json";
+
+	stringstream ss;
+	ifstream ifs;
+	ifs.open(gatePath, std::ios::binary);
+	ss << ifs.rdbuf();
+	ifs.close();
 
 	Document doc;
-	doc.Parse<0>(gate_json.c_str());
+	doc.Parse<0>(ss.str().c_str());
 
 	if (doc.HasParseError())
 	{

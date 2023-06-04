@@ -21,6 +21,8 @@
 #include <filesystem>
 #include <iostream>
 #include "UIHelpers.hpp"
+#include "TagTypes.hpp"
+#include "GateTarget.hpp"
 
 using namespace std;
 using namespace Gdiplus;
@@ -44,6 +46,8 @@ using namespace SMRSharedData;
 class CSMRRadar :
 	public EuroScopePlugIn::CRadarScreen
 {
+private:
+	GateTarget * gate_target;
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();
@@ -140,12 +144,6 @@ public:
 	multimap<string, string> DistanceTools;
 	bool DistanceToolActive = false;
 	pair<string, string> ActiveDistance;
-
-	//----
-	// Tag types
-	//---
-
-	enum TagTypes { Departure, Arrival, Airborne, Uncorrelated };
 
 
 	string ActiveAirport = "EGKK";

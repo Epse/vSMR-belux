@@ -22,7 +22,7 @@ class GateTarget
 {
 private:
 	static constexpr int POINTS_IN_INDICATOR = 6;
-	std::optional<EuroScopePlugIn::CPosition> gateLocation(Gate& gate_info);
+	static std::optional<EuroScopePlugIn::CPosition> gateLocation(const Gate& gate_info);
 	static void getIndicator(Gdiplus::Point* points, POINT target);
 	std::map<std::string, std::map<std::string, Gate>> gates;
 	double calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen) const;

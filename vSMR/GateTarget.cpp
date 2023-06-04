@@ -6,7 +6,7 @@
 #include "HttpHelper.hpp"
 #include "rapidjson/document.h"
 
-std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(Gate& gate_info)
+std::optional<EuroScopePlugIn::CPosition> GateTarget::gateLocation(const Gate& gate_info)
 {
 	if (gate_info.gate.empty())
 		return {}; // Auto-generated non-existent value
@@ -90,11 +90,11 @@ void GateTarget::getIndicator(Gdiplus::Point* points, POINT target)
 // ASRs can be rotated at an angle, we will here calculate it as ES does not provide it
 double GateTarget::calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen) const
 {
-	auto zero = radar_screen->ConvertCoordFromPixelToPosition(POINT{ 0, 0 });
+	const auto zero = radar_screen->ConvertCoordFromPixelToPosition(POINT{ 0, 0 });
 	EuroScopePlugIn::CPosition end;
 	end.m_Latitude = zero.m_Latitude;
 	end.m_Longitude = zero.m_Longitude + 0.05;
-	auto px_end = radar_screen->ConvertCoordFromPositionToPixel(end);
+	const auto px_end = radar_screen->ConvertCoordFromPositionToPixel(end);
 
 	return RadToDeg(atan(static_cast<double>(px_end.y) / static_cast<double>(px_end.x)));
 }
@@ -121,7 +121,7 @@ void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics)
 
 	const auto brush = Gdiplus::SolidBrush(Gdiplus::Color(150, 255, 165, 0));
 
-	auto angle = calculateAsrAngle(radar_screen);
+	const double angle = calculateAsrAngle(radar_screen);
 	graphics->TranslateTransform(pos.x, pos.y);
 	graphics->RotateTransform(gate_info.heading - 180 + angle);
 	Gdiplus::Point points[GateTarget::POINTS_IN_INDICATOR];

@@ -637,6 +637,16 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 
+		if (strcmp(sObjectId, "FilterMenu") == 0)
+		{
+			Area.top = Area.top + 30;
+			Area.bottom = Area.bottom + 30;
+			GetPlugIn()->OpenPopupList(Area, "Filter Menu", 1);
+			GetPlugIn()->AddPopupListElement("Show Free", "", FILTER_SHOW_FREE, false, show_free_traffic ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Show Not Mine", "", FILTER_NON_ASSUMED, false, show_nonmine ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
+		}
+
 		if (strcmp(sObjectId, "BeluxMenu") == 0) {
 			Area.top = Area.top + 30;
 			Area.bottom = Area.bottom + 30;
@@ -1086,6 +1096,16 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		NeedCorrelateCursor = AcquireInProgress;
 
 		CorrelateCursor();
+	}
+
+	if (FunctionId == FILTER_SHOW_FREE)
+	{
+		show_free_traffic = !show_free_traffic;
+	}
+
+	if (FunctionId == FILTER_NON_ASSUMED)
+	{
+		show_nonmine = !show_nonmine;
 	}
 }
 
@@ -2030,6 +2050,12 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		bool AcisCorrelated = IsCorrelated(fp, rt);
 
+		if (!show_free_traffic && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
+			isAcDisplayed = false;
+
+		if (!show_nonmine && strlen(fp.GetTrackingControllerId()) != 0 && !fp.GetTrackingControllerIsMe() && !fp.GetCoordinatedNextController())
+			isAcDisplayed = false;
+
 		if (!AcisCorrelated && (reportedGs < 3 && (belux_promode && !belux_promode_easy)))
 			isAcDisplayed = false;
 
@@ -2729,9 +2755,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	offset += dc.GetTextExtent("Colours").cx + 10;
 	dc.TextOutA(ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, "Alerts");
-	AddScreenObject(RIMCAS_MENU, "RIMCASMenu", { ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, ToolBarAreaTop.left + offset + dc.GetTextExtent("Alerts").cx, ToolBarAreaTop.top + 4 + +dc.GetTextExtent("Alerts").cy }, false, "RIMCAS menu");
+	AddScreenObject(RIMCAS_MENU, "RIMCASMenu", { ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, ToolBarAreaTop.left + offset + dc.GetTextExtent("Alerts").cx, ToolBarAreaTop.top + 4 + dc.GetTextExtent("Alerts").cy }, false, "RIMCAS menu");
 
 	offset += dc.GetTextExtent("Alerts").cx + 10;
+	dc.TextOutA(ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, "Filters");
+	AddScreenObject(RIMCAS_MENU, "FilterMenu", { ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, ToolBarAreaTop.left + offset + dc.GetTextExtent("Filters").cx, ToolBarAreaTop.top + 4 + dc.GetTextExtent("Filters").cy }, false, "Filter menu");
+
+	offset += dc.GetTextExtent("Filters").cx + 10;
 	dc.TextOutA(ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, "Belux");
 	AddScreenObject(RIMCAS_MENU, "BeluxMenu", { ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, ToolBarAreaTop.left + offset + dc.GetTextExtent("Belux").cx, ToolBarAreaTop.top + 4 + +dc.GetTextExtent("Belux").cy }, false, "Belux menu");
 

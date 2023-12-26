@@ -141,6 +141,9 @@ public:
 	bool belux_promode = false;
 	bool belux_promode_easy = false;
 
+	bool show_free_traffic = true;
+	bool show_nonmine = true;
+
 	multimap<string, string> DistanceTools;
 	bool DistanceToolActive = false;
 	pair<string, string> ActiveDistance;

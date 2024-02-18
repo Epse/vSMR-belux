@@ -23,6 +23,7 @@
 #include "UIHelpers.hpp"
 #include "TagTypes.hpp"
 #include "GateTarget.hpp"
+#include "TagDrawingContext.hpp"
 
 using namespace std;
 using namespace Gdiplus;
@@ -48,6 +49,7 @@ class CSMRRadar :
 {
 private:
 	GateTarget * gate_target;
+	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt);
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();

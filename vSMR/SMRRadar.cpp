@@ -318,10 +318,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			const RectF layoutRect(static_cast<Gdiplus::REAL>(TagTopLeft.x + TempTagWidth),
 				static_cast<Gdiplus::REAL>(TagTopLeft.y + TagHeight),
-				static_cast<Gdiplus::REAL>(mesureRect.GetRight()),
-				static_cast<Gdiplus::REAL>(mesureRect.GetBottom()));
+				mesureRect.GetRight(),
+				mesureRect.GetBottom());
 			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(), color);
-
 
 			CRect ItemRect(layoutRect.GetLeft(), layoutRect.GetTop(),
 				layoutRect.GetRight(),
@@ -348,19 +347,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	CRect TagBackgroundRect(TagTopLeft.x, TagTopLeft.y, TagTopLeft.x + TagWidth,
 	                        TagTopLeft.y + TagHeight);
 
+
 	// Drawing the ASEL border
 	if (is_asel && ColorTagType != TagTypes::Airborne)
 	{
 		Rect tag(TagTopLeft.x, TagTopLeft.y, TagWidth, TagHeight);
 		UIHelper::drawAselBorder(*tdc.graphics, ColorManager, tag);
 	}
-	//tdc.graphics->FillRectangle(
-	//	&TagBackgroundBrush,
-	//	TagCenter.x - TagWidth / 2,
-	//	TagCenter.y - TagHeight / 2,
-	//	TagWidth,
-	//	TagHeight
-	//);
 
 
 	// Drawing the leader line
@@ -418,26 +411,16 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 	// Adding the tag screen object
 	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
-	AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
+
+	/*
+	 * Let me explain...
+	 * The tag item itself is only really used to ASEL the aircraft, or drag it.
+	 * Why would you click on a part that doesn't really appear to be part of the non-rectangular tag??
+	 * I'll leave this line here for posterity
+	 */
+	//AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
 
 	TagBackgroundRect = oldCrectSave;
-
-	// FIXME
-	// Clickable zones
-	lineid = 0;
-	int heightOffset = 0;
-	for (auto&& line : ReplacedLabelLines)
-	{
-		int widthOffset = 0;
-		for (auto&& element : line)
-		{
-
-			//widthOffset += (int)mRect.GetRight();
-			//widthOffset += tdc.blank_width;
-		}
-		lineid += 1;
-		heightOffset += tdc.line_height;
-	}
 }
 
 CSMRRadar::CSMRRadar()

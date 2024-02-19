@@ -57,8 +57,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
 	int reportedGs = RtPos.GetReportedGS();
 
-	auto callsign = fp.GetCallsign();
-
 	// Filtering the targets
 
 	bool isAcDisplayed = isVisible(rt);
@@ -104,6 +102,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[rt.GetCallsign()]))));
 		TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[rt.GetCallsign()]))));
 	}
+
+	POINT TagTopLeft{TagCenter.x - 10, TagCenter.y - 10};
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -186,57 +186,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (!LabelLines.IsArray())
 		return;
 
-
-	int lineid = 0;
-	for (unsigned int i = 0; i < LabelLines.Size(); i++)
-	{
-		const Value& line = LabelLines[i];
-		vector<string> lineStringArray;
-
-		TagHeight += tdc.line_height;
-
-
-		int TempTagWidth = 0;
-
-		for (unsigned int j = 0; j < line.Size(); j++)
-		{
-			RectF mesureRect = RectF(0, 0, 0, 0);
-			string element = line[j].GetString();
-
-			for (auto& kv : TagReplacingMap)
-			{
-				replaceAll(element, kv.first, kv.second);
-			}
-
-			lineStringArray.push_back(element);
-
-			if (element == "" && line.Size() == 1)
-			{
-				TagHeight -= (tdc.line_height + 2);
-				continue;
-			}
-
-			wstring wstr = wstring(element.begin(), element.end());
-			Gdiplus::Font* font = customFonts[currentFontSize];
-			if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
-			{
-				font = customFonts[currentFontSize + 10];
-			}
-
-			tdc.graphics->MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
-			                       font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
-
-			TempTagWidth += (int)mesureRect.GetRight();
-
-			if (j != line.Size() - 1)
-				TempTagWidth += (int)tdc.blank_width;
-		}
-		lineid += 1;
-		TagWidth = max(TagWidth, TempTagWidth);
-
-		ReplacedLabelLines.push_back(lineStringArray);
-	}
-
 	Color definedBackgroundColor = CurrentConfig->getConfigColor(
 		(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["background_color"]);
 
@@ -272,6 +221,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		                                                            CurrentConfig->getActiveProfile()["rimcas"][
 			                                                            "background_color_stage_two"]));
 
+	TagBackgroundColor = ColorManager->get_corrected_color("label", TagBackgroundColor);
+
 	// We need to figure out if the tag color changes according to RIMCAS alerts, or not
 	bool rimcasLabelOnly = CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
 
@@ -280,99 +231,51 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		                                                      definedBackgroundColor,
 		                                                      definedBackgroundColor);
 
-	// Drawing the ASEL border
-	if (is_asel && ColorTagType != TagTypes::Airborne)
-	{
-		UIHelper::drawAselBorder(*tdc.graphics, ColorManager, TagCenter, TagWidth, TagHeight);
-	}
-
-	TagBackgroundColor = ColorManager->get_corrected_color("label", TagBackgroundColor);
-
-	// Drawing the tag background
-	CRect TagBackgroundRect(TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2), TagCenter.x + (TagWidth / 2),
-	                        TagCenter.y + (TagHeight / 2));
 	SolidBrush TagBackgroundBrush(TagBackgroundColor);
-	tdc.graphics->FillRectangle(
-		&TagBackgroundBrush,
-		TagCenter.x - TagWidth / 2,
-		TagCenter.y - TagHeight / 2,
-		TagWidth,
-		TagHeight
-	);
+	SolidBrush FontColor(ColorManager
+		->get_corrected_color("label",
+		                      CurrentConfig->getConfigColor(
+			                      (*tdc.labels_settings)[UIHelper::getEnumString(
+					                      ColorTagType).c_str()]["text_color"])));
 
 
-	// Drawing the tag text
-	SolidBrush FontColor(ColorManager->get_corrected_color("label",
-	                                                       CurrentConfig->getConfigColor(
-		                                                       (*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).
-			                                                       c_str()]["text_color"])));
-
-	// Drawing the leader line
-	RECT TagBackRectData = TagBackgroundRect;
-	POINT toDraw1, toDraw2;
-	if (LiangBarsky(TagBackRectData, acPosPix, TagBackgroundRect.CenterPoint(), toDraw1, toDraw2))
-		tdc.graphics->DrawLine(&Pen(ColorManager->get_corrected_color("symbol", Color::White)),
-		                  PointF(Gdiplus::REAL(acPosPix.x), Gdiplus::REAL(acPosPix.y)),
-		                  PointF(Gdiplus::REAL(toDraw1.x), Gdiplus::REAL(toDraw1.y)));
-
-	// If we use a RIMCAS label only, we display it, and adapt the rectangle
-	CRect oldCrectSave = TagBackgroundRect;
-
-	if (rimcasLabelOnly)
+	int lineid = 0;
+	for (unsigned int i = 0; i < LabelLines.Size(); i++)
 	{
-		Color RimcasLabelColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
-		                                                          CurrentConfig->getConfigColor(
-			                                                          CurrentConfig->getActiveProfile()["rimcas"][
-				                                                          "background_color_stage_one"]),
-		                                                          CurrentConfig->getConfigColor(
-			                                                          CurrentConfig->getActiveProfile()["rimcas"][
-				                                                          "background_color_stage_two"]));
+		const Value& line = LabelLines[i];
+		vector<string> lineStringArray;
 
-		if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF())
+		int TempTagWidth = 0;
+		int TempTagHeight = 0;
+
+		for (unsigned int j = 0; j < line.Size(); j++)
 		{
-			RimcasLabelColor = ColorManager->get_corrected_color("label", RimcasLabelColor);
-			int rimcas_height = 0;
+			RectF mesureRect = RectF(0, 0, 0, 0);
+			string element = line[j].GetString();
 
-			wstring wrimcas_height = wstring(L"ALERT");
+			for (auto& kv : TagReplacingMap)
+			{
+				replaceAll(element, kv.first, kv.second);
+			}
 
-			RectF RectRimcas_height;
+			lineStringArray.push_back(element);
 
-			tdc.graphics->MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()), customFonts[currentFontSize],
-			                       PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
-			rimcas_height = int(RectRimcas_height.GetBottom());
+			if (element == "" && line.Size() == 1)
+			{
+				continue;
+			}
 
-			// Drawing the rectangle
+			wstring wstr = wstring(element.begin(), element.end());
+			Gdiplus::Font* font = customFonts[currentFontSize];
+			if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
+			{
+				font = customFonts[currentFontSize + 10];
+			}
 
-			CRect RimcasLabelRect(TagBackgroundRect.left, TagBackgroundRect.top - rimcas_height,
-			                      TagBackgroundRect.right, TagBackgroundRect.top);
-			tdc.graphics->FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
-			TagBackgroundRect.top -= rimcas_height;
+			tdc.graphics->MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
+			                            font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
-			// Drawing the text
-
-			wstring rimcasw = wstring(L"ALERT");
-			StringFormat stformat = new StringFormat();
-			stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
-			tdc.graphics->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
-			                    PointF(Gdiplus::REAL((TagBackgroundRect.left + TagBackgroundRect.right) / 2),
-			                           Gdiplus::REAL(TagBackgroundRect.top)), &stformat, tdc.rimcas_text_color);
-		}
-	}
-
-	// Adding the tag screen object
-	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
-	AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
-
-	TagBackgroundRect = oldCrectSave;
-
-	// Clickable zones
-	lineid = 0;
-	int heightOffset = 0;
-	for (auto&& line : ReplacedLabelLines)
-	{
-		int widthOffset = 0;
-		for (auto&& element : line)
-		{
+			// Setup text colors
 			Brush* color = nullptr;
 
 			// TODO this feels like a bad spot
@@ -401,34 +304,136 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 				color = FontColor.Clone();
 			}
 
-			RectF mRect(0, 0, 0, 0);
-
-			wstring welement = wstring(element.begin(), element.end());
-			Gdiplus::Font* font = customFonts[currentFontSize];
+			font = customFonts[currentFontSize];
 			if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
 			{
 				font = customFonts[currentFontSize + 10];
 				//color = &tdc.squawk_error_color;
 			}
 
-			tdc.graphics->DrawString(welement.c_str(), wcslen(welement.c_str()), font,
-			                    PointF(Gdiplus::REAL(TagBackgroundRect.left + widthOffset),
-			                           Gdiplus::REAL(TagBackgroundRect.top + heightOffset)),
-			                    &Gdiplus::StringFormat(), color);
+			// Drawing!
+			tdc.graphics->FillRectangle(&TagBackgroundBrush, TagTopLeft.x + TempTagWidth, TagTopLeft.y + TagHeight,
+		                            static_cast<int>(mesureRect.GetRight()) + tdc.blank_width,
+		                            static_cast<int>(mesureRect.GetBottom()));
+
+			const RectF layoutRect(static_cast<Gdiplus::REAL>(TagTopLeft.x + TempTagWidth),
+				static_cast<Gdiplus::REAL>(TagTopLeft.y + TagHeight),
+				static_cast<Gdiplus::REAL>(mesureRect.GetRight()),
+				static_cast<Gdiplus::REAL>(mesureRect.GetBottom()));
+			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(), color);
 
 
-			tdc.graphics->MeasureString(welement.c_str(), wcslen(welement.c_str()), font,
-			                       PointF(0, 0), &Gdiplus::StringFormat(), &mRect);
-
-			CRect ItemRect(TagBackgroundRect.left + widthOffset, TagBackgroundRect.top + heightOffset,
-			               TagBackgroundRect.left + widthOffset + (int)mRect.GetRight(),
-			               TagBackgroundRect.top + heightOffset + (int)mRect.GetBottom());
-
+			CRect ItemRect(layoutRect.GetLeft(), layoutRect.GetTop(),
+				layoutRect.GetRight(),
+				layoutRect.GetBottom());
 			AddScreenObject(TagClickableMap[element], rt.GetCallsign(), ItemRect, true,
 			                GetBottomLine(rt.GetCallsign()).c_str());
 
-			widthOffset += (int)mRect.GetRight();
-			widthOffset += tdc.blank_width;
+			TempTagWidth += static_cast<int>(mesureRect.GetRight());
+			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
+
+			if (j != line.Size() - 1)
+				TempTagWidth += tdc.blank_width;
+		}
+
+
+		lineid += 1;
+		TagWidth = max(TagWidth, TempTagWidth);
+		TagHeight += TempTagHeight;
+
+		ReplacedLabelLines.push_back(lineStringArray);
+	}
+
+
+	CRect TagBackgroundRect(TagTopLeft.x, TagTopLeft.y, TagTopLeft.x + TagWidth,
+	                        TagTopLeft.y + TagHeight);
+
+	// Drawing the ASEL border
+	if (is_asel && ColorTagType != TagTypes::Airborne)
+	{
+		Rect tag(TagTopLeft.x, TagTopLeft.y, TagWidth, TagHeight);
+		UIHelper::drawAselBorder(*tdc.graphics, ColorManager, tag);
+	}
+	//tdc.graphics->FillRectangle(
+	//	&TagBackgroundBrush,
+	//	TagCenter.x - TagWidth / 2,
+	//	TagCenter.y - TagHeight / 2,
+	//	TagWidth,
+	//	TagHeight
+	//);
+
+
+	// Drawing the leader line
+	RECT TagBackRectData = TagBackgroundRect;
+	POINT toDraw1, toDraw2;
+	if (LiangBarsky(TagBackRectData, acPosPix, TagBackgroundRect.CenterPoint(), toDraw1, toDraw2))
+		tdc.graphics->DrawLine(&Pen(ColorManager->get_corrected_color("symbol", Color::White)),
+		                       PointF(Gdiplus::REAL(acPosPix.x), Gdiplus::REAL(acPosPix.y)),
+		                       PointF(Gdiplus::REAL(toDraw1.x), Gdiplus::REAL(toDraw1.y)));
+
+	// If we use a RIMCAS label only, we display it, and adapt the rectangle
+	CRect oldCrectSave = TagBackgroundRect;
+
+	if (rimcasLabelOnly)
+	{
+		Color RimcasLabelColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
+		                                                          CurrentConfig->getConfigColor(
+			                                                          CurrentConfig->getActiveProfile()["rimcas"][
+				                                                          "background_color_stage_one"]),
+		                                                          CurrentConfig->getConfigColor(
+			                                                          CurrentConfig->getActiveProfile()["rimcas"][
+				                                                          "background_color_stage_two"]));
+
+		if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF())
+		{
+			RimcasLabelColor = ColorManager->get_corrected_color("label", RimcasLabelColor);
+			int rimcas_height = 0;
+
+			wstring wrimcas_height = wstring(L"ALERT");
+
+			RectF RectRimcas_height;
+
+			tdc.graphics->MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
+			                            customFonts[currentFontSize],
+			                            PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
+			rimcas_height = int(RectRimcas_height.GetBottom());
+
+			// Drawing the rectangle
+
+			CRect RimcasLabelRect(TagBackgroundRect.left, TagBackgroundRect.top - rimcas_height,
+			                      TagBackgroundRect.right, TagBackgroundRect.top);
+			tdc.graphics->FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
+			TagBackgroundRect.top -= rimcas_height;
+
+			// Drawing the text
+
+			wstring rimcasw = wstring(L"ALERT");
+			StringFormat stformat = new StringFormat();
+			stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
+			tdc.graphics->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
+			                         PointF(Gdiplus::REAL((TagBackgroundRect.left + TagBackgroundRect.right) / 2),
+			                                Gdiplus::REAL(TagBackgroundRect.top)), &stformat, tdc.rimcas_text_color);
+		}
+	}
+
+	// Adding the tag screen object
+	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
+	AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
+
+	TagBackgroundRect = oldCrectSave;
+
+	// FIXME
+	// Clickable zones
+	lineid = 0;
+	int heightOffset = 0;
+	for (auto&& line : ReplacedLabelLines)
+	{
+		int widthOffset = 0;
+		for (auto&& element : line)
+		{
+
+			//widthOffset += (int)mRect.GetRight();
+			//widthOffset += tdc.blank_width;
 		}
 		lineid += 1;
 		heightOffset += tdc.line_height;

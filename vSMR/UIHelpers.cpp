@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "UIHelpers.hpp"
 
-void UIHelper::drawAselBorder(Gdiplus::Graphics& graphics, CColorManager* colorManager, POINT tagCenter, int tagWidth, int tagHeight)
+void UIHelper::drawAselBorder(Gdiplus::Graphics& graphics, CColorManager* colorManager, Rect tag)
 {
 	constexpr unsigned int border_width = 3; // Width of border. 4 is realistic-ish
 	constexpr unsigned int border_padding = 1; // pixels between tag and border. 1 is kinda realistic
@@ -11,10 +11,10 @@ void UIHelper::drawAselBorder(Gdiplus::Graphics& graphics, CColorManager* colorM
 
 	const Gdiplus::Pen pen(colorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
 	graphics.DrawRectangle(&pen,
-		static_cast<int>(tagCenter.x - (tagWidth / 2) - border_width - border_padding + 1), // x
-		static_cast<int>(tagCenter.y - (tagHeight / 2) - border_width - border_padding + 1), // y
-		tagWidth + (border_width)+border_padding * 2,
-		tagHeight + (border_width)+border_padding * 2
+		static_cast<int>(tag.GetLeft() - border_width - border_padding + 1), // x
+		static_cast<int>(tag.GetTop() - border_width - border_padding + 1), // y
+		tag.Width + (border_width)+border_padding * 2,
+		tag.Height + (border_width)+border_padding * 2
 	);
 }
 

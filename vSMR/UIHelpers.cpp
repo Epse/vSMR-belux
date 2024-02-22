@@ -1,22 +1,6 @@
 #include "stdafx.h"
 #include "UIHelpers.hpp"
-
-void UIHelper::drawAselBorder(Gdiplus::Graphics& graphics, CColorManager* colorManager, POINT tagCenter, int tagWidth, int tagHeight)
-{
-	constexpr unsigned int border_width = 3; // Width of border. 4 is realistic-ish
-	constexpr unsigned int border_padding = 1; // pixels between tag and border. 1 is kinda realistic
-
-	/* I have no clue about why I need to add a singular pixel...
-	Assuming something with rounding, and I need to match whatever the actual tag is doing for it to look good. */
-
-	const Gdiplus::Pen pen(colorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
-	graphics.DrawRectangle(&pen,
-		static_cast<int>(tagCenter.x - (tagWidth / 2) - border_width - border_padding + 1), // x
-		static_cast<int>(tagCenter.y - (tagHeight / 2) - border_width - border_padding + 1), // y
-		tagWidth + (border_width)+border_padding * 2,
-		tagHeight + (border_width)+border_padding * 2
-	);
-}
+#include <cmath>
 
 string UIHelper::getEnumString(TagTypes type) {
 	if (type == TagTypes::Departure)
@@ -26,4 +10,23 @@ string UIHelper::getEnumString(TagTypes type) {
 	if (type == TagTypes::Uncorrelated)
 		return "uncorrelated";
 	return "airborne";
+}
+
+void UIHelper::drawLeaderLine(const std::vector<PointF>& points, const PointF& acPos, const Gdiplus::Pen* pen, Gdiplus::Graphics* graphics)
+{
+
+	PointF point;
+	float distance = FLT_MAX;
+
+	for (const PointF& p: points)
+	{
+		const float current_distance = sqrtf(powf(acPos.X - p.X, 2) + powf(acPos.Y - p.Y, 2));
+		if (current_distance <= distance)
+		{
+			point = p;
+			distance = current_distance;
+		}
+	}
+
+	graphics->DrawLine(pen, acPos, point);
 }

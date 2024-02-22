@@ -7,6 +7,6 @@
 class UIHelper
 {
 public:
-static void drawAselBorder(Gdiplus::Graphics &graphics, CColorManager* colorManager, POINT tagCenter, int tagWidth, int tagHeight);
 static string getEnumString(TagTypes type);
+static void drawLeaderLine(const std::vector<PointF>& points, const PointF& acPos, const Gdiplus::Pen* pen, Gdiplus::Graphics* graphics);
 };

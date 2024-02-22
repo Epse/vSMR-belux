@@ -8,4 +8,5 @@ class UIHelper
 {
 public:
 static string getEnumString(TagTypes type);
+static void drawLeaderLine(const std::vector<PointF>& points, const PointF& acPos, const Gdiplus::Pen* pen, Gdiplus::Graphics* graphics);
 };

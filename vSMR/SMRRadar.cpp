@@ -368,30 +368,22 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	                        TagTopLeft.y + TagHeight);
 
 
+
+	// Drawing the symbol to tag line
+	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
+	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("symbol", Color::White));
+	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
+
 	// Drawing the ASEL border
 	if (is_asel && ColorTagType != TagTypes::Airborne)
 	{
-		constexpr unsigned int border_width = 2; // Width of border. 4 is realistic-ish
-
-		/* I have no clue about why I need to add a singular pixel...
-		Assuming something with rounding, and I need to match whatever the actual tag is doing for it to look good. */
+		constexpr unsigned int border_width = 2; // Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
 
 		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
 		tdc.graphics->DrawPolygon(&pen, border_points.data(), border_points.size());
-
-		//Rect tag(TagTopLeft.x, TagTopLeft.y, TagWidth, TagHeight);
-		//UIHelper::drawAselBorder(*tdc.graphics, ColorManager, tag);
 	}
 
-
-	// Drawing the leader line
-	RECT TagBackRectData = TagBackgroundRect;
-	POINT toDraw1, toDraw2;
-	if (LiangBarsky(TagBackRectData, acPosPix, TagBackgroundRect.CenterPoint(), toDraw1, toDraw2))
-		tdc.graphics->DrawLine(&Pen(ColorManager->get_corrected_color("symbol", Color::White)),
-		                       PointF(Gdiplus::REAL(acPosPix.x), Gdiplus::REAL(acPosPix.y)),
-		                       PointF(Gdiplus::REAL(toDraw1.x), Gdiplus::REAL(toDraw1.y)));
 
 	// If we use a RIMCAS label only, we display it, and adapt the rectangle
 	CRect oldCrectSave = TagBackgroundRect;

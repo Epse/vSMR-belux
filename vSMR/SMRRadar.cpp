@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "SMRRadar.hpp"
+#include <cmath>
 
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
@@ -236,10 +237,15 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		->get_corrected_color("label",
 		                      CurrentConfig->getConfigColor(
 			                      (*tdc.labels_settings)[UIHelper::getEnumString(
-					                      ColorTagType).c_str()]["text_color"])));
+				                      ColorTagType).c_str()]["text_color"])));
 
 
 	int lineid = 0;
+	constexpr Gdiplus::REAL border_padding = 3; // 1 pixel plus border width of 2 using inset drawing
+	vector<PointF> border_points;
+	border_points.reserve(2 + 2 * LabelLines.Size());
+
+	border_points.push_back(PointF{static_cast<Gdiplus::REAL>(TagTopLeft.x) - border_padding, static_cast<Gdiplus::REAL>(TagTopLeft.y) - border_padding});
 	for (unsigned int i = 0; i < LabelLines.Size(); i++)
 	{
 		const Value& line = LabelLines[i];
@@ -313,18 +319,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			// Drawing!
 			tdc.graphics->FillRectangle(&TagBackgroundBrush, TagTopLeft.x + TempTagWidth, TagTopLeft.y + TagHeight,
-		                            static_cast<int>(mesureRect.GetRight()) + tdc.blank_width,
-		                            static_cast<int>(mesureRect.GetBottom()));
+			                            static_cast<int>(mesureRect.GetRight()) + tdc.blank_width,
+			                            static_cast<int>(mesureRect.GetBottom()));
 
 			const RectF layoutRect(static_cast<Gdiplus::REAL>(TagTopLeft.x + TempTagWidth),
-				static_cast<Gdiplus::REAL>(TagTopLeft.y + TagHeight),
-				mesureRect.GetRight(),
-				mesureRect.GetBottom());
-			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(), color);
+			                       static_cast<Gdiplus::REAL>(TagTopLeft.y + TagHeight),
+			                       mesureRect.GetRight() + tdc.blank_width,
+			                       mesureRect.GetBottom());
+			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
+			                         color);
 
-			CRect ItemRect(layoutRect.GetLeft(), layoutRect.GetTop(),
-				layoutRect.GetRight(),
-				layoutRect.GetBottom());
+			CRect ItemRect(floor(layoutRect.GetLeft()), floor(layoutRect.GetTop()),
+			               floor(layoutRect.GetRight()),
+			               floor(layoutRect.GetBottom()));
 			AddScreenObject(TagClickableMap[element], rt.GetCallsign(), ItemRect, true,
 			                GetBottomLine(rt.GetCallsign()).c_str());
 
@@ -332,7 +339,17 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
 
 			if (j != line.Size() - 1)
+			{
 				TempTagWidth += tdc.blank_width;
+			}
+			else
+			{
+				// TODO padding
+				PointF line_top_right(floor(layoutRect.GetRight() + border_padding), floor(layoutRect.GetTop() - border_padding ));
+				PointF line_bottom_right(floor(layoutRect.GetRight() + border_padding), floor(layoutRect.GetBottom() - border_padding)); // TODO this y padding needs to be negative unless its the last line
+				border_points.push_back(line_top_right);
+				border_points.push_back(line_bottom_right);
+			}
 		}
 
 
@@ -343,6 +360,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		ReplacedLabelLines.push_back(lineStringArray);
 	}
 
+	border_points.back().Y += 2 * border_padding;
+
+	border_points.push_back(PointF{ border_points.front().X, border_points.back().Y });
 
 	CRect TagBackgroundRect(TagTopLeft.x, TagTopLeft.y, TagTopLeft.x + TagWidth,
 	                        TagTopLeft.y + TagHeight);
@@ -351,8 +371,17 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// Drawing the ASEL border
 	if (is_asel && ColorTagType != TagTypes::Airborne)
 	{
-		Rect tag(TagTopLeft.x, TagTopLeft.y, TagWidth, TagHeight);
-		UIHelper::drawAselBorder(*tdc.graphics, ColorManager, tag);
+		constexpr unsigned int border_width = 2; // Width of border. 4 is realistic-ish
+
+		/* I have no clue about why I need to add a singular pixel...
+		Assuming something with rounding, and I need to match whatever the actual tag is doing for it to look good. */
+
+		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
+		pen.SetAlignment(Gdiplus::PenAlignmentInset);
+		tdc.graphics->DrawPolygon(&pen, border_points.data(), border_points.size());
+
+		//Rect tag(TagTopLeft.x, TagTopLeft.y, TagWidth, TagHeight);
+		//UIHelper::drawAselBorder(*tdc.graphics, ColorManager, tag);
 	}
 
 

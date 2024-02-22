@@ -7,6 +7,5 @@
 class UIHelper
 {
 public:
-static void drawAselBorder(Gdiplus::Graphics &graphics, CColorManager* colorManager, Rect tag);
 static string getEnumString(TagTypes type);
 };

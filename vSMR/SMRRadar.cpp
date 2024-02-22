@@ -104,7 +104,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[rt.GetCallsign()]))));
 	}
 
-	POINT TagTopLeft{TagCenter.x - 10, TagCenter.y - 10};
+	const bool right_align = TagCenter.x < acPosPix.x;
+
+	POINT tag_start{TagCenter.x - 10, TagCenter.y - 10};
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -182,7 +184,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 
 	const Value& LabelLines = (*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"];
-	vector<vector<string>> ReplacedLabelLines;
 
 	if (!LabelLines.IsArray())
 		return;
@@ -240,12 +241,14 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 				                      ColorTagType).c_str()]["text_color"])));
 
 
-	int lineid = 0;
 	constexpr Gdiplus::REAL border_padding = 3; // 1 pixel plus border width of 2 using inset drawing
 	vector<PointF> border_points;
 	border_points.reserve(2 + 2 * LabelLines.Size());
 
-	border_points.push_back(PointF{static_cast<Gdiplus::REAL>(TagTopLeft.x) - border_padding, static_cast<Gdiplus::REAL>(TagTopLeft.y) - border_padding});
+	border_points.push_back(PointF{
+		right_align ? static_cast<Gdiplus::REAL>(tag_start.x) + border_padding : static_cast<Gdiplus::REAL>(tag_start.x) - border_padding,
+		static_cast<Gdiplus::REAL>(tag_start.y) - border_padding
+	});
 	for (unsigned int i = 0; i < LabelLines.Size(); i++)
 	{
 		const Value& line = LabelLines[i];
@@ -254,10 +257,16 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		int TempTagWidth = 0;
 		int TempTagHeight = 0;
 
-		for (unsigned int j = 0; j < line.Size(); j++)
+		/*
+		 * Okay, breathe, I got you.
+		 * If we're left aligning, this is just for (int j = 0; j < line.Size(); j++)
+		 * if right aligning, we iterate in the inverse order. Okay? Lovely
+		 */
+		for (int el = right_align ? line.Size() - 1 : 0; right_align ? el >= 0 : el < line.Size();
+		     right_align ? el-- : el++)
 		{
 			RectF mesureRect = RectF(0, 0, 0, 0);
-			string element = line[j].GetString();
+			string element = line[el].GetString();
 
 			for (auto& kv : TagReplacingMap)
 			{
@@ -273,7 +282,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			wstring wstr = wstring(element.begin(), element.end());
 			Gdiplus::Font* font = customFonts[currentFontSize];
-			if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
+			if (i == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
 			{
 				font = customFonts[currentFontSize + 10];
 			}
@@ -311,21 +320,24 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			}
 
 			font = customFonts[currentFontSize];
-			if (lineid == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
+			if (i == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
 			{
 				font = customFonts[currentFontSize + 10];
 				//color = &tdc.squawk_error_color;
 			}
 
 			// Drawing!
-			tdc.graphics->FillRectangle(&TagBackgroundBrush, TagTopLeft.x + TempTagWidth, TagTopLeft.y + TagHeight,
-			                            static_cast<int>(mesureRect.GetRight()) + tdc.blank_width,
-			                            static_cast<int>(mesureRect.GetBottom()));
+			const auto draw_start = right_align
+				                        ? floor(tag_start.x - TempTagWidth - mesureRect.Width - tdc.blank_width) // TODO whyyyy is this not pixel perfect
+				                        : tag_start.x + TempTagWidth;
+			tdc.graphics->FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
+			                            static_cast<int>(mesureRect.Width) + tdc.blank_width,
+			                            static_cast<int>(mesureRect.Height));
 
-			const RectF layoutRect(static_cast<Gdiplus::REAL>(TagTopLeft.x + TempTagWidth),
-			                       static_cast<Gdiplus::REAL>(TagTopLeft.y + TagHeight),
-			                       mesureRect.GetRight() + tdc.blank_width,
-			                       mesureRect.GetBottom());
+			const RectF layoutRect(draw_start,
+			                       static_cast<Gdiplus::REAL>(tag_start.y + TagHeight),
+			                       mesureRect.Width + tdc.blank_width,
+			                       mesureRect.Height);
 			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
 			                         color);
 
@@ -338,38 +350,48 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			TempTagWidth += static_cast<int>(mesureRect.GetRight());
 			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
 
-			if (j != line.Size() - 1)
+			// If we're not looking at the last element
+			if ((right_align && el != 0) || (!right_align && el != line.Size() - 1))
 			{
 				TempTagWidth += tdc.blank_width;
 			}
-			else
+			else if (!right_align)
 			{
-				// TODO padding
-				PointF line_top_right(floor(layoutRect.GetRight() + border_padding), floor(layoutRect.GetTop() - border_padding ));
-				PointF line_bottom_right(floor(layoutRect.GetRight() + border_padding), floor(layoutRect.GetBottom() - border_padding)); // TODO this y padding needs to be negative unless its the last line
+				// Left aligned and last element
+				PointF line_top_right(floor(layoutRect.GetRight() + border_padding),
+									  floor(layoutRect.GetTop() - border_padding));
+				PointF line_bottom_right(floor(layoutRect.GetRight() + border_padding),
+										 floor(layoutRect.GetBottom() - border_padding));
+				// TODO this y padding needs to be negative unless its the last line
 				border_points.push_back(line_top_right);
 				border_points.push_back(line_bottom_right);
+			}
+			if (right_align && el == 0)
+			{
+				PointF line_top_left(floor(layoutRect.GetLeft() - border_padding),
+									 floor(layoutRect.GetTop() - border_padding));
+				PointF line_bottom_left(floor(layoutRect.GetLeft() - border_padding),
+										floor(layoutRect.GetBottom() - border_padding));
+				border_points.push_back(line_top_left);
+				border_points.push_back(line_bottom_left);
 			}
 		}
 
 
-		lineid += 1;
 		TagWidth = max(TagWidth, TempTagWidth);
 		TagHeight += TempTagHeight;
-
-		ReplacedLabelLines.push_back(lineStringArray);
 	}
 
 	border_points.back().Y += 2 * border_padding;
 
-	border_points.push_back(PointF{ border_points.front().X, border_points.back().Y });
+	border_points.push_back(PointF{border_points.front().X, border_points.back().Y});
 
-	CRect TagBackgroundRect(TagTopLeft.x, TagTopLeft.y, TagTopLeft.x + TagWidth,
-	                        TagTopLeft.y + TagHeight);
-
+	CRect TagBackgroundRect(tag_start.x, tag_start.y, tag_start.x + TagWidth,
+	                        tag_start.y + TagHeight);
 
 
 	// Drawing the symbol to tag line
+	// TODO this reaches the ASEL border, not the tag border :( what if my aircraft is not ASEL?
 	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
 	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("symbol", Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
@@ -377,7 +399,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// Drawing the ASEL border
 	if (is_asel && ColorTagType != TagTypes::Airborne)
 	{
-		constexpr unsigned int border_width = 2; // Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
+		constexpr unsigned int border_width = 2;
+		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
 
 		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);

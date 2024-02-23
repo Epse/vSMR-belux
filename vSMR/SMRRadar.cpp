@@ -2,6 +2,7 @@
 #include "Resource.h"
 #include "SMRRadar.hpp"
 #include <cmath>
+#include <boost/geometry.hpp>
 
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
@@ -246,8 +247,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	border_points.reserve(2 + 2 * LabelLines.Size());
 
 	border_points.push_back(PointF{
-		right_align ? static_cast<Gdiplus::REAL>(tag_start.x) + border_padding : static_cast<Gdiplus::REAL>(tag_start.x) - border_padding,
-		static_cast<Gdiplus::REAL>(tag_start.y) - border_padding
+		static_cast<Gdiplus::REAL>(tag_start.x),
+		static_cast<Gdiplus::REAL>(tag_start.y)
 	});
 	for (unsigned int i = 0; i < LabelLines.Size(); i++)
 	{
@@ -328,7 +329,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			// Drawing!
 			const auto draw_start = right_align
-				                        ? floor(tag_start.x - TempTagWidth - mesureRect.Width - tdc.blank_width) // TODO whyyyy is this not pixel perfect
+				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width // TODO whyyyy is this not pixel perfect
 				                        : tag_start.x + TempTagWidth;
 			tdc.graphics->FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
 			                            static_cast<int>(mesureRect.Width) + tdc.blank_width,
@@ -358,20 +359,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			else if (!right_align)
 			{
 				// Left aligned and last element
-				PointF line_top_right(floor(layoutRect.GetRight() + border_padding),
-									  floor(layoutRect.GetTop() - border_padding));
-				PointF line_bottom_right(floor(layoutRect.GetRight() + border_padding),
-										 floor(layoutRect.GetBottom() - border_padding));
-				// TODO this y padding needs to be negative unless its the last line
+				PointF line_top_right(floor(layoutRect.GetRight()),
+									  floor(layoutRect.GetTop()));
+				PointF line_bottom_right(floor(layoutRect.GetRight()),
+										 floor(layoutRect.GetBottom()));
 				border_points.push_back(line_top_right);
 				border_points.push_back(line_bottom_right);
 			}
 			if (right_align && el == 0)
 			{
-				PointF line_top_left(floor(layoutRect.GetLeft() - border_padding),
-									 floor(layoutRect.GetTop() - border_padding));
-				PointF line_bottom_left(floor(layoutRect.GetLeft() - border_padding),
-										floor(layoutRect.GetBottom() - border_padding));
+				PointF line_top_left(floor(layoutRect.GetLeft()),
+									 floor(layoutRect.GetTop()));
+				PointF line_bottom_left(floor(layoutRect.GetLeft()),
+										floor(layoutRect.GetBottom()));
 				border_points.push_back(line_top_left);
 				border_points.push_back(line_bottom_left);
 			}
@@ -382,8 +382,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		TagHeight += TempTagHeight;
 	}
 
-	border_points.back().Y += 2 * border_padding;
-
 	border_points.push_back(PointF{border_points.front().X, border_points.back().Y});
 
 	CRect TagBackgroundRect(tag_start.x, tag_start.y, tag_start.x + TagWidth,
@@ -391,7 +389,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 
 	// Drawing the symbol to tag line
-	// TODO this reaches the ASEL border, not the tag border :( what if my aircraft is not ASEL?
 	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
 	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
@@ -400,11 +397,47 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (is_asel && ColorTagType != TagTypes::Airborne)
 	{
 		constexpr unsigned int border_width = 2;
+		constexpr unsigned int growth = border_width + 1;
 		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
+		// We should expand the polygon
+		std::vector<PointF> grown_points;
+		grown_points.reserve(border_points.size());
+
+		/*
+		 * We need to define the polygon clockwise, so reverse iterate it if its counterclockwise
+		 * Then, we can use some facts we know about this particular polygon to efficiently expand it.
+		 */
+		if (!right_align)
+		{
+			// The first point is the top left
+			grown_points.push_back(PointF(border_points.front().X - growth, border_points.front().Y - growth));
+			// Now, all but the last points need to expand +X
+			for (size_t i = 1; i < border_points.size() - 1; ++i)
+			{
+				grown_points.push_back(PointF(border_points[i].X + growth, border_points[i].Y - growth));
+			}
+			// But the penultimate point actually needs to grow into positive Y, so compensate
+			grown_points.back().Y += 2 * growth;
+			// And the last point needs negative X and positive Y
+			grown_points.push_back(PointF(border_points.back().X - growth, border_points.back().Y + growth));
+		} else
+		{
+			// We kinda do the same, but counterclockwise here
+			grown_points.push_back(PointF(border_points.front().X + growth, border_points.front().Y - growth));
+			for (size_t i = 1; i < border_points.size() - 1; ++i)
+			{
+				grown_points.push_back(PointF(border_points[i].X - growth, border_points[i].Y - growth));
+			}
+			// The penultimate point needed positive Y, as above
+			grown_points.back().Y += 2 * growth;
+			// And the positive X and Y
+			grown_points.push_back(PointF(border_points.back().X + growth, border_points.back().Y + growth));
+		}
+
 
 		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
-		tdc.graphics->DrawPolygon(&pen, border_points.data(), border_points.size());
+		tdc.graphics->DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}
 
 

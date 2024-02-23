@@ -393,9 +393,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
 
-	// Drawing the ASEL border
-	if (is_asel && ColorTagType != TagTypes::Airborne)
+	// Do we need a border??
+	const bool is_assr_err = !TagReplacingMap["sqerror"].empty();
+	// Drawing the border
+	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne && TagReplacingMap["actype"] != "NoFPL")
 	{
+		Color border_color = is_assr_err ? is_asel ? Color::Orange : Color::Red : is_asel ? Color::Yellow : Color::AlphaMask;
+
 		constexpr unsigned int border_width = 2;
 		constexpr unsigned int growth = border_width + 1;
 		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
@@ -435,7 +439,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		}
 
 
-		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", Gdiplus::Color::Yellow), border_width);
+		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", border_color), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
 		tdc.graphics->DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}

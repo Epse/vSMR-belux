@@ -11,6 +11,17 @@ class CColorManager
 {
 protected:
 	map<string, int> ColorSettings{};
+
+	virtual Gdiplus::Color brighten(const BYTE brightness, const Gdiplus::Color color)
+	{
+		return {
+			color.GetA(),
+			min<BYTE>(255, static_cast<BYTE>((color.GetR() * brightness) / 100)),
+			min<BYTE>(255, static_cast<BYTE>((color.GetG() * brightness) / 100)),
+			min<BYTE>(255, static_cast<BYTE>((color.GetB() * brightness) / 100))
+		};
+	}
+
 public:
 	CColorManager()
 	{
@@ -18,6 +29,7 @@ public:
 		update_brightness("symbol", 70);
 		update_brightness("afterglow", 100);
 	};
+
 	virtual ~CColorManager()
 	{
 		ColorSettings.clear();
@@ -35,25 +47,19 @@ public:
 		return 100;
 	};
 
+	virtual Gdiplus::Color get_corrected_color(const string id, const int extra_dimming, const Gdiplus::Color color)
+	{
+		return this->brighten(max(0, get_brightness(id) - extra_dimming), color);
+	}
+
 	virtual Gdiplus::Color get_corrected_color(const string id, const Gdiplus::Color color)
 	{
 		if (get_brightness(id) == 100)
 			return color;
 
-		COLORREF colorref = color.ToCOLORREF();
-
-		int r = GetRValue(colorref);
-		int g = GetGValue(colorref);
-		int b = GetBValue(colorref);
-		const BYTE a = color.GetAlpha();
-		
-
-		r = min(255, int((r*get_brightness(id))/100));
-		g = min(255, int((g*get_brightness(id))/100));
-		b = min(255, int((b*get_brightness(id))/100));
-
-		return Gdiplus::Color(a, r, g, b);
+		return this->brighten(get_brightness(id), color);
 	};
+
 
 	static int bounds_low()
 	{
@@ -65,4 +71,3 @@ public:
 		return 130;
 	};
 };
-

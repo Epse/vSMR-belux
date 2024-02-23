@@ -52,7 +52,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (!rt.IsValid())
 		return;
 
-	bool is_asel = strcmp(rt.GetCallsign(), GetPlugIn()->FlightPlanSelectASEL().GetCallsign()) == 0;
+	const bool is_asel = strcmp(rt.GetCallsign(), GetPlugIn()->FlightPlanSelectASEL().GetCallsign()) == 0;
+	const int dimming = is_asel ? 0 : TAG_DIMMING;
 
 	CRadarTargetPositionData RtPos = rt.GetPosition();
 	POINT acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
@@ -224,15 +225,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		                                                            CurrentConfig->getActiveProfile()["rimcas"][
 			                                                            "background_color_stage_two"]));
 
-	TagBackgroundColor = ColorManager->get_corrected_color("label", TagBackgroundColor);
+	TagBackgroundColor = ColorManager->get_corrected_color("label", dimming, TagBackgroundColor);
 
-	// We need to figure out if the tag color changes according to RIMCAS alerts, or not
-	bool rimcasLabelOnly = CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
-
-	if (rimcasLabelOnly)
-		TagBackgroundColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(),
-		                                                      definedBackgroundColor,
-		                                                      definedBackgroundColor);
 
 	SolidBrush TagBackgroundBrush(TagBackgroundColor);
 	SolidBrush FontColor(ColorManager
@@ -242,7 +236,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 				                      ColorTagType).c_str()]["text_color"])));
 
 
-	constexpr Gdiplus::REAL border_padding = 3; // 1 pixel plus border width of 2 using inset drawing
 	vector<PointF> border_points;
 	border_points.reserve(2 + 2 * LabelLines.Size());
 
@@ -390,13 +383,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 	// Drawing the symbol to tag line
 	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
-	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", Color::White));
+	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", dimming, Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
 
 	// Do we need a border??
-	const bool is_assr_err = !TagReplacingMap["sqerror"].empty();
+	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
 	// Drawing the border
-	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne && TagReplacingMap["actype"] != "NoFPL")
+	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
 	{
 		Color border_color = is_assr_err ? is_asel ? Color::Orange : Color::Red : is_asel ? Color::Yellow : Color::AlphaMask;
 
@@ -448,6 +441,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// If we use a RIMCAS label only, we display it, and adapt the rectangle
 	CRect oldCrectSave = TagBackgroundRect;
 
+	// We need to figure out if the tag color changes according to RIMCAS alerts, or not
+	const bool rimcasLabelOnly = CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
 	if (rimcasLabelOnly)
 	{
 		Color RimcasLabelColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,

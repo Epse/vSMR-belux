@@ -50,6 +50,7 @@ class CSMRRadar :
 private:
 	GateTarget * gate_target;
 	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt);
+	bool shift_top_bar = false;
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();

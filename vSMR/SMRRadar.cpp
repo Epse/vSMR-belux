@@ -322,7 +322,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			// Drawing!
 			const auto draw_start = right_align
-				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width // TODO whyyyy is this not pixel perfect
+				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width
 				                        : tag_start.x + TempTagWidth;
 			tdc.graphics->FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
 			                            static_cast<int>(mesureRect.Width) + tdc.blank_width,
@@ -738,6 +738,9 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 	if ((p_value = GetDataFromAsr("BeluxProModeEasy")) != NULL)
 		belux_promode_easy = (strcmp(p_value, "on") == 0);
 
+	if ((p_value = GetDataFromAsr("ShiftTopBar")) != NULL)
+		shift_top_bar = (strcmp(p_value, "on") == 0);
+
 	string temp;
 
 	for (int i = 1; i < 3; i++)
@@ -822,6 +825,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 
 	SaveDataToAsr("BeluxProMode", "vSMR Belux pro mode", (belux_promode ? "on" : "off"));
 	SaveDataToAsr("BeluxProModeEasy", "vSMR Belux pro mode - easy version", (belux_promode_easy ? "on" : "off"));
+
+	SaveDataToAsr("ShiftTopBar", "Shift top menu bar downwards", shift_top_bar ? "on" : "off");
 
 
 	string temp = "";
@@ -1912,6 +1917,12 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 		return true;
 	}
 
+	if (strcmp(sCommandLine, ".smr shift-top-bar") == 0)
+	{
+		shift_top_bar = !shift_top_bar;
+		return true;
+	}
+
 	return false;
 }
 
@@ -2608,27 +2619,26 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		CPen qTrailPen(PS_SOLID, 1, ColorManager->get_corrected_color("symbol", Gdiplus::Color::White).ToCOLORREF());
+		// TODO make this the IRL symbols!!!!
+		// TODO Does this need to vary with zoom? Pretty sure it does, just like the RPS, which needs to shrink btw
+		// Draw target symbols
+		CPen qTrailPen(PS_SOLID, 2.0, ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
+		constexpr int size = 15;
 		if (RtPos.GetTransponderC())
 		{
-			dc.MoveTo({acPosPix.x, acPosPix.y - 6});
-			dc.LineTo({acPosPix.x - 6, acPosPix.y});
-			dc.LineTo({acPosPix.x, acPosPix.y + 6});
-			dc.LineTo({acPosPix.x + 6, acPosPix.y});
-			dc.LineTo({acPosPix.x, acPosPix.y - 6});
+			Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+			const Pen pen(color, 2.0);
+			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
 		}
 		else
 		{
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x - 4, acPosPix.y - 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x + 4, acPosPix.y - 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x - 4, acPosPix.y + 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x + 4, acPosPix.y + 4);
+			dc.MoveTo(acPosPix.x - size / 2, acPosPix.y - size / 2);
+			dc.LineTo(acPosPix.x + size / 2, acPosPix.y - size / 2);
+			dc.LineTo(acPosPix.x + size / 2, acPosPix.y + size / 2);
+			dc.LineTo(acPosPix.x - size / 2, acPosPix.y + size / 2);
+			dc.LineTo(acPosPix.x - size / 2, acPosPix.y - size / 2);
 		}
 
 		// Predicted Track Line
@@ -3092,7 +3102,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	COLORREF qToolBarColor = RGB(127, 122, 122);
 
 	// Drawing the toolbar on the top
-	CRect ToolBarAreaTop(RadarArea.left, RadarArea.top, RadarArea.right, RadarArea.top + 20);
+	constexpr char shift_amount = 21;
+	CRect ToolBarAreaTop(RadarArea.left, RadarArea.top + (shift_top_bar ? shift_amount : 0), RadarArea.right, RadarArea.top + 20 + (shift_top_bar ? shift_amount : 0));
 	dc.FillSolidRect(ToolBarAreaTop, qToolBarColor);
 
 	COLORREF oldTextColor = dc.SetTextColor(RGB(0, 0, 0));

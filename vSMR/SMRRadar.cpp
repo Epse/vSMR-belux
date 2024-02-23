@@ -393,7 +393,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// Drawing the symbol to tag line
 	// TODO this reaches the ASEL border, not the tag border :( what if my aircraft is not ASEL?
 	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
-	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("symbol", Color::White));
+	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
 
 	// Drawing the ASEL border

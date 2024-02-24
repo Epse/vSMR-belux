@@ -26,7 +26,7 @@ public:
 	CColorManager()
 	{
 		update_brightness("label", 100);
-		update_brightness("symbol", 70);
+		update_brightness("symbol", 100);
 		update_brightness("target", 100);
 		update_brightness("afterglow", 100);
 	};

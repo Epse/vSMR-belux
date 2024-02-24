@@ -1704,8 +1704,7 @@ void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 
 	Patatoides[RadarTarget.GetCallsign()].points.clear();
 
-	CFlightPlan fp;
-	fp = GetPlugIn()->FlightPlanSelect(RadarTarget.GetCallsign());
+	const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(RadarTarget.GetCallsign());
 
 	// All units in M
 	float width = 34.0f;

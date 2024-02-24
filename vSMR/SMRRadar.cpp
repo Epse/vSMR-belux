@@ -353,18 +353,18 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			{
 				// Left aligned and last element
 				PointF line_top_right(floor(layoutRect.GetRight()),
-									  floor(layoutRect.GetTop()));
+				                      floor(layoutRect.GetTop()));
 				PointF line_bottom_right(floor(layoutRect.GetRight()),
-										 floor(layoutRect.GetBottom()));
+				                         floor(layoutRect.GetBottom()));
 				border_points.push_back(line_top_right);
 				border_points.push_back(line_bottom_right);
 			}
 			if (right_align && el == 0)
 			{
 				PointF line_top_left(floor(layoutRect.GetLeft()),
-									 floor(layoutRect.GetTop()));
+				                     floor(layoutRect.GetTop()));
 				PointF line_bottom_left(floor(layoutRect.GetLeft()),
-										floor(layoutRect.GetBottom()));
+				                        floor(layoutRect.GetBottom()));
 				border_points.push_back(line_top_left);
 				border_points.push_back(line_bottom_left);
 			}
@@ -391,46 +391,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// Drawing the border
 	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
 	{
-		Color border_color = is_assr_err ? is_asel ? Color::Orange : Color::Red : is_asel ? Color::Yellow : Color::AlphaMask;
+		Color border_color = is_assr_err
+			                     ? is_asel
+				                       ? Color::Orange
+				                       : Color::Red
+			                     : is_asel
+			                     ? Color::Yellow
+			                     : Color::AlphaMask;
 
 		constexpr unsigned int border_width = 2;
-		constexpr unsigned int growth = border_width + 1;
+		constexpr int growth = border_width + 1;
 		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
 		// We should expand the polygon
-		std::vector<PointF> grown_points;
-		grown_points.reserve(border_points.size());
-
-		/*
-		 * We need to define the polygon clockwise, so reverse iterate it if its counterclockwise
-		 * Then, we can use some facts we know about this particular polygon to efficiently expand it.
-		 */
-		if (!right_align)
-		{
-			// The first point is the top left
-			grown_points.push_back(PointF(border_points.front().X - growth, border_points.front().Y - growth));
-			// Now, all but the last points need to expand +X
-			for (size_t i = 1; i < border_points.size() - 1; ++i)
-			{
-				grown_points.push_back(PointF(border_points[i].X + growth, border_points[i].Y - growth));
-			}
-			// But the penultimate point actually needs to grow into positive Y, so compensate
-			grown_points.back().Y += 2 * growth;
-			// And the last point needs negative X and positive Y
-			grown_points.push_back(PointF(border_points.back().X - growth, border_points.back().Y + growth));
-		} else
-		{
-			// We kinda do the same, but counterclockwise here
-			grown_points.push_back(PointF(border_points.front().X + growth, border_points.front().Y - growth));
-			for (size_t i = 1; i < border_points.size() - 1; ++i)
-			{
-				grown_points.push_back(PointF(border_points[i].X - growth, border_points[i].Y - growth));
-			}
-			// The penultimate point needed positive Y, as above
-			grown_points.back().Y += 2 * growth;
-			// And the positive X and Y
-			grown_points.push_back(PointF(border_points.back().X + growth, border_points.back().Y + growth));
-		}
-
+		const auto grown_points = UIHelper::grow_border(border_points, growth, right_align);
 
 		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", border_color), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
@@ -3103,7 +3076,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	// Drawing the toolbar on the top
 	constexpr char shift_amount = 21;
-	CRect ToolBarAreaTop(RadarArea.left, RadarArea.top + (shift_top_bar ? shift_amount : 0), RadarArea.right, RadarArea.top + 20 + (shift_top_bar ? shift_amount : 0));
+	CRect ToolBarAreaTop(RadarArea.left, RadarArea.top + (shift_top_bar ? shift_amount : 0), RadarArea.right,
+	                     RadarArea.top + 20 + (shift_top_bar ? shift_amount : 0));
 	dc.FillSolidRect(ToolBarAreaTop, qToolBarColor);
 
 	COLORREF oldTextColor = dc.SetTextColor(RGB(0, 0, 0));

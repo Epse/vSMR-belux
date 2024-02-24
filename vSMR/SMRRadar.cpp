@@ -214,18 +214,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
 	}
 
-	Color TagBackgroundColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(),
-	                                                            definedBackgroundColor,
-	                                                            //CurrentConfig->getConfigColor((*tdc.labels_settings)[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]),
-	                                                            definedBackgroundColor,
-	                                                            CurrentConfig->getConfigColor(
-		                                                            CurrentConfig->getActiveProfile()["rimcas"][
-			                                                            "background_color_stage_one"]),
-	                                                            CurrentConfig->getConfigColor(
-		                                                            CurrentConfig->getActiveProfile()["rimcas"][
-			                                                            "background_color_stage_two"]));
 
-	TagBackgroundColor = ColorManager->get_corrected_color("label", dimming, TagBackgroundColor);
+	const Color TagBackgroundColor = ColorManager->get_corrected_color("label", dimming, definedBackgroundColor);
 
 
 	SolidBrush TagBackgroundBrush(TagBackgroundColor);
@@ -442,19 +432,21 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			// Drawing the rectangle
 
-			CRect RimcasLabelRect(TagBackgroundRect.left, TagBackgroundRect.top - rimcas_height,
-			                      TagBackgroundRect.right, TagBackgroundRect.top);
+			CRect RimcasLabelRect(
+				min(border_points.front().X, border_points[1].X), border_points.front().Y - rimcas_height,
+				max(border_points.front().X, border_points[1].X), border_points.front().Y);
 			tdc.graphics->FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
 			TagBackgroundRect.top -= rimcas_height;
 
 			// Drawing the text
 
-			wstring rimcasw = wstring(L"ALERT");
+			const wstring rimcasw = wstring(L"ALERT");
 			StringFormat stformat = new StringFormat();
 			stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
+			const RectF string_rect(RimcasLabelRect.TopLeft().x, RimcasLabelRect.TopLeft().y, RimcasLabelRect.Width(),
+			                        RimcasLabelRect.Height());
 			tdc.graphics->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
-			                         PointF(Gdiplus::REAL((TagBackgroundRect.left + TagBackgroundRect.right) / 2),
-			                                Gdiplus::REAL(TagBackgroundRect.top)), &stformat, tdc.rimcas_text_color);
+			                         string_rect, &stformat, tdc.rimcas_text_color);
 		}
 	}
 
@@ -2593,17 +2585,21 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		constexpr float symbol_size_meters = 30.0;
 		constexpr float symbol_line_thickness = 2.0;
-		const POINT center_screen = POINT{ (RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2 };
+		const POINT center_screen = POINT{
+			(RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2
+		};
 		CPosition test_start_position = ConvertCoordFromPixelToPosition(center_screen);
-		POINT test_end_pixels = ConvertCoordFromPositionToPixel(BetterHarversine(test_start_position, 0.0, symbol_size_meters));
+		POINT test_end_pixels = ConvertCoordFromPositionToPixel(
+			BetterHarversine(test_start_position, 0.0, symbol_size_meters));
 		const unsigned char size = static_cast<unsigned char>(
 			sqrtf(powf(test_end_pixels.x - center_screen.x, 2) + powf(test_end_pixels.y - center_screen.y, 2))
-			);
-		
-		
+		);
+
+
 		// Should match rougly 30m
 		// Draw target symbols
-		CPen qTrailPen(PS_SOLID, symbol_line_thickness, ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
+		CPen qTrailPen(PS_SOLID, symbol_line_thickness,
+		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
 		if (RtPos.GetTransponderC())

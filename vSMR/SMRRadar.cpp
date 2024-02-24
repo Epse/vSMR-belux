@@ -2437,11 +2437,27 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 #pragma region symbols
 	// Drawing the symbols
 	Logger::info("Symbols loop");
+
+	// First do some math, once
+	// Should match rougly 30m in target diameter
+	constexpr float symbol_size_meters = 30.0;
+	const POINT center_screen = POINT{
+		(RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2
+	};
+	CPosition test_start_position = ConvertCoordFromPixelToPosition(center_screen);
+	POINT test_end_pixels = ConvertCoordFromPositionToPixel(
+		BetterHarversine(test_start_position, 0.0, symbol_size_meters));
+	const unsigned char size = static_cast<unsigned char>(
+		sqrtf(powf(test_end_pixels.x - center_screen.x, 2) + powf(test_end_pixels.y - center_screen.y, 2))
+	);
+	const unsigned char half_size = size / 2;
+	// Then go be clever
 	EuroScopePlugIn::CRadarTarget rt;
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
 	     rt.IsValid();
 	     rt = GetPlugIn()->RadarTargetSelectNext(rt))
 	{
+		const auto cs = rt.GetCallsign();
 		if (!rt.IsValid() || !rt.GetPosition().IsValid())
 			continue;
 
@@ -2578,60 +2594,14 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
-		bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
 
-		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
-			continue;
-
-		constexpr float symbol_size_meters = 30.0;
 		constexpr float symbol_line_thickness = 2.0;
-		const POINT center_screen = POINT{
-			(RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2
-		};
-		CPosition test_start_position = ConvertCoordFromPixelToPosition(center_screen);
-		POINT test_end_pixels = ConvertCoordFromPositionToPixel(
-			BetterHarversine(test_start_position, 0.0, symbol_size_meters));
-		const unsigned char size = static_cast<unsigned char>(
-			sqrtf(powf(test_end_pixels.x - center_screen.x, 2) + powf(test_end_pixels.y - center_screen.y, 2))
-		);
-
-
-		// Should match rougly 30m
 		// Draw target symbols
 		CPen qTrailPen(PS_SOLID, symbol_line_thickness,
 		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
-		if (RtPos.GetTransponderC())
-		{
-			Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-			const Pen pen(color, symbol_line_thickness);
-			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
-		}
-		else
-		{
-			dc.MoveTo(acPosPix.x - size / 2, acPosPix.y - size / 2);
-			dc.LineTo(acPosPix.x + size / 2, acPosPix.y - size / 2);
-			dc.LineTo(acPosPix.x + size / 2, acPosPix.y + size / 2);
-			dc.LineTo(acPosPix.x - size / 2, acPosPix.y + size / 2);
-			dc.LineTo(acPosPix.x - size / 2, acPosPix.y - size / 2);
-		}
-
-		// Predicted Track Line
-		// It starts 20 seconds away from the ac
-		if (reportedGs > 50 && PredictedLength > 0)
-		{
-			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;
-			CPosition AwayBase = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), d);
-
-			d = double(rt.GetPosition().GetReportedGS() * 0.514444) * (PredictedLength * 60) - 10;
-			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
-
-			dc.MoveTo(ConvertCoordFromPositionToPixel(AwayBase));
-			dc.LineTo(ConvertCoordFromPositionToPixel(PredictedEnd));
-		}
-
-		if (mouseWithin({acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5}))
+		if (mouseWithin({acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
 			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
 			dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
@@ -2654,9 +2624,43 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
 		}
 
+		const bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
+
 		AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(),
-		                {acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5}, false,
+		                {acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}, false,
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
+
+		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
+			continue;
+
+		if (RtPos.GetTransponderC())
+		{
+			Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+			const Pen pen(color, symbol_line_thickness);
+			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
+		}
+		else // We still want the primary return square, but we simulate only getting a good lock if its moving
+		{
+			dc.MoveTo(acPosPix.x - half_size, acPosPix.y - half_size);
+			dc.LineTo(acPosPix.x + half_size, acPosPix.y - half_size);
+			dc.LineTo(acPosPix.x + half_size, acPosPix.y + half_size);
+			dc.LineTo(acPosPix.x - half_size, acPosPix.y + half_size);
+			dc.LineTo(acPosPix.x - half_size, acPosPix.y - half_size);
+		}
+
+		// Predicted Track Line
+		// It starts 20 seconds away from the ac
+		if (reportedGs > 50 && PredictedLength > 0)
+		{
+			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;
+			CPosition AwayBase = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), d);
+
+			d = double(rt.GetPosition().GetReportedGS() * 0.514444) * (PredictedLength * 60) - 10;
+			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
+
+			dc.MoveTo(ConvertCoordFromPositionToPixel(AwayBase));
+			dc.LineTo(ConvertCoordFromPositionToPixel(PredictedEnd));
+		}
 
 		dc.SelectObject(pqOrigPen);
 	}

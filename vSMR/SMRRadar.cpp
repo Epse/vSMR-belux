@@ -2591,17 +2591,25 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		// TODO make this the IRL symbols!!!!
-		// TODO Does this need to vary with zoom? Pretty sure it does, just like the RPS, which needs to shrink btw
+		constexpr float symbol_size_meters = 30.0;
+		constexpr float symbol_line_thickness = 2.0;
+		const POINT center_screen = POINT{ (RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2 };
+		CPosition test_start_position = ConvertCoordFromPixelToPosition(center_screen);
+		POINT test_end_pixels = ConvertCoordFromPositionToPixel(BetterHarversine(test_start_position, 0.0, symbol_size_meters));
+		const unsigned char size = static_cast<unsigned char>(
+			sqrtf(powf(test_end_pixels.x - center_screen.x, 2) + powf(test_end_pixels.y - center_screen.y, 2))
+			);
+		
+		
+		// Should match rougly 30m
 		// Draw target symbols
-		CPen qTrailPen(PS_SOLID, 2.0, ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
+		CPen qTrailPen(PS_SOLID, symbol_line_thickness, ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
-		constexpr int size = 15;
 		if (RtPos.GetTransponderC())
 		{
 			Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-			const Pen pen(color, 2.0);
+			const Pen pen(color, symbol_line_thickness);
 			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
 		}
 		else

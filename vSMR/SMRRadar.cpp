@@ -111,7 +111,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	// Would the start of a right-aligned tag be to the left of the tag start?
 	const bool right_align = acPosPix.x > TagCenter.x + start_offset;
 
-	const POINT tag_start = right_align ? POINT{ TagCenter.x + start_offset, TagCenter.y + start_offset } : POINT{ TagCenter.x - start_offset, TagCenter.y - start_offset};
+	const POINT tag_start = right_align
+		                        ? POINT{TagCenter.x + start_offset, TagCenter.y + start_offset}
+		                        : POINT{TagCenter.x - start_offset, TagCenter.y - start_offset};
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -2464,7 +2466,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	     rt.IsValid();
 	     rt = GetPlugIn()->RadarTargetSelectNext(rt))
 	{
-		const auto cs = rt.GetCallsign();
 		if (!rt.IsValid() || !rt.GetPosition().IsValid())
 			continue;
 
@@ -2608,7 +2609,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
-		if (mouseWithin({acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
+		if (mouseWithin(
+			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
 			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
 			dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
@@ -2629,12 +2631,37 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			dc.LineTo(acPosPix.x + 12, acPosPix.y - 6);
 			dc.MoveTo(acPosPix.x + 8, acPosPix.y);
 			dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
+
+			/*
+			Stef, why are we getting interaction straight from the Windows APIS?
+			That's BS, this method is only called like once a second?
+
+			Well, some people like to use vSMR with TopSky.
+			TopSky really likes drawing its own target symbols and handling its own interactivity.
+			This for reasons unknown gets drawn _over_ the vSMR interactivity objects,
+			thus our onclick handler never gets called.
+
+			So we say f you we do it ourselves.
+			 */
+			const bool button_down = GetAsyncKeyState(VK_RBUTTON) & 0x8000; // MSB set: currently down
+			const bool is_asel = strcmp(GetPlugIn()->RadarTargetSelectASEL().GetSystemID(), rt.GetSystemID()) == 0;
+			if (button_down && !is_asel)
+			{
+				this->OnClickScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(), POINT{mouseLocation.x, mouseLocation.y},
+				                          RECT{
+					                          acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size,
+					                          acPosPix.y + half_size
+				                          }, BUTTON_RIGHT);
+			}
 		}
 
 		const bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
 
 		AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(),
-		                {acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}, false,
+		                {
+			                acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size,
+			                acPosPix.y + half_size
+		                }, false,
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)

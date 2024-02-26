@@ -379,30 +379,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", dimming, Color::White));
 	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
 
-	// Do we need a border??
-	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
-	// Drawing the border
-	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
-	{
-		Color border_color = is_assr_err
-			                     ? is_asel
-				                       ? Color::Orange
-				                       : Color::Red
-			                     : is_asel
-			                     ? Color::Yellow
-			                     : Color::AlphaMask;
-
-		constexpr unsigned int border_width = 2;
-		constexpr int growth = border_width + 1;
-		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
-		// We should expand the polygon
-		const auto grown_points = UIHelper::grow_border(border_points, growth, right_align);
-
-		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", border_color), border_width);
-		pen.SetAlignment(Gdiplus::PenAlignmentInset);
-		tdc.graphics->DrawPolygon(&pen, grown_points.data(), grown_points.size());
-	}
-
 
 	// If we use a RIMCAS label only, we display it, and adapt the rectangle
 	CRect oldCrectSave = TagBackgroundRect;
@@ -450,7 +426,35 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			                        RimcasLabelRect.Height());
 			tdc.graphics->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
 			                         string_rect, &stformat, tdc.rimcas_text_color);
+
+			// Modify the border points, so the border appropriately surrounds the warning
+			border_points.front().Y -= rimcas_height;
+			border_points[1].Y -= rimcas_height;
 		}
+	}
+
+	// Do we need a border??
+	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
+	// Drawing the border
+	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
+	{
+		Color border_color = is_assr_err
+			                     ? is_asel
+				                       ? Color::Orange
+				                       : Color::Red
+			                     : is_asel
+			                     ? Color::Yellow
+			                     : Color::AlphaMask;
+
+		constexpr unsigned int border_width = 2;
+		constexpr int growth = border_width + 1;
+		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
+		// We should expand the polygon
+		const auto grown_points = UIHelper::grow_border(border_points, growth, right_align);
+
+		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", border_color), border_width);
+		pen.SetAlignment(Gdiplus::PenAlignmentInset);
+		tdc.graphics->DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}
 
 	// Adding the tag screen object

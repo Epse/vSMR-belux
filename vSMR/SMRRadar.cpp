@@ -106,9 +106,12 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[rt.GetCallsign()]))));
 	}
 
-	const bool right_align = TagCenter.x < acPosPix.x;
+	constexpr char start_offset = 10;
 
-	POINT tag_start{TagCenter.x - 10, TagCenter.y - 10};
+	// Would the start of a right-aligned tag be to the left of the tag start?
+	const bool right_align = acPosPix.x > TagCenter.x + start_offset;
+
+	const POINT tag_start = right_align ? POINT{ TagCenter.x + start_offset, TagCenter.y + start_offset } : POINT{ TagCenter.x - start_offset, TagCenter.y - start_offset};
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;

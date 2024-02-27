@@ -88,3 +88,35 @@ std::vector<PointF> UIHelper::grow_border(const std::vector<PointF>& border_poin
 	}
 	return grown_points;
 }
+
+std::optional<std::vector<std::vector<std::string>>> UIHelper::parse_label_lines(const Value& value)
+{
+	if (!value.IsArray())
+	{
+		return {};
+	}
+
+	std::vector<std::vector<std::string>> output;
+	output.reserve(value.Size());
+
+	for (size_t i = 0; i < value.Size(); ++i)
+	{
+		if (!value[i].IsArray())
+			return {};
+
+		std::vector<std::string> elements;
+		elements.reserve(value[i].Size());
+
+		for (size_t j = 0; j < value[i].Size(); ++j)
+		{
+			if (!value[i][j].IsString())
+				return {};
+			elements.emplace_back(value[i][j].GetString());
+		}
+
+		output.emplace_back(elements);
+	}
+
+	return { output };
+}
+

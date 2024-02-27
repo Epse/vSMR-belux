@@ -180,6 +180,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	TagClickableMap[TagReplacingMap["groundstatus"]] = TAG_CITEM_GROUNDSTATUS;
 	TagClickableMap[TagReplacingMap["uk_stand"]] = TAG_CITEM_UKSTAND;
 	TagClickableMap[TagReplacingMap["scratch_pad"]] = TAG_CITEM_GATE;
+	TagClickableMap["SSR/FPL"] = TAG_CITEM_CALLSIGN; // Not really, but close enough ya know
 
 	//
 	// ----- Now the hard part, drawing (using gdi+) -------
@@ -190,10 +191,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	int TagWidth = 0, TagHeight = 0;
 
 
-	const Value& LabelLines = (*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"];
-
-	if (!LabelLines.IsArray())
-		return;
+	//const Value& LabelLines = (*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"];
+	const optional<vector<vector<string>>> parsed_label_lines = UIHelper::parse_label_lines((*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"]);
+	vector<vector<string>> LabelLines = parsed_label_lines.value_or(vector<vector<string>>());
 
 	Color definedBackgroundColor = CurrentConfig->getConfigColor(
 		(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["background_color"]);
@@ -230,32 +230,43 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			                      (*tdc.labels_settings)[UIHelper::getEnumString(
 				                      ColorTagType).c_str()]["text_color"])));
 
+	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
+
+	if (is_assr_err)
+	{
+		auto val = vector<string>();
+		val.emplace_back("SSR/FPL");
+		LabelLines.insert(LabelLines.begin(), std::move(val));
+	}
+
 
 	vector<PointF> border_points;
-	border_points.reserve(2 + 2 * LabelLines.Size());
+	border_points.reserve(2 + 2 * LabelLines.size());
 
 	border_points.push_back(PointF{
 		static_cast<Gdiplus::REAL>(tag_start.x),
 		static_cast<Gdiplus::REAL>(tag_start.y)
 	});
-	for (unsigned int i = 0; i < LabelLines.Size(); i++)
+	for (unsigned int i = 0; i < LabelLines.size(); i++)
 	{
-		const Value& line = LabelLines[i];
+		const auto line = LabelLines[i];
 		vector<string> lineStringArray;
 
 		int TempTagWidth = 0;
 		int TempTagHeight = 0;
+		// TODO remove
+		auto cs = rt.GetCallsign();
 
 		/*
 		 * Okay, breathe, I got you.
-		 * If we're left aligning, this is just for (int j = 0; j < line.Size(); j++)
+		 * If we're left aligning, iterate forwards.
 		 * if right aligning, we iterate in the inverse order. Okay? Lovely
 		 */
-		for (int el = right_align ? line.Size() - 1 : 0; right_align ? el >= 0 : el < line.Size();
-		     right_align ? el-- : el++)
+		for (size_t el = right_align ? line.size() : 0; right_align ? el-- > 0 : el < line.size(); right_align ? 0 : ++el)
 		{
 			RectF mesureRect = RectF(0, 0, 0, 0);
-			string element = line[el].GetString();
+			const string element_was = line[el];
+			string element = line[el];
 
 			for (auto& kv : TagReplacingMap)
 			{
@@ -264,14 +275,14 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			lineStringArray.push_back(element);
 
-			if (element == "" && line.Size() == 1)
+			if (element == "" && line.size() == 1)
 			{
 				continue;
 			}
 
 			wstring wstr = wstring(element.begin(), element.end());
 			Gdiplus::Font* font = customFonts[currentFontSize];
-			if (i == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
+			if ((element_was == "callsign" || i == 0) && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
 			{
 				font = customFonts[currentFontSize + 10];
 			}
@@ -282,7 +293,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			// Setup text colors
 			Brush* color = nullptr;
 
-			// TODO this feels like a bad spot
 			if (is_asel && ColorTagType == TagTypes::Airborne)
 			{
 				color = tdc.asel_text_color->Clone();
@@ -306,13 +316,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			if (color == nullptr) // default case
 			{
 				color = FontColor.Clone();
-			}
-
-			font = customFonts[currentFontSize];
-			if (i == 0 && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
-			{
-				font = customFonts[currentFontSize + 10];
-				//color = &tdc.squawk_error_color;
 			}
 
 			// Drawing!
@@ -340,7 +343,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
 
 			// If we're not looking at the last element
-			if ((right_align && el != 0) || (!right_align && el != line.Size() - 1))
+			if ((right_align && el != 0) || (!right_align && el != line.size() - 1))
 			{
 				TempTagWidth += tdc.blank_width;
 			}
@@ -435,8 +438,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		}
 	}
 
-	// Do we need a border??
-	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
 	// Drawing the border
 	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
 	{

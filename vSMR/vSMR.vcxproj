@@ -127,7 +127,8 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)$(ProjectName).dll" "%HOMEPATH%\Documents\EuroScope\Plugins\vSMR\$(ProjectName).dll"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -25,6 +25,7 @@ protected:
 public:
 	CColorManager()
 	{
+		// TODO make this an enum
 		update_brightness("label", 100);
 		update_brightness("symbol", 100);
 		update_brightness("target", 100);

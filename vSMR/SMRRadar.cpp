@@ -2684,6 +2684,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		// Predicted Track Line
 		// It starts 20 seconds away from the ac
+		CPen qTrackPen(PS_SOLID, 1,
+		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
+		dc.SelectObject(qTrackPen);
 		if (reportedGs > 50 && PredictedLength > 0)
 		{
 			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;

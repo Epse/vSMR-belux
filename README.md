@@ -33,6 +33,10 @@ This is the latest stable release, which has been tested and the one you should 
 
 Download the latest release here: <https://github.com/Epse/vSMR-belux/releases>
 
+### Nightly builds
+
+If you know what you're doing, you can nab the latest dev builds here: <https://github.com/Epse/vSMR-belux/actions> under Artifacts of an MSBuild workflow. Try to grab one from the master branch.
+
 ### Thanks
 
 Thanks to pierr3 for the original version of this plugin and Nicola Macoir for the original Belux fork.

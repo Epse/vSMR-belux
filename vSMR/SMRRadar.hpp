@@ -141,7 +141,7 @@ public:
 	bool ReleaseInProgress = false;
 	bool AcquireInProgress = false;
 
-	bool belux_promode = false;
+	bool belux_promode = true;
 	bool belux_promode_easy = false;
 
 	bool show_free_traffic = true;

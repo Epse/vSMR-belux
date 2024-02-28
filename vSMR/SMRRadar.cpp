@@ -254,8 +254,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 		int TempTagWidth = 0;
 		int TempTagHeight = 0;
-		// TODO remove
-		auto cs = rt.GetCallsign();
 
 		/*
 		 * Okay, breathe, I got you.
@@ -955,7 +953,7 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 				TagAngles[sObjectId] = closest(angles, angle);
 				TagLeaderLineLength[sObjectId] = max(LeaderLineDefaultlenght,
 				                                     min(int(DistancePts(AcPosPix, TagCenterPix)),
-					                                     LeaderLineDefaultlenght * 2));
+					                                     LeaderLineDefaultlenght * 4));
 			}
 			else
 			{

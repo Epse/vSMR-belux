@@ -1929,6 +1929,7 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	bool IsPrimary = !rt.GetPosition().GetTransponderC();
 	bool isAirborne = rt.GetPosition().GetReportedGS() > 50;
 
+	// TODO Add ^ to callsign if DEPA in scratchpad. This signifies takeoff clearance and makes an upwards arrow in Euroscope font
 	// ----- Callsign -------
 	string callsign = rt.GetCallsign();
 	if (fp.IsValid())
@@ -1970,6 +1971,20 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 		default:
 			// Don't change callsign
 			break;
+		}
+
+		if (strcmp(fp.GetGroundState(), "DEPA") == 0)
+		{
+			callsign += "^"; // Forms an up arrow in Euroscope font
+		}
+		// This uses the TopSky "Mark" _or_ Freq feature
+		const string strip_seven = fp.GetControllerAssignedData().GetFlightStripAnnotation(7);
+		if (
+			strip_seven.find("K") != string::npos
+			|| strip_seven.find("R") != string::npos
+			)
+		{
+			callsign += "|"; // Forms a down arrow in Euroscope font, as in cleared to land
 		}
 	}
 

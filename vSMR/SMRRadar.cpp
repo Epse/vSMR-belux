@@ -2681,19 +2681,15 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
+		Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+		const Pen pen(color, symbol_line_thickness);
 		if (RtPos.GetTransponderC())
 		{
-			Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-			const Pen pen(color, symbol_line_thickness);
 			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
 		}
 		else // We still want the primary return square, but we simulate only getting a good lock if its moving
 		{
-			dc.MoveTo(acPosPix.x - half_size, acPosPix.y - half_size);
-			dc.LineTo(acPosPix.x + half_size, acPosPix.y - half_size);
-			dc.LineTo(acPosPix.x + half_size, acPosPix.y + half_size);
-			dc.LineTo(acPosPix.x - half_size, acPosPix.y + half_size);
-			dc.LineTo(acPosPix.x - half_size, acPosPix.y - half_size);
+			graphics.DrawRectangle(&pen, acPosPix.x - half_size, acPosPix.y - half_size, size, size);
 		}
 
 		// Predicted Track Line

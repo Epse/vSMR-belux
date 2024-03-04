@@ -232,7 +232,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
 
-	if (is_assr_err)
+	if (is_assr_err && show_err_lines)
 	{
 		auto val = vector<string>();
 		val.emplace_back("SSR/FPL");
@@ -714,6 +714,9 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 	if ((p_value = GetDataFromAsr("ShiftTopBar")) != NULL)
 		shift_top_bar = (strcmp(p_value, "on") == 0);
 
+	if ((p_value = GetDataFromAsr("ShowErrLines")) != NULL)
+		show_err_lines = (strcmp(p_value, "on") == 0);
+
 	string temp;
 
 	for (int i = 1; i < 3; i++)
@@ -800,6 +803,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("BeluxProModeEasy", "vSMR Belux pro mode - easy version", (belux_promode_easy ? "on" : "off"));
 
 	SaveDataToAsr("ShiftTopBar", "Shift top menu bar downwards", shift_top_bar ? "on" : "off");
+
+	SaveDataToAsr("ShowErrLines", "Show TAG error lines", show_err_lines ? "on" : "off");
 
 
 	string temp = "";
@@ -1155,6 +1160,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("SRW 1", "", APPWINDOW_ONE, false, int(appWindowDisplays[1]));
 			GetPlugIn()->AddPopupListElement("SRW 2", "", APPWINDOW_TWO, false, int(appWindowDisplays[2]));
 			GetPlugIn()->AddPopupListElement("Profiles", "", RIMCAS_OPEN_LIST);
+			GetPlugIn()->AddPopupListElement("Tag Error Lines", "", RIMCAS_ERR_LINE_TOGGLE, false, show_err_lines ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 
@@ -1492,6 +1498,11 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 	{
 		QDMenabled = !QDMenabled;
 		QDMSelectEnabled = false;
+	}
+
+	if (FunctionId == RIMCAS_ERR_LINE_TOGGLE)
+	{
+		show_err_lines = !show_err_lines;
 	}
 
 	if (FunctionId == RIMCAS_QDM_SELECT_TOGGLE)

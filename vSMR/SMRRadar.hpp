@@ -51,6 +51,7 @@ private:
 	GateTarget * gate_target;
 	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt);
 	bool shift_top_bar = false;
+	bool show_err_lines = true;
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();

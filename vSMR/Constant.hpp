@@ -293,6 +293,7 @@ constexpr int RIMCAS_MENU = 8000;
 constexpr int RIMCAS_QDM_TOGGLE = 8006;
 constexpr int RIMCAS_QDM_SELECT_TOGGLE = 8007;
 constexpr int RIMCAS_ERR_LINE_TOGGLE = 8009;
+constexpr int RIMCAS_SHIFT_TOP_BAR_TOGGLE = 8010;
 constexpr int RIMCAS_OPEN_LIST = 9873;
 constexpr int RIMCAS_TIMER = 8015;
 constexpr int RIMCAS_UPDATE_PROFILE = 8016;

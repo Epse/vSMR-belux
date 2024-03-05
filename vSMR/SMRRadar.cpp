@@ -1161,6 +1161,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("SRW 2", "", APPWINDOW_TWO, false, int(appWindowDisplays[2]));
 			GetPlugIn()->AddPopupListElement("Profiles", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Tag Error Lines", "", RIMCAS_ERR_LINE_TOGGLE, false, show_err_lines ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Shift Top Bar", "", RIMCAS_SHIFT_TOP_BAR_TOGGLE, false, shift_top_bar ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 
@@ -1503,6 +1504,11 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 	if (FunctionId == RIMCAS_ERR_LINE_TOGGLE)
 	{
 		show_err_lines = !show_err_lines;
+	}
+
+	if (FunctionId == RIMCAS_SHIFT_TOP_BAR_TOGGLE)
+	{
+		shift_top_bar = !shift_top_bar;
 	}
 
 	if (FunctionId == RIMCAS_QDM_SELECT_TOGGLE)
@@ -1940,7 +1946,6 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	bool IsPrimary = !rt.GetPosition().GetTransponderC();
 	bool isAirborne = rt.GetPosition().GetReportedGS() > 50;
 
-	// TODO Add ^ to callsign if DEPA in scratchpad. This signifies takeoff clearance and makes an upwards arrow in Euroscope font
 	// ----- Callsign -------
 	string callsign = rt.GetCallsign();
 	if (fp.IsValid())

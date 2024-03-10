@@ -695,7 +695,7 @@ void CSMRPlugin::OnTimer(int Counter)
 		// We auto-reject any DCL requests for those without valid flight plan, because they don't show up in the DEP list
 		for (auto &element : AircraftDemandingClearance) {
 			auto flightPlan = this->FlightPlanSelect(element.c_str());
-			if (flightPlan.IsValid() && flightPlan.GetState() != 0) {
+			if (flightPlan.IsValid()) {
 				continue;
 			}
 

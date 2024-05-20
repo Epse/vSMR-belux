@@ -2686,6 +2686,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 
 		const bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
+		const bool TargetIsAsel = strcmp(GetPlugIn()->FlightPlanSelectASEL().GetCallsign(), rt.GetCallsign()) == 0;
 
 		AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(),
 		                {
@@ -2706,6 +2707,14 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		else // We still want the primary return square, but we simulate only getting a good lock if its moving
 		{
 			graphics.DrawRectangle(&pen, acPosPix.x - half_size, acPosPix.y - half_size, size, size);
+		}
+
+		if (TargetIsAsel)
+		{
+			const Color asel_color = ColorManager->get_corrected_color("target", Gdiplus::Color::Yellow);
+			const Pen asel_pen(asel_color, symbol_line_thickness);
+			const int asel_size = size + 2*symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
+			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
 		}
 
 		// Predicted Track Line

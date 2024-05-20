@@ -22,11 +22,13 @@ class GateTarget
 {
 private:
 	static constexpr int POINTS_IN_INDICATOR = 6;
+	static constexpr char LABEL_PADDING = 2;
 	static std::optional<EuroScopePlugIn::CPosition> gateLocation(const Gate& gate_info);
-	static void getIndicator(Gdiplus::Point* points, POINT target);
+	static void getIndicator(Gdiplus::Point* points, POINT target, const unsigned char width_px);
 	std::map<std::string, std::map<std::string, Gate>> gates;
 	double calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen) const;
+	static unsigned char calculateTargetSize(EuroScopePlugIn::CRadarScreen* radar_screen);
 public:
-	void OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics);
+	void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font);
 	void loadGates();
 };

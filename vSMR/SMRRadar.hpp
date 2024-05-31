@@ -147,6 +147,7 @@ public:
 
 	bool show_free_traffic = true;
 	bool show_nonmine = true;
+	bool show_on_blocks = true;
 
 	multimap<string, string> DistanceTools;
 	bool DistanceToolActive = false;

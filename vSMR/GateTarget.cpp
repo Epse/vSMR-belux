@@ -116,20 +116,30 @@ unsigned char GateTarget::calculateTargetSize(EuroScopePlugIn::CRadarScreen* rad
 	);
 }
 
+std::optional<Gate> GateTarget::maybe_get_gate(CSMRRadar* radar_screen, const EuroScopePlugIn::CFlightPlan* fp) const
+{
+	const std::string gate = fp->GetControllerAssignedData().GetFlightStripAnnotation(4);
+	if (gate.empty())
+		return {};
+
+	const auto airport = radar_screen->getActiveAirport();
+	if (strcmp(fp->GetFlightPlanData().GetDestination(), airport.c_str()) != 0)
+		return {};
+
+	const Gate gate_info = this->gates.at(airport).at(gate);
+	if (gate_info.airport.empty())
+		return {};
+
+	return gate_info;
+}
+
 void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font)
 {
 	const EuroScopePlugIn::CFlightPlan fp = radar_screen->GetPlugIn()->FlightPlanSelectASEL();
-	const std::string airport = radar_screen->getActiveAirport();
-	const std::string gate = fp.GetControllerAssignedData().GetFlightStripAnnotation(4);
-	if (gate.empty())
+	const auto maybe_gate = this->maybe_get_gate(radar_screen, &fp);
+	if (!maybe_gate.has_value())
 		return;
-
-	if (strcmp(fp.GetFlightPlanData().GetDestination(), airport.c_str()) != 0)
-		return;
-
-	Gate gate_info = this->gates[airport][gate];
-	if (gate_info.airport.empty())
-		return;
+	const auto gate_info = maybe_gate.value();
 
 	const auto maybe_pos = this->gateLocation(gate_info);
 	if (!maybe_pos.has_value())
@@ -172,4 +182,26 @@ void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics,
 	graphics->DrawString(wgate.c_str(), wgate.length(), font, Gdiplus::PointF(GateTarget::LABEL_PADDING, GateTarget::LABEL_PADDING + sign * 30), &text_brush);
 
 	graphics->ResetTransform();
+}
+
+
+bool GateTarget::isOnBlocks(CSMRRadar* radar_screen, EuroScopePlugIn::CRadarTarget* target) const
+{
+	const auto fp = target->GetCorrelatedFlightPlan();
+	const auto pos = target->GetPosition().GetPosition();
+
+	if (target->GetGS() > 0)
+		return false;
+
+	const auto maybe_gate = this->maybe_get_gate(radar_screen, &fp);
+	if (!maybe_gate.has_value())
+		return false;
+
+	const auto maybe_pos = gateLocation(*maybe_gate);
+	if (!maybe_pos.has_value())
+		return false;
+
+	const auto dist = pos.DistanceTo(*maybe_pos) * 1852; // Convert from NM to m
+
+	return dist <= ON_BLOCKS_TOLERANCE;
 }

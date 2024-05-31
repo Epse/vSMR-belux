@@ -79,6 +79,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
 		isAcDisplayed = false;
 
+	if (!show_on_blocks && gate_target->isOnBlocks(this, &rt))
+		isAcDisplayed = false;
+
 	if (!isAcDisplayed)
 	{
 		return;
@@ -1174,6 +1177,8 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			                                 show_free_traffic ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show Not Mine", "", FILTER_NON_ASSUMED, false,
 			                                 show_nonmine ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Show On Blocks", "", FILTER_SHOW_ON_BLOCKS, false,
+												show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
 		}
 
@@ -1681,6 +1686,11 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 	if (FunctionId == FILTER_NON_ASSUMED)
 	{
 		show_nonmine = !show_nonmine;
+	}
+
+	if (FunctionId == FILTER_SHOW_ON_BLOCKS)
+	{
+		show_on_blocks = !show_on_blocks;
 	}
 }
 

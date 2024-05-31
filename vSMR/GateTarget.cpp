@@ -103,7 +103,7 @@ double GateTarget::calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen
 
 unsigned char GateTarget::calculateTargetSize(EuroScopePlugIn::CRadarScreen* radar_screen)
 {
-	constexpr float symbol_size_meters = 25.0; // Target size in metres
+	constexpr float symbol_size_meters = 35.0; // Target size in metres
 	const auto RadarArea = radar_screen->GetRadarArea();
 	const POINT center_screen = POINT{
 		(RadarArea.right - RadarArea.left) / 2, (RadarArea.bottom - RadarArea.top) / 2
@@ -138,7 +138,7 @@ void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics,
 
 	const auto bright_blue = Gdiplus::Color(255, 0, 160, 250);
 	const auto brush = Gdiplus::SolidBrush(bright_blue);
-	const auto pen = Gdiplus::Pen(Gdiplus::Color::Black, 2);
+	const auto pen = Gdiplus::Pen(Gdiplus::Color::Black, 1);
 
 	const auto size_px = GateTarget::calculateTargetSize(radar_screen);
 

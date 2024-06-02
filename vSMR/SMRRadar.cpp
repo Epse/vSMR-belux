@@ -2483,6 +2483,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	RimcasInstance->OnRefreshBegin(isLVP);
 
+	// Gate Targets, before symbols and RPS
+	this->gate_target->OnRefresh(this, &graphics, customFonts[currentFontSize]);
+
 #pragma region symbols
 	// Drawing the symbols
 	Logger::info("Symbols loop");
@@ -2748,9 +2751,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 #pragma endregion Drawing of the symbols
-
-	// Gate Targets
-	this->gate_target->OnRefresh(this, &graphics, customFonts[currentFontSize]);
 
 	TimePopupData.clear();
 	AcOnRunway.clear();

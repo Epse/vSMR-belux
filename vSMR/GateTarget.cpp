@@ -190,6 +190,9 @@ bool GateTarget::isOnBlocks(CSMRRadar* radar_screen, EuroScopePlugIn::CRadarTarg
 	const auto fp = target->GetCorrelatedFlightPlan();
 	const auto pos = target->GetPosition().GetPosition();
 
+	if (radar_screen->getActiveAirport() == fp.GetFlightPlanData().GetDestination())
+		return false;
+
 	if (target->GetGS() > 0)
 		return false;
 

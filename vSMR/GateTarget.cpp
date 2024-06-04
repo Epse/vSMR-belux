@@ -28,7 +28,7 @@ void GateTarget::loadGates()
 	if (!gates.empty())
 		return;
 
-	const std::string url = "https://beluxvacc.org/files/navigation_department/datafiles/vSMR_gates.json";
+	const std::string url = "https://api.beluxvacc.org/belux-gate-manager-api/gates/";
 
 	// Use HttpHelper to get the URL
 	// Then use rapidjson to parse

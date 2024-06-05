@@ -720,6 +720,15 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 	if ((p_value = GetDataFromAsr("ShowErrLines")) != NULL)
 		show_err_lines = (strcmp(p_value, "on") == 0);
 
+	if ((p_value = GetDataFromAsr("Filters_ShowNonMine")) != NULL)
+		show_nonmine = strcmp(p_value, "on") == 0;
+
+	if ((p_value = GetDataFromAsr("Filters_ShowFree")) != NULL)
+		show_free_traffic = strcmp(p_value, "on") == 0;
+
+	if ((p_value = GetDataFromAsr("Filters_ShowOnBlocks")) != NULL)
+		show_on_blocks = strcmp(p_value, "on") == 0;
+
 	string temp;
 
 	for (int i = 1; i < 3; i++)
@@ -809,6 +818,9 @@ void CSMRRadar::OnAsrContentToBeSaved()
 
 	SaveDataToAsr("ShowErrLines", "Show TAG error lines", show_err_lines ? "on" : "off");
 
+	SaveDataToAsr("Filters_ShowNonMine", "Filters: Show None Mine", show_nonmine ? "on" : "off");
+	SaveDataToAsr("Filters_ShowFree", "Filters: Show Free", show_free_traffic ? "on" : "off");
+	SaveDataToAsr("Filters_ShowOnBlocks", "Filters: Show On Blocks", show_on_blocks ? "on" : "off");
 
 	string temp = "";
 

@@ -28,31 +28,19 @@ void GateTarget::loadGates()
 	if (!gates.empty())
 		return;
 
-	const std::string url = "https://api.beluxvacc.org/belux-gate-manager-api/gates";
+	const std::string url = "https://api.beluxvacc.org/belux-gate-manager-api/gates/";
 
-	// Use HttpHelper to get https://api.beluxvacc.org/belux-gate-manager-api/gates
+	// Use HttpHelper to get the URL
 	// Then use rapidjson to parse
 	// map that into gates
-	/*
-	const auto httpHelper = new HttpHelper();
-	std::string gate_json;
-	gate_json.assign(httpHelper->downloadStringFromURL(url));
-	*/
-
-	char DllPathFile[_MAX_PATH];
-	GetModuleFileNameA(HINSTANCE(&__ImageBase), DllPathFile, sizeof(DllPathFile));
-	std::string DllPath = DllPathFile;
-	DllPath.resize(DllPath.size() - strlen("vSMR.dll"));
-	std::string gatePath = DllPath + "\\gates.json";
-
-	stringstream ss;
-	ifstream ifs;
-	ifs.open(gatePath, std::ios::binary);
-	ss << ifs.rdbuf();
-	ifs.close();
+	const auto maybe_json = HttpHelper::downloadStringFromURL(url);
+	if (!maybe_json)
+	{
+		return;
+	}
 
 	Document doc;
-	doc.Parse<0>(ss.str().c_str());
+	doc.Parse<0>(maybe_json->c_str());
 
 	if (doc.HasParseError())
 	{
@@ -90,7 +78,7 @@ void GateTarget::getIndicator(Gdiplus::Point* points, POINT target, const unsign
 }
 
 // ASRs can be rotated at an angle, we will here calculate it as ES does not provide it
-double GateTarget::calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen) const
+double GateTarget::calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen)
 {
 	const auto zero = radar_screen->ConvertCoordFromPixelToPosition(POINT{ 0, 0 });
 	EuroScopePlugIn::CPosition end;
@@ -133,7 +121,7 @@ std::optional<Gate> GateTarget::maybe_get_gate(CSMRRadar* radar_screen, const Eu
 	return gate_info;
 }
 
-void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font)
+void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font) const
 {
 	const EuroScopePlugIn::CFlightPlan fp = radar_screen->GetPlugIn()->FlightPlanSelectASEL();
 	const auto maybe_gate = this->maybe_get_gate(radar_screen, &fp);

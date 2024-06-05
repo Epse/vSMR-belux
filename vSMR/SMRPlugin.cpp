@@ -12,8 +12,6 @@ std::string FailedToConnectMessage;
 string logonCode;
 string logonCallsign = "EGKK";
 
-HttpHelper * httpHelper = nullptr;
-
 bool BLINK = false;
 
 bool PlaySoundClr = false;
@@ -88,18 +86,19 @@ void datalinkLogin(void * arg) {
 	url += "&from=";
 	url += logonCallsign;
 	url += "&to=SERVER&type=PING";
-	raw.assign(httpHelper->downloadStringFromURL(url));
+	raw.assign(HttpHelper::downloadStringFromURL(url).value_or(""));
 
 	if (startsWith("ok", raw.c_str())) {
 		HoppieConnected = true;
 		ConnectionMessage = true;
 	}
 	else {
-		if (httpHelper->getLastErrorMessage().length() < 1) {
+		const auto err = HttpHelper::getLastErrorMessage();
+		if (err.length() < 1) {
 			FailedToConnectMessage = raw;
 		}
 		else {
-			FailedToConnectMessage = httpHelper->getLastErrorMessage();
+			FailedToConnectMessage = err;
 		}
 	}
 };
@@ -124,7 +123,7 @@ void sendDatalinkMessage(void * arg) {
 		start_pos += string("%20").length();
 	}
 
-	raw.assign(httpHelper->downloadStringFromURL(url));
+	raw.assign(HttpHelper::downloadStringFromURL(url).value_or(""));
 
 	if (startsWith("ok", raw.c_str())) {
 		if (PendingMessages.find(DatalinkToSend.callsign) != PendingMessages.end())
@@ -144,7 +143,7 @@ void pollMessages(void * arg) {
 	url += "&from=";
 	url += logonCallsign;
 	url += "&to=SERVER&type=POLL";
-	raw.assign(httpHelper->downloadStringFromURL(url));
+	raw.assign(HttpHelper::downloadStringFromURL(url).value_or(""));
 
 	if (!startsWith("ok", raw.c_str()) || raw.size() <= 3)
 		return;
@@ -281,7 +280,7 @@ void sendDatalinkClearance(void * arg) {
 		start_pos += string("%20").length();
 	}
 
-	raw.assign(httpHelper->downloadStringFromURL(url));
+	raw.assign(HttpHelper::downloadStringFromURL(url).value_or(""));
 
 	if (startsWith("ok", raw.c_str())) {
 		if (std::find(AircraftDemandingClearance.begin(), AircraftDemandingClearance.end(), DatalinkToSend.callsign.c_str()) != AircraftDemandingClearance.end()) {
@@ -339,9 +338,6 @@ CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PL
 	messageId = 0;
 
 	timer = clock();
-
-	if (httpHelper == nullptr)
-		httpHelper = new HttpHelper();
 
 	const char * p_value;
 

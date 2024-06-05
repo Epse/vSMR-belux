@@ -1,16 +1,14 @@
 #pragma once
+#include <optional>
 #include <string>
-#include <curl\curl.h>
-#include <curl\easy.h>
+#pragma comment(lib, "wininet.lib")
 
 class HttpHelper
 {
 private:
-	static std::string downloadedContents;
-	static size_t handle_data(void *ptr, size_t size, size_t nmemb, void *stream);
-	std::string lastErrorMessage;
 
 public:
-	std::string downloadStringFromURL(const std::string& url);
-	std::string getLastErrorMessage();
+	static std::optional<std::string> downloadStringFromURL(const std::string& url);
+	static DWORD getLastErrorCode();
+	static std::string getLastErrorMessage();
 };

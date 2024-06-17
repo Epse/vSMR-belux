@@ -114,11 +114,22 @@ std::optional<Gate> GateTarget::maybe_get_gate(CSMRRadar* radar_screen, const Eu
 	if (strcmp(fp->GetFlightPlanData().GetDestination(), airport.c_str()) != 0)
 		return {};
 
-	const Gate gate_info = this->gates.at(airport).at(gate);
-	if (gate_info.airport.empty())
+	const auto airport_map = this->gates.find(airport);
+	if (airport_map == this->gates.end())
+	{
+		return {};
+	}
+
+	const auto gate_info = airport_map->second.find(gate);
+	if (gate_info == airport_map->second.end())
+	{
+		return {};
+	}
+
+	if (gate_info->second.airport.empty())
 		return {};
 
-	return gate_info;
+	return gate_info->second;
 }
 
 void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font) const
@@ -175,24 +186,24 @@ void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics,
 
 bool GateTarget::isOnBlocks(CSMRRadar* radar_screen, EuroScopePlugIn::CRadarTarget* target) const
 {
-	const auto fp = target->GetCorrelatedFlightPlan();
-	const auto pos = target->GetPosition().GetPosition();
+		const auto fp = target->GetCorrelatedFlightPlan();
+		const auto pos = target->GetPosition().GetPosition();
 
-	if (radar_screen->getActiveAirport() == fp.GetFlightPlanData().GetOrigin())
-		return false;
+		if (radar_screen->getActiveAirport() == fp.GetFlightPlanData().GetOrigin())
+			return false;
 
-	if (target->GetGS() > 0)
-		return false;
+		if (target->GetGS() > 0)
+			return false;
 
-	const auto maybe_gate = this->maybe_get_gate(radar_screen, &fp);
-	if (!maybe_gate.has_value())
-		return false;
+		const auto maybe_gate = this->maybe_get_gate(radar_screen, &fp);
+		if (!maybe_gate.has_value())
+			return false;
 
-	const auto maybe_pos = gateLocation(*maybe_gate);
-	if (!maybe_pos.has_value())
-		return false;
+		const auto maybe_pos = gateLocation(*maybe_gate);
+		if (!maybe_pos.has_value())
+			return false;
 
-	const auto dist = pos.DistanceTo(*maybe_pos) * 1852; // Convert from NM to m
+		const auto dist = pos.DistanceTo(*maybe_pos) * 1852; // Convert from NM to m
 
-	return dist <= ON_BLOCKS_TOLERANCE;
+		return dist <= ON_BLOCKS_TOLERANCE;
 }

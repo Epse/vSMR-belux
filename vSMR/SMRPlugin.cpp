@@ -54,6 +54,7 @@ unsigned int messageId = 0;
 unsigned int dclCounter = 0;
 
 clock_t timer;
+unsigned int timer_random_offset = 0;
 
 string myfrequency;
 
@@ -93,8 +94,9 @@ void datalinkLogin(void * arg) {
 		ConnectionMessage = true;
 	}
 	else {
+		const auto error_code = HttpHelper::getLastErrorCode();
 		const auto err = HttpHelper::getLastErrorMessage();
-		if (err.length() < 1) {
+		if (!error_code || err.length() < 1) {
 			FailedToConnectMessage = raw;
 		}
 		else {
@@ -684,9 +686,10 @@ void CSMRPlugin::OnTimer(int Counter)
 		HoppieConnected = false;
 	}
 
-	if (((clock() - timer) / CLOCKS_PER_SEC) > 10 && HoppieConnected) {
+	if (((clock() - timer) / CLOCKS_PER_SEC) > (30 + timer_random_offset) && HoppieConnected) {
 		_beginthread(pollMessages, 0, nullptr);
 		timer = clock();
+		timer_random_offset = std::rand() / ((RAND_MAX + 1u) / 5); // Random 0-5 value
 
 		// We auto-reject any DCL requests for those without valid flight plan, because they don't show up in the DEP list
 		for (auto &element : AircraftDemandingClearance) {

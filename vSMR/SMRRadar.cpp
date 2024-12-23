@@ -66,10 +66,10 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 	bool AcisCorrelated = IsCorrelated(fp, rt);
 
-	if (!show_free_traffic && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
+	if (!filters.show_free && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
 		isAcDisplayed = false;
 
-	if (!show_nonmine && strlen(fp.GetTrackingControllerId()) != 0 && !fp.GetTrackingControllerIsMe() && !fp.
+	if (!filters.show_nonmine && strlen(fp.GetTrackingControllerId()) != 0 && !fp.GetTrackingControllerIsMe() && !fp.
 		GetCoordinatedNextController())
 		isAcDisplayed = false;
 
@@ -79,7 +79,12 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
 		isAcDisplayed = false;
 
-	if (!show_on_blocks && gate_target->isOnBlocks(this, &rt))
+	if (!filters.show_on_blocks && gate_target->isOnBlocks(this, &rt))
+		isAcDisplayed = false;
+
+	const char* callsign = fp.GetCallsign();
+	// NSTS shows up as "" here
+	if (!filters.show_nsts && strlen(fp.GetGroundState()) == 0)
 		isAcDisplayed = false;
 
 	if (!isAcDisplayed)
@@ -720,14 +725,10 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 	if ((p_value = GetDataFromAsr("ShowErrLines")) != NULL)
 		show_err_lines = (strcmp(p_value, "on") == 0);
 
-	if ((p_value = GetDataFromAsr("Filters_ShowNonMine")) != NULL)
-		show_nonmine = strcmp(p_value, "on") == 0;
-
-	if ((p_value = GetDataFromAsr("Filters_ShowFree")) != NULL)
-		show_free_traffic = strcmp(p_value, "on") == 0;
-
-	if ((p_value = GetDataFromAsr("Filters_ShowOnBlocks")) != NULL)
-		show_on_blocks = strcmp(p_value, "on") == 0;
+	if ((p_value = GetDataFromAsr("Filters")) != NULL)
+	{
+		filters = filters_from_char(*p_value);
+	}
 
 	string temp;
 
@@ -818,9 +819,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 
 	SaveDataToAsr("ShowErrLines", "Show TAG error lines", show_err_lines ? "on" : "off");
 
-	SaveDataToAsr("Filters_ShowNonMine", "Filters: Show None Mine", show_nonmine ? "on" : "off");
-	SaveDataToAsr("Filters_ShowFree", "Filters: Show Free", show_free_traffic ? "on" : "off");
-	SaveDataToAsr("Filters_ShowOnBlocks", "Filters: Show On Blocks", show_on_blocks ? "on" : "off");
+	const char filter_char = char_from_filters(filters);
+	SaveDataToAsr("Filters", "Filter settings", &filter_char);
 
 	string temp = "";
 
@@ -1186,11 +1186,13 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			Area.bottom = Area.bottom + 30;
 			GetPlugIn()->OpenPopupList(Area, "Filter Menu", 1);
 			GetPlugIn()->AddPopupListElement("Show Free", "", FILTER_SHOW_FREE, false,
-			                                 show_free_traffic ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			                                 filters.show_free ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show Not Mine", "", FILTER_NON_ASSUMED, false,
-			                                 show_nonmine ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			                                 filters.show_nonmine ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show On Blocks", "", FILTER_SHOW_ON_BLOCKS, false,
-												show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+												filters.show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Show NSTS", "", FILTER_SHOW_NSTS, false,
+												filters.show_nsts ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
 		}
 
@@ -1692,17 +1694,22 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 
 	if (FunctionId == FILTER_SHOW_FREE)
 	{
-		show_free_traffic = !show_free_traffic;
+		filters.show_free = !filters.show_free;
 	}
 
 	if (FunctionId == FILTER_NON_ASSUMED)
 	{
-		show_nonmine = !show_nonmine;
+		filters.show_nonmine = !filters.show_nonmine;
 	}
 
 	if (FunctionId == FILTER_SHOW_ON_BLOCKS)
 	{
-		show_on_blocks = !show_on_blocks;
+		filters.show_on_blocks = !filters.show_on_blocks;
+	}
+
+	if (FunctionId == FILTER_SHOW_NSTS)
+	{
+		filters.show_nsts = !filters.show_nsts;
 	}
 }
 

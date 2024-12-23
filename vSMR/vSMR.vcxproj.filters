@@ -140,6 +140,9 @@
     <ClInclude Include="TagDrawingContext.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Filters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vSMR.def">

@@ -24,6 +24,7 @@
 #include "TagTypes.hpp"
 #include "GateTarget.hpp"
 #include "TagDrawingContext.hpp"
+#include "Filters.h"
 
 using namespace std;
 using namespace Gdiplus;
@@ -145,9 +146,7 @@ public:
 	bool belux_promode = true;
 	bool belux_promode_easy = false;
 
-	bool show_free_traffic = true;
-	bool show_nonmine = true;
-	bool show_on_blocks = true;
+	Filters filters = new_filters();
 
 	multimap<string, string> DistanceTools;
 	bool DistanceToolActive = false;

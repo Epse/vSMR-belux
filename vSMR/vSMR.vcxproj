@@ -159,6 +159,7 @@
     <ClInclude Include="Constant.hpp" />
     <ClInclude Include="CPDLCSettingsDialog.hpp" />
     <ClInclude Include="DataLinkDialog.hpp" />
+    <ClInclude Include="Filters.h" />
     <ClInclude Include="GateTarget.hpp" />
     <ClInclude Include="HttpHelper.hpp" />
     <ClInclude Include="InsetWindow.h" />

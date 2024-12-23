@@ -31,7 +31,7 @@ struct DatalinkPacket {
 
 DatalinkPacket DatalinkToSend;
 
-string baseUrlDatalink = "http://www.hoppie.nl/acars/system/connect.html";
+string baseUrlDatalink = "https://www.hoppie.nl/acars/system/connect.html";
 
 struct AcarsMessage {
 	string from;

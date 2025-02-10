@@ -334,6 +334,7 @@ constexpr int FILTER_NON_ASSUMED = 8892;
 constexpr int FILTER_SHOW_FREE = 8893;
 constexpr int FILTER_SHOW_ON_BLOCKS = 8894;
 constexpr int FILTER_SHOW_NSTS = 8895;
+constexpr int FILTER_SHOW_STUP = 8896;
 
 // Brightness update
 constexpr int RIMCAS_BRIGHTNESS_LABEL = 301;

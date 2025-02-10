@@ -966,11 +966,8 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 			{
 				double angle = RadToDeg(atan2(CustomTag.y, CustomTag.x));
 				angle = fmod(angle + 360, 360);
-				vector<double> angles;
-				for (double k = 0.0; k <= 360.0; k += 22.5)
-					angles.push_back(k);
 
-				TagAngles[sObjectId] = closest(angles, angle);
+				TagAngles[sObjectId] = angle;
 				TagLeaderLineLength[sObjectId] = max(LeaderLineDefaultlenght,
 				                                     min(int(DistancePts(AcPosPix, TagCenterPix)),
 					                                     LeaderLineDefaultlenght * 4));

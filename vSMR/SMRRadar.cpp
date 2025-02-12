@@ -104,7 +104,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		// Use angle:
 
 		if (TagAngles.find(rt.GetCallsign()) == TagAngles.end())
-			TagAngles[rt.GetCallsign()] = 270.0f;
+		{
+			TagAngles[rt.GetCallsign()] = 0.0f;
+		}
 
 		int length = LeaderLineDefaultlenght;
 		if (TagLeaderLineLength.find(rt.GetCallsign()) != TagLeaderLineLength.end())
@@ -114,14 +116,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[rt.GetCallsign()]))));
 	}
 
-	constexpr char start_offset = 10;
-
 	// Would the start of a right-aligned tag be to the left of the tag start?
-	const bool right_align = acPosPix.x > TagCenter.x + start_offset;
+	const bool right_align = acPosPix.x > TagCenter.x;
 
-	const POINT tag_start = right_align
-		                        ? POINT{TagCenter.x + start_offset, TagCenter.y + start_offset}
-		                        : POINT{TagCenter.x - start_offset, TagCenter.y - start_offset};
+	// Duplicate for now, might change when we correct for top vs bottom
+	const POINT tag_start = TagCenter;
+	/*
+	 * The tag drawing logic is _slightly_ broken when tags are drawn on the top vs. bottom of the aircraft.
+	 * tag_start is the top left when in the right semicircle or the top left when on the left,
+	 * but this causes a different effective default distance between the tag and aircraft on top vs bottom,
+	 * causing overlap with bottom of the tag and the aircraft.
+	 * The leaderlinelength should be the actual length of the line, even if connected to the bottom left corner of the tag,
+	 * regardless of line count.
+	 */
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -966,11 +973,8 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 			{
 				double angle = RadToDeg(atan2(CustomTag.y, CustomTag.x));
 				angle = fmod(angle + 360, 360);
-				vector<double> angles;
-				for (double k = 0.0; k <= 360.0; k += 22.5)
-					angles.push_back(k);
 
-				TagAngles[sObjectId] = closest(angles, angle);
+				TagAngles[sObjectId] = angle;
 				TagLeaderLineLength[sObjectId] = max(LeaderLineDefaultlenght,
 				                                     min(int(DistancePts(AcPosPix, TagCenterPix)),
 					                                     LeaderLineDefaultlenght * 4));
@@ -3278,6 +3282,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (IsTagBeingDragged(areas.first))
 			continue;
 
+		// If the tag was recently moved, leave it where it is for now.
 		if (RecentlyAutoMovedTags.find(areas.first) != RecentlyAutoMovedTags.end())
 		{
 			double t = (double)clock() - RecentlyAutoMovedTags[areas.first] / ((double)CLOCKS_PER_SEC);

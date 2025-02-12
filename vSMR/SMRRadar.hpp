@@ -50,7 +50,7 @@ class CSMRRadar :
 {
 private:
 	GateTarget * gate_target;
-	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt);
+	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode = false);
 	bool shift_top_bar = false;
 	bool show_err_lines = true;
 public:

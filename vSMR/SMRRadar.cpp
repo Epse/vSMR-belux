@@ -47,8 +47,9 @@ bool mouseWithin(const CRect& rect)
 }
 
 
-void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
+void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode)
 {
+	const std::string callsign = rt.GetCallsign();
 	if (!rt.IsValid())
 		return;
 
@@ -64,7 +65,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 	bool isAcDisplayed = isVisible(rt);
 
-	bool AcisCorrelated = IsCorrelated(fp, rt);
+	// Alt mode makes me pretend its correlated
+	bool AcisCorrelated = alt_mode || IsCorrelated(fp, rt);
 
 	if (!filters.show_free && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
 		isAcDisplayed = false;
@@ -73,7 +75,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 		GetCoordinatedNextController())
 		isAcDisplayed = false;
 
-	if (!AcisCorrelated && (reportedGs < 3 && (belux_promode && !belux_promode_easy)))
+	if (!AcisCorrelated && belux_promode && !belux_promode_easy)
 		isAcDisplayed = false;
 
 	if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
@@ -88,7 +90,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (!filters.show_stup && strcmp(fp.GetGroundState(), "STUP") == 0)
 		isAcDisplayed = false;
 
-	if (!isAcDisplayed)
+	if (!isAcDisplayed && !alt_mode)
 	{
 		return;
 	}
@@ -158,8 +160,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	}
 
 	if (!AcisCorrelated &&
-		((belux_promode && belux_promode_easy)
-			|| (reportedGs >= 3)))
+		(belux_promode && belux_promode_easy))
 	{
 		TagType = TagTypes::Uncorrelated;
 		ColorTagType = TagTypes::Uncorrelated;
@@ -296,7 +297,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 
 			wstring wstr = wstring(element.begin(), element.end());
 			Gdiplus::Font* font = customFonts[currentFontSize];
-			if ((element_was == "callsign" || i == 0) && strcmp(UIHelper::getEnumString(TagType).c_str(), "uncorrelated") != 0)
+			if ((element_was == "callsign" || i == 0) && TagType != TagTypes::Uncorrelated)
 			{
 				font = customFonts[currentFontSize + 10];
 			}
@@ -2273,6 +2274,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 {
 	Logger::info(string(__FUNCSIG__));
 
+	const bool alt_mode = GetAsyncKeyState(VK_MENU) & 0x8000;
+
 	// First, we define some constants
 	// These could probably be persisted across redraws,
 	// but this is already much better than recalculating per target
@@ -2825,7 +2828,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	     rt.IsValid();
 	     rt = GetPlugIn()->RadarTargetSelectNext(rt))
 	{
-		this->draw_target(tdc, rt);
+		this->draw_target(tdc, rt, alt_mode);
 	}
 
 #pragma endregion Drawing of the tags

@@ -82,9 +82,10 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt)
 	if (!filters.show_on_blocks && gate_target->isOnBlocks(this, &rt))
 		isAcDisplayed = false;
 
-	const char* callsign = fp.GetCallsign();
 	// NSTS shows up as "" here
 	if (!filters.show_nsts && strlen(fp.GetGroundState()) == 0)
+		isAcDisplayed = false;
+	if (!filters.show_stup && strcmp(fp.GetGroundState(), "STUP") == 0)
 		isAcDisplayed = false;
 
 	if (!isAcDisplayed)
@@ -1197,6 +1198,8 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 												filters.show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show NSTS", "", FILTER_SHOW_NSTS, false,
 												filters.show_nsts ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Show STUP", "", FILTER_SHOW_STUP, false,
+												filters.show_stup ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
 		}
 
@@ -1714,6 +1717,11 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 	if (FunctionId == FILTER_SHOW_NSTS)
 	{
 		filters.show_nsts = !filters.show_nsts;
+	}
+
+	if (FunctionId == FILTER_SHOW_STUP)
+	{
+		filters.show_stup = !filters.show_stup;
 	}
 }
 

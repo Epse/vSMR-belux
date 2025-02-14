@@ -2530,12 +2530,15 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	RimcasInstance->RunwayAreas.clear();
 
-	CRect R(GetRadarArea());
-	R.top += 20;
-	R.bottom = GetChatArea().top;
+	if (QDMSelectEnabled || QDMenabled || context_menu_for.has_value())
+	{
+		CRect R(GetRadarArea());
+		R.top += 20;
+		R.bottom = GetChatArea().top;
 
-	R.NormalizeRect();
-	AddScreenObject(DRAWING_BACKGROUND_CLICK, "", R, false, "");
+		R.NormalizeRect();
+		AddScreenObject(DRAWING_BACKGROUND_CLICK, "", R, false, "");
+	}
 
 	Logger::info("Runway loop");
 	CSectorElement rwy;

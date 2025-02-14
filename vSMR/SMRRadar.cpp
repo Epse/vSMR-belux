@@ -1056,7 +1056,7 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 		if (rt.IsValid())
 		{
 			const CRect Temp = Area;
-			const POINT TagCenterPix = Temp.CenterPoint();
+			const POINT TagCenterPix = Temp.TopLeft();
 			const POINT AcPosPix = ConvertCoordFromPositionToPixel(
 				GetPlugIn()->RadarTargetSelect(sObjectId).GetPosition().GetPosition());
 			const POINT CustomTag = {TagCenterPix.x - AcPosPix.x, TagCenterPix.y - AcPosPix.y};
@@ -1067,9 +1067,8 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 				angle = fmod(angle + 360, 360);
 
 				TagAngles[sObjectId] = angle;
-				TagLeaderLineLength[sObjectId] = max(LeaderLineDefaultlenght,
-				                                     min(int(DistancePts(AcPosPix, TagCenterPix)),
-					                                     LeaderLineDefaultlenght * 4));
+				TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
+					                                     LeaderLineDefaultlenght * 4);
 			}
 			else
 			{

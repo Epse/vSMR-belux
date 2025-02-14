@@ -3,6 +3,7 @@
 #include "SMRRadar.hpp"
 #include <cmath>
 #include <boost/geometry.hpp>
+using namespace std::string_literals;
 
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
@@ -209,7 +210,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 
 	//const Value& LabelLines = (*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"];
-	const optional<vector<vector<string>>> parsed_label_lines = UIHelper::parse_label_lines((*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"]);
+	const optional<vector<vector<string>>> parsed_label_lines = UIHelper::parse_label_lines(
+		(*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"]);
 	vector<vector<string>> LabelLines = parsed_label_lines.value_or(vector<vector<string>>());
 
 	Color definedBackgroundColor = CurrentConfig->getConfigColor(
@@ -277,7 +279,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		 * If we're left aligning, iterate forwards.
 		 * if right aligning, we iterate in the inverse order. Okay? Lovely
 		 */
-		for (size_t el = right_align ? line.size() : 0; right_align ? el-- > 0 : el < line.size(); right_align ? 0 : ++el)
+		for (size_t el = right_align ? line.size() : 0; right_align ? el-- > 0 : el < line.size();
+		     right_align ? 0 : ++el)
 		{
 			RectF mesureRect = RectF(0, 0, 0, 0);
 			const string element_was = line[el];
@@ -487,6 +490,93 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	//AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
 
 	TagBackgroundRect = oldCrectSave;
+}
+
+void CSMRRadar::draw_context_menu(HDC hdc)
+{
+	if (!this->context_menu_for.has_value())
+		return;
+
+	const ContextMenuData flight = this->context_menu_for.value();
+
+	if (flight.callsign != GetPlugIn()->RadarTargetSelectASEL().GetCallsign())
+	{
+		this->context_menu_for = std::nullopt;
+		return;
+	}
+
+	constexpr int line_height = 15;
+	constexpr int width = 100;
+	constexpr int buffer = 20;
+	constexpr int lines = 4;
+	constexpr int total_height = lines * line_height;
+	constexpr float text_size = 8.0;
+	constexpr float callsign_size = 10.0;
+
+	const Color background_color = this->ColorManager->get_corrected_color("label", Color(0, 0, 0));
+	const Color contrast_color = this->ColorManager->get_corrected_color("label", Color(255, 255, 255));
+
+	const WCHAR* font_name = L"Euroscope";
+	const Gdiplus::Font font(font_name, text_size);
+	const Gdiplus::Font callsign_font(font_name, callsign_size);
+
+	const wstring wcallsign = wstring(flight.callsign.begin(), flight.callsign.end());
+	StringFormat callsign_format;
+	callsign_format.SetAlignment(StringAlignmentCenter);
+	callsign_format.SetLineAlignment(StringAlignmentCenter);
+	StringFormat generic_format;
+	generic_format.SetLineAlignment(StringAlignmentCenter);
+
+	Graphics graphics(hdc);
+	const RECT radar_area = this->GetRadarArea();
+	// If closer to the right, draw to the left with buffer, else to the right with buffer
+	const int offset_x = abs(context_menu_pos.x - radar_area.left) > abs(context_menu_pos.x - radar_area.right)
+		                     ? context_menu_pos.x - width - buffer
+		                     : context_menu_pos.x + buffer;
+	const POINT draw_at = POINT{offset_x, context_menu_pos.y};
+
+	const SolidBrush background_brush(background_color);
+	const SolidBrush contrast_brush(contrast_color);
+	const Pen contrast_pen(contrast_color);
+
+	const Rect background(draw_at.x, draw_at.y, width, total_height);
+	graphics.FillRectangle(&background_brush, background);
+	graphics.DrawRectangle(&contrast_pen, background);
+
+	// Callsign line
+	graphics.FillRectangle(&contrast_brush, draw_at.x, draw_at.y, width, line_height);
+	graphics.DrawString(wcallsign.c_str(), -1, &callsign_font, RectF(draw_at.x, draw_at.y, width, line_height),
+	                    &callsign_format, &background_brush);
+
+	// Release
+	const WCHAR* release_label = this->is_manually_released(flight.system_id.c_str()) ? L"XRelease" : L"Release";
+	graphics.DrawString(release_label, -1, &font, RectF(draw_at.x, draw_at.y + 1 * line_height, width, line_height),
+	                    &generic_format, &contrast_brush);
+	AddScreenObject(CONTEXT_RELEASE, flight.system_id.c_str(), RECT{
+		                draw_at.x, draw_at.y + 1 * line_height, draw_at.x + width, draw_at.y + 2 * line_height
+	                }, false,
+	                GetBottomLine(flight.callsign.c_str()).c_str());;
+
+	// Acquire
+	const WCHAR* acquire_label = this->is_manually_correlated(flight.system_id.c_str()) ? L"XAcquire" : L"Acquire";
+	graphics.DrawString(acquire_label, -1, &font, RectF(draw_at.x, draw_at.y + 2 * line_height, width, line_height),
+	                    &generic_format, &contrast_brush);
+	AddScreenObject(CONTEXT_ACQUIRE, flight.system_id.c_str(), RECT{
+		                draw_at.x, draw_at.y + 2 * line_height, draw_at.x + width, draw_at.y + 3 * line_height
+	                }, false,
+	                GetBottomLine(flight.callsign.c_str()).c_str());;
+
+	const std::string strip_seven = GetPlugIn()->RadarTargetSelectASEL().GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
+	const bool cleared = strip_seven.find("K") != std::string::npos;
+	const WCHAR* land_label = cleared ? L"XLand" : L"Land";
+	graphics.DrawString(land_label, -1, &font, RectF(draw_at.x, draw_at.y + 3 * line_height, width, line_height),
+	                    &generic_format, &contrast_brush);
+	AddScreenObject(CONTEXT_LAND, flight.system_id.c_str(), RECT{
+		                draw_at.x, draw_at.y + 3 * line_height, draw_at.x + width, draw_at.y + 4 * line_height
+	                }, false,
+	                GetBottomLine(flight.callsign.c_str()).c_str());;
+
+	graphics.ReleaseHDC(hdc);
 }
 
 CSMRRadar::CSMRRadar()
@@ -1166,6 +1256,12 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 				RequestRefresh();
 			}
 		}
+
+		if (this->context_menu_for.has_value())
+		{
+			this->context_menu_for = std::nullopt;
+			this->RequestRefresh();
+		}
 	}
 
 	if (ObjectType == RIMCAS_MENU)
@@ -1181,8 +1277,10 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("SRW 1", "", APPWINDOW_ONE, false, int(appWindowDisplays[1]));
 			GetPlugIn()->AddPopupListElement("SRW 2", "", APPWINDOW_TWO, false, int(appWindowDisplays[2]));
 			GetPlugIn()->AddPopupListElement("Profiles", "", RIMCAS_OPEN_LIST);
-			GetPlugIn()->AddPopupListElement("Tag Error Lines", "", RIMCAS_ERR_LINE_TOGGLE, false, show_err_lines ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
-			GetPlugIn()->AddPopupListElement("Shift Top Bar", "", RIMCAS_SHIFT_TOP_BAR_TOGGLE, false, shift_top_bar ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Tag Error Lines", "", RIMCAS_ERR_LINE_TOGGLE, false,
+			                                 show_err_lines ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Shift Top Bar", "", RIMCAS_SHIFT_TOP_BAR_TOGGLE, false,
+			                                 shift_top_bar ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 
@@ -1196,11 +1294,11 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("Show Not Mine", "", FILTER_NON_ASSUMED, false,
 			                                 filters.show_nonmine ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show On Blocks", "", FILTER_SHOW_ON_BLOCKS, false,
-												filters.show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			                                 filters.show_on_blocks ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show NSTS", "", FILTER_SHOW_NSTS, false,
-												filters.show_nsts ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			                                 filters.show_nsts ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Show STUP", "", FILTER_SHOW_STUP, false,
-												filters.show_stup ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			                                 filters.show_stup ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
 		}
 
@@ -1306,24 +1404,12 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		{
 			if (ReleaseInProgress)
 			{
-				ReleaseInProgress = NeedCorrelateCursor = false;
-
-				ReleasedTracks.push_back(rt.GetSystemID());
-
-				if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) !=
-					ManuallyCorrelated.end())
-					ManuallyCorrelated.erase(std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(),
-					                                   rt.GetSystemID()));
+				this->manually_release(rt.GetSystemID());
 			}
 
 			if (AcquireInProgress)
 			{
-				AcquireInProgress = NeedCorrelateCursor = false;
-
-				ManuallyCorrelated.push_back(rt.GetSystemID());
-
-				if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
-					ReleasedTracks.erase(std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()));
+				this->manually_correlate(rt.GetSystemID());
 			}
 
 
@@ -1376,14 +1462,16 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 
 				if (Button == BUTTON_RIGHT)
 				{
-					if (TagAngles.find(sObjectId) == TagAngles.end())
-					{
-						TagAngles[sObjectId] = 0;
-					}
-					else
-					{
-						TagAngles[sObjectId] = fmod(TagAngles[sObjectId] + 22.5, 360);
-					}
+					context_menu_for = ContextMenuData{rt.GetSystemID(), rt.GetCallsign()};
+					context_menu_pos = this->ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+					//if (TagAngles.find(sObjectId) == TagAngles.end())
+					//{
+					//	TagAngles[sObjectId] = 0;
+					//}
+					//else
+					//{
+					//	TagAngles[sObjectId] = fmod(TagAngles[sObjectId] + 22.5, 360);
+					//}
 				}
 
 				RequestRefresh();
@@ -1474,6 +1562,38 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			{
 				it = DistanceTools.erase(it);
 				break;
+			}
+		}
+	}
+
+	if (ObjectType == CONTEXT_RELEASE)
+	{
+		this->manually_release(sObjectId);
+		this->context_menu_for = std::nullopt;
+	}
+
+	if (ObjectType == CONTEXT_ACQUIRE)
+	{
+		this->manually_correlate(sObjectId);
+		this->context_menu_for = std::nullopt;
+	}
+
+	if (ObjectType == CONTEXT_LAND)
+	{
+		const auto rt = GetPlugIn()->RadarTargetSelectASEL();
+		if (strcmp(rt.GetSystemID(), sObjectId) == 0)
+		{
+			std::string strip_seven = rt.GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
+			const bool cleared = strip_seven.find("K") != std::string::npos || strip_seven.find("R") != std::string::npos;
+			if (cleared)
+			{
+				replaceAll(strip_seven, "K", "");
+				replaceAll(strip_seven, "R", "");
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
+			} else
+			{
+				strip_seven.push_back('K');
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
 			}
 		}
 	}
@@ -2038,9 +2158,9 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 		// This uses the TopSky "Mark" _or_ Freq feature
 		const string strip_seven = fp.GetControllerAssignedData().GetFlightStripAnnotation(7);
 		if (
-			strip_seven.find("K") != string::npos
-			|| strip_seven.find("R") != string::npos
-			)
+			strip_seven.find("K") != string::npos // K: TopSky Mark
+			|| strip_seven.find("R") != string::npos // R: TopSky Freq
+		)
 		{
 			callsign += "|"; // Forms a down arrow in Euroscope font, as in cleared to land
 		}
@@ -2349,6 +2469,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			graphics.ReleaseHDC(hDC);
 		}
 
+		this->draw_context_menu(hDC);
 		Logger::info("break Phase == REFRESH_PHASE_AFTER_LISTS");
 		return;
 	}
@@ -2409,15 +2530,12 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	RimcasInstance->RunwayAreas.clear();
 
-	if (QDMSelectEnabled || QDMenabled)
-	{
-		CRect R(GetRadarArea());
-		R.top += 20;
-		R.bottom = GetChatArea().top;
+	CRect R(GetRadarArea());
+	R.top += 20;
+	R.bottom = GetChatArea().top;
 
-		R.NormalizeRect();
-		AddScreenObject(DRAWING_BACKGROUND_CLICK, "", R, false, "");
-	}
+	R.NormalizeRect();
+	AddScreenObject(DRAWING_BACKGROUND_CLICK, "", R, false, "");
 
 	Logger::info("Runway loop");
 	CSectorElement rwy;
@@ -2760,8 +2878,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		{
 			const Color asel_color = ColorManager->get_corrected_color("target", Gdiplus::Color::Yellow);
 			const Pen asel_pen(asel_color, symbol_line_thickness);
-			const int asel_size = size + 2*symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
-			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
+			const int asel_size = size + 2 * symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
+			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size,
+			                     asel_size);
 		}
 
 		// Predicted Track Line
@@ -3424,5 +3543,42 @@ void CSMRRadar::EuroScopePlugInExitCustom()
 	if (smrCursor != nullptr && smrCursor != nullptr)
 	{
 		SetWindowLong(pluginWindow, GWL_WNDPROC, (LONG)gSourceProc);
+	}
+}
+
+void CSMRRadar::manually_correlate(const char* system_id)
+{
+	AcquireInProgress = NeedCorrelateCursor = false;
+
+	if (!is_manually_correlated(system_id))
+	{
+		ManuallyCorrelated.push_back(system_id);
+
+		if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), system_id) != ReleasedTracks.end())
+			ReleasedTracks.erase(std::find(ReleasedTracks.begin(), ReleasedTracks.end(), system_id));
+	}
+	else
+	{
+		ManuallyCorrelated.erase(std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(),
+		                                   system_id));
+	}
+}
+
+void CSMRRadar::manually_release(const char* system_id)
+{
+	ReleaseInProgress = NeedCorrelateCursor = false;
+
+	if (!is_manually_released(system_id))
+	{
+		ReleasedTracks.push_back(system_id);
+
+		if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), system_id) !=
+			ManuallyCorrelated.end())
+			ManuallyCorrelated.erase(std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(),
+			                                   system_id));
+	}
+	else
+	{
+		ReleasedTracks.erase(std::find(ReleasedTracks.begin(), ReleasedTracks.end(), system_id));
 	}
 }

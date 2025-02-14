@@ -43,6 +43,12 @@ namespace SMRPluginSharedData
 	static asio::io_service io_service;
 }
 
+struct ContextMenuData
+{
+	std::string system_id;
+	std::string callsign;
+};
+
 using namespace SMRSharedData;
 
 class CSMRRadar :
@@ -53,6 +59,11 @@ private:
 	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode = false);
 	bool shift_top_bar = false;
 	bool show_err_lines = true;
+	std::optional<ContextMenuData> context_menu_for = {};
+	POINT context_menu_pos = POINT{ 0, 0 };
+	void draw_context_menu(HDC hdc);
+	void manually_correlate(const char* system_id);
+	void manually_release(const char* system_id);
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();
@@ -166,6 +177,16 @@ public:
 	//---GenerateTagData--------------------------------------------
 
 	static map<string, string> GenerateTagData(CRadarTarget Rt, CFlightPlan fp, bool isAcCorrelated, bool isProMode, int TransitionAltitude, bool useSpeedForGates, string ActiveAirport);
+
+	inline virtual bool is_manually_correlated(const char* system_id)
+	{
+		return std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), system_id) != ManuallyCorrelated.end();
+	}
+
+	inline virtual bool is_manually_released(const char* system_id)
+	{
+		return std::find(ReleasedTracks.begin(), ReleasedTracks.end(), system_id) != ReleasedTracks.end();
+	}
 
 	//---IsCorrelatedFuncs---------------------------------------------
 

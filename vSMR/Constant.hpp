@@ -288,6 +288,7 @@ constexpr int FUNC_MANUAL_CALLSIGN = 2000;
 // Context menu
 constexpr int CONTEXT_ACQUIRE = 3000;
 constexpr int CONTEXT_RELEASE = 3001;
+constexpr int CONTEXT_LAND = 3002;
 
 // RIMCAS Menus & shit
 constexpr int RIMCAS_CLOSE = EuroScopePlugIn::TAG_ITEM_FUNCTION_NO;

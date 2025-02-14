@@ -508,7 +508,7 @@ void CSMRRadar::draw_context_menu(HDC hdc)
 	constexpr int line_height = 15;
 	constexpr int width = 100;
 	constexpr int buffer = 20;
-	constexpr int lines = 3;
+	constexpr int lines = 4;
 	constexpr int total_height = lines * line_height;
 	constexpr float text_size = 8.0;
 	constexpr float callsign_size = 10.0;
@@ -563,6 +563,16 @@ void CSMRRadar::draw_context_menu(HDC hdc)
 	                    &generic_format, &contrast_brush);
 	AddScreenObject(CONTEXT_ACQUIRE, flight.system_id.c_str(), RECT{
 		                draw_at.x, draw_at.y + 2 * line_height, draw_at.x + width, draw_at.y + 3 * line_height
+	                }, false,
+	                GetBottomLine(flight.callsign.c_str()).c_str());;
+
+	const std::string strip_seven = GetPlugIn()->RadarTargetSelectASEL().GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
+	const bool cleared = strip_seven.find("K") != std::string::npos;
+	const WCHAR* land_label = cleared ? L"XLand" : L"Land";
+	graphics.DrawString(land_label, -1, &font, RectF(draw_at.x, draw_at.y + 3 * line_height, width, line_height),
+	                    &generic_format, &contrast_brush);
+	AddScreenObject(CONTEXT_LAND, flight.system_id.c_str(), RECT{
+		                draw_at.x, draw_at.y + 3 * line_height, draw_at.x + width, draw_at.y + 4 * line_height
 	                }, false,
 	                GetBottomLine(flight.callsign.c_str()).c_str());;
 
@@ -1568,6 +1578,26 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		this->context_menu_for = std::nullopt;
 	}
 
+	if (ObjectType == CONTEXT_LAND)
+	{
+		const auto rt = GetPlugIn()->RadarTargetSelectASEL();
+		if (strcmp(rt.GetSystemID(), sObjectId) == 0)
+		{
+			std::string strip_seven = rt.GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
+			const bool cleared = strip_seven.find("K") != std::string::npos || strip_seven.find("R") != std::string::npos;
+			if (cleared)
+			{
+				replaceAll(strip_seven, "K", "");
+				replaceAll(strip_seven, "R", "");
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
+			} else
+			{
+				strip_seven.push_back('K');
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
+			}
+		}
+	}
+
 	RequestRefresh();
 };
 
@@ -2128,8 +2158,8 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 		// This uses the TopSky "Mark" _or_ Freq feature
 		const string strip_seven = fp.GetControllerAssignedData().GetFlightStripAnnotation(7);
 		if (
-			strip_seven.find("K") != string::npos
-			|| strip_seven.find("R") != string::npos
+			strip_seven.find("K") != string::npos // K: TopSky Mark
+			|| strip_seven.find("R") != string::npos // R: TopSky Freq
 		)
 		{
 			callsign += "|"; // Forms a down arrow in Euroscope font, as in cleared to land

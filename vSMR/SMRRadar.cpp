@@ -101,31 +101,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	}
 
 
-	// Getting the tag center/offset
-	POINT TagCenter;
-	if (auto it = TagsOffsets.find(rt.GetCallsign()); it != TagsOffsets.end())
-	{
-		TagCenter = {acPosPix.x + it->second.x, acPosPix.y + it->second.y};
-	}
-	else
-	{
-		// Use angle:
-
-		if (TagAngles.find(rt.GetCallsign()) == TagAngles.end())
-		{
-			TagAngles[rt.GetCallsign()] = 0.0f;
-		}
-
-		int length = LeaderLineDefaultlenght;
-		if (TagLeaderLineLength.find(rt.GetCallsign()) != TagLeaderLineLength.end())
-			length = TagLeaderLineLength[rt.GetCallsign()];
-
-		TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[rt.GetCallsign()]))));
-		TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[rt.GetCallsign()]))));
-	}
 
 	// Would the start of a right-aligned tag be to the left of the tag start?
-	const bool right_align = acPosPix.x > TagCenter.x;
+	const bool right_align = abs(TagAngles[callsign]) <= 90;
 
 	// Set up an offscreen buffer to draw to
 	// that way, we can measure the tag while drawing and position it _perfectly_.
@@ -472,6 +450,33 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
 		graphics.DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}
+
+	const auto angle_rad = DegToRad(TagAngles[callsign]);
+
+	// This needs to be ever so slightly further from the TagCenter,
+	// as to make the length var the distance between tag edge and PRS.
+	// Luckily, we know the angle between center and PRS and the tag dimensions,
+	// so some sin(alpha) = ((TagHeight/2)/llen) should help.
+	// That goes to inf when we close to angle=0, but cos is useful then. Min is what we want
+	const auto extension = min(
+		abs((TagHeight / 2) / sin(angle_rad)),
+		abs((TagWidth / 2) / cos(angle_rad))
+	);
+
+	POINT TagCenter;
+	if (TagAngles.find(callsign) == TagAngles.end())
+	{
+		TagAngles[rt.GetCallsign()] = 0.0f;
+	}
+
+	int length = LeaderLineDefaultlenght;
+	if (TagLeaderLineLength.find(callsign) != TagLeaderLineLength.end())
+		length = TagLeaderLineLength[callsign];
+
+	length += extension;
+
+	TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[callsign]))));
+	TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[callsign]))));
 
 	const POINT tag_top_left = POINT{ TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2)};
 	const auto x1 = right_align ? mem_buffer_size - TagWidth - 3 * border_growth : 0.0f;

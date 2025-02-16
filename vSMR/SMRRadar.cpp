@@ -100,10 +100,14 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		return;
 	}
 
-
+	if (TagAngles.find(callsign) == TagAngles.end())
+	{
+		TagAngles[callsign] = 360 - 45.0f;
+	}
 
 	// Would the start of a right-aligned tag be to the left of the tag start?
-	const bool right_align = abs(TagAngles[callsign]) <= 90;
+	const auto angle = fmod(abs(TagAngles[callsign]), 360);
+	const bool right_align = fmod(abs(TagAngles[callsign] + 90), 360) > 180;
 
 	// Set up an offscreen buffer to draw to
 	// that way, we can measure the tag while drawing and position it _perfectly_.
@@ -463,11 +467,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	);
 
 	POINT TagCenter;
-	if (TagAngles.find(callsign) == TagAngles.end())
-	{
-		TagAngles[rt.GetCallsign()] = 0.0f;
-	}
-
 	int length = LeaderLineDefaultlenght;
 	if (TagLeaderLineLength.find(callsign) != TagLeaderLineLength.end())
 		length = TagLeaderLineLength[callsign];

@@ -456,8 +456,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	// This needs to be ever so slightly further from the TagCenter,
 	// as to make the length var the distance between tag edge and PRS.
 	// Luckily, we know the angle between center and PRS and the tag dimensions,
-	// so some sin(alpha) = ((TagHeight/2)/llen) should help.
-	// That goes to inf when we close to angle=0, but cos is useful then. Min is what we want
+	// so some sin(alpha) = ((TagHeight/2)/llen) should help
 	const auto extension = min(
 		abs((TagHeight / 2) / sin(angle_rad)),
 		abs((TagWidth / 2) / cos(angle_rad))
@@ -1095,19 +1094,12 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 				GetPlugIn()->RadarTargetSelect(sObjectId).GetPosition().GetPosition());
 			const POINT CustomTag = {TagCenterPix.x - AcPosPix.x, TagCenterPix.y - AcPosPix.y};
 
-			if (CurrentConfig->getActiveProfile()["labels"]["auto_deconfliction"].GetBool())
-			{
-				double angle = RadToDeg(atan2(CustomTag.y, CustomTag.x));
-				angle = fmod(angle + 360, 360);
+			double angle = RadToDeg(atan2(CustomTag.y, CustomTag.x));
+			angle = fmod(angle + 360, 360);
 
-				TagAngles[sObjectId] = angle;
-				TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
-					                                     LeaderLineDefaultlenght * 4);
-			}
-			else
-			{
-				TagsOffsets[sObjectId] = CustomTag;
-			}
+			TagAngles[sObjectId] = angle;
+			TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
+													 LeaderLineDefaultlenght * 4);
 
 
 			GetPlugIn()->SetASELAircraft(GetPlugIn()->FlightPlanSelect(sObjectId));
@@ -1177,10 +1169,9 @@ void CSMRRadar::OnOverScreenObject(int ObjectType, const char* sObjectId, POINT 
 	RequestRefresh();
 }
 
-void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT Pt, RECT Area, int Button)
+void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT mouseLocation, RECT Area, int Button)
 {
 	Logger::info(string(__FUNCSIG__));
-	mouseLocation = Pt;
 
 	if (ObjectType == APPWINDOW_ONE || ObjectType == APPWINDOW_TWO)
 	{
@@ -1270,7 +1261,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		{
 			if (Button == BUTTON_LEFT)
 			{
-				QDMSelectPt = Pt;
+				QDMSelectPt = mouseLocation;
 				RequestRefresh();
 			}
 
@@ -1428,7 +1419,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		if (rt.GetCorrelatedFlightPlan().IsValid())
 		{
 			StartTagFunction(rt.GetCallsign(), nullptr, EuroScopePlugIn::TAG_ITEM_TYPE_CALLSIGN, rt.GetCallsign(),
-			                 nullptr, EuroScopePlugIn::TAG_ITEM_FUNCTION_NO, Pt, Area);
+			                 nullptr, EuroScopePlugIn::TAG_ITEM_FUNCTION_NO, mouseLocation, Area);
 		}
 
 		// Release & correlate actions
@@ -1457,7 +1448,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			{
 				if (Button == BUTTON_LEFT)
 				{
-					QDMSelectPt = Pt;
+					QDMSelectPt = mouseLocation;
 					RequestRefresh();
 				}
 			}
@@ -1478,9 +1469,6 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			}
 			else
 			{
-				if (TagsOffsets.find(sObjectId) != TagsOffsets.end())
-					TagsOffsets.erase(sObjectId);
-
 				if (Button == BUTTON_LEFT)
 				{
 					if (TagAngles.find(sObjectId) == TagAngles.end())
@@ -1496,7 +1484,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 				if (Button == BUTTON_RIGHT)
 				{
 					context_menu_for = ContextMenuData{rt.GetSystemID(), rt.GetCallsign()};
-					context_menu_pos = this->ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+					context_menu_pos = mouseLocation;
 					//if (TagAngles.find(sObjectId) == TagAngles.end())
 					//{
 					//	TagAngles[sObjectId] = 0;
@@ -1529,13 +1517,21 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			}
 			RequestRefresh();
 		}
+		else if (Button == BUTTON_RIGHT)
+		{
+			CRadarTarget rt = GetPlugIn()->RadarTargetSelect(sObjectId);
+			GetPlugIn()->SetASELAircraft(GetPlugIn()->FlightPlanSelect(sObjectId));
+			context_menu_for = ContextMenuData{rt.GetSystemID(), rt.GetCallsign()};
+			context_menu_pos = mouseLocation;
+			RequestRefresh();
+		}
 		else
 		{
 			if (ObjectType == DRAWING_AC_SYMBOL_APPWINDOW1)
-				appWindows[1]->OnClickScreenObject(sObjectId, Pt, Button);
+				appWindows[1]->OnClickScreenObject(sObjectId, mouseLocation, Button);
 
 			if (ObjectType == DRAWING_AC_SYMBOL_APPWINDOW2)
-				appWindows[2]->OnClickScreenObject(sObjectId, Pt, Button);
+				appWindows[2]->OnClickScreenObject(sObjectId, mouseLocation, Button);
 		}
 	}
 
@@ -1559,7 +1555,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		if (rt.GetCorrelatedFlightPlan().IsValid())
 		{
 			StartTagFunction(rt.GetCallsign(), nullptr, TAG_ITEM_TYPE_CALLSIGN, rt.GetCallsign(), nullptr,
-			                 TAG_ITEM_FUNCTION_NO, Pt, Area);
+			                 TAG_ITEM_FUNCTION_NO, mouseLocation, Area);
 		}
 	}
 
@@ -1569,7 +1565,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		CRadarTarget rt = GetPlugIn()->RadarTargetSelect(sObjectId);
 		GetPlugIn()->SetASELAircraft(GetPlugIn()->FlightPlanSelect(sObjectId));
 		StartTagFunction(rt.GetCallsign(), nullptr, EuroScopePlugIn::TAG_ITEM_TYPE_CALLSIGN, rt.GetCallsign(), nullptr,
-		                 TagMenu, Pt, Area);
+		                 TagMenu, mouseLocation, Area);
 	}
 
 	if (Button == BUTTON_RIGHT && TagObjectRightTypes[ObjectType])
@@ -1578,7 +1574,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		CRadarTarget rt = GetPlugIn()->RadarTargetSelect(sObjectId);
 		GetPlugIn()->SetASELAircraft(GetPlugIn()->FlightPlanSelect(sObjectId));
 		StartTagFunction(rt.GetCallsign(), nullptr, EuroScopePlugIn::TAG_ITEM_TYPE_CALLSIGN, rt.GetCallsign(), nullptr,
-		                 TagMenu, Pt, Area);
+		                 TagMenu, mouseLocation, Area);
 	}
 
 	if (ObjectType == RIMCAS_DISTANCE_TOOL)
@@ -3430,122 +3426,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	dc.SetTextColor(oldTextColor);
 
-	//
-	// Tag deconflicting
-	//
-
-	Logger::info("Tag deconfliction loop");
-
-	for (const auto& areas : tagAreas)
-	{
-		if (!CurrentConfig->getActiveProfile()["labels"]["auto_deconfliction"].GetBool())
-			break;
-
-		if (TagsOffsets.find(areas.first) != TagsOffsets.end())
-			continue;
-
-		if (IsTagBeingDragged(areas.first))
-			continue;
-
-		// If the tag was recently moved, leave it where it is for now.
-		if (RecentlyAutoMovedTags.find(areas.first) != RecentlyAutoMovedTags.end())
-		{
-			double t = (double)clock() - RecentlyAutoMovedTags[areas.first] / ((double)CLOCKS_PER_SEC);
-			if (t >= 0.8)
-			{
-				RecentlyAutoMovedTags.erase(areas.first);
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		// We need to see wether the rotation will be clockwise or anti-clockwise
-
-		bool isAntiClockwise = false;
-
-		for (const auto& area2 : tagAreas)
-		{
-			if (areas.first == area2.first)
-				continue;
-
-			if (IsTagBeingDragged(area2.first))
-				continue;
-
-			CRect h;
-
-			if (h.IntersectRect(tagAreas[areas.first], area2.second))
-			{
-				if (areas.second.left <= area2.second.left)
-				{
-					isAntiClockwise = true;
-				}
-
-				break;
-			}
-		}
-
-		// We then rotate the tags until we did a 360 or there is no more conflicts
-
-		POINT acPosPix = ConvertCoordFromPositionToPixel(
-			GetPlugIn()->RadarTargetSelect(areas.first.c_str()).GetPosition().GetPosition());
-		int lenght = LeaderLineDefaultlenght;
-		if (TagLeaderLineLength.find(areas.first) != TagLeaderLineLength.end())
-			lenght = TagLeaderLineLength[areas.first];
-
-		int width = areas.second.Width();
-		int height = areas.second.Height();
-
-		for (double rotated = 0.0; abs(rotated) <= 360.0;)
-		{
-			// We first rotate the tag
-			double newangle = fmod(TagAngles[areas.first] + rotated, 360.0f);
-
-			POINT TagCenter{
-				long(acPosPix.x + float(lenght * cos(DegToRad(newangle)))),
-				long(acPosPix.y + float(lenght * sin(DegToRad(newangle))))
-			};
-
-			CRect NewRectangle(TagCenter.x - (width / 2), TagCenter.y - (height / 2), TagCenter.x + (width / 2),
-			                   TagCenter.y + (height / 2));
-			NewRectangle.NormalizeRect();
-
-			// Assume there is no conflict, then try again
-
-			bool isTagConflicing = false;
-
-			for (const auto& area2 : tagAreas)
-			{
-				if (areas.first == area2.first)
-					continue;
-
-				if (IsTagBeingDragged(area2.first))
-					continue;
-
-				CRect h;
-
-				if (h.IntersectRect(NewRectangle, area2.second))
-				{
-					isTagConflicing = true;
-					break;
-				}
-			}
-
-			if (!isTagConflicing)
-			{
-				TagAngles[areas.first] = fmod(TagAngles[areas.first] + rotated, 360);
-				tagAreas[areas.first] = NewRectangle;
-				RecentlyAutoMovedTags[areas.first] = clock();
-				break;
-			}
-
-			if (isAntiClockwise)
-				rotated -= 22.5f;
-			else
-				rotated += 22.5f;
-		}
-	}
 
 	//
 	// App windows

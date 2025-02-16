@@ -72,8 +72,6 @@ public:
 
 	bool BLINK = false;
 
-	map<string, POINT> TagsOffsets;
-
 	vector<string> Active_Arrivals;
 
 	clock_t clock_init, clock_final;
@@ -279,7 +277,7 @@ public:
 
 	//---OnClickScreenObject-----------------------------------------
 
-	void OnClickScreenObject(int ObjectType, const char * sObjectId, POINT Pt, RECT Area, int Button) override;
+	void OnClickScreenObject(int ObjectType, const char * sObjectId, POINT mouseLocation, RECT Area, int Button) override;
 
 	//---OnMoveScreenObject---------------------------------------------
 

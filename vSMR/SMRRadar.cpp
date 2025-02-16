@@ -50,6 +50,10 @@ bool mouseWithin(const CRect& rect)
 
 void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode)
 {
+	constexpr int mem_buffer_size = 200;
+	constexpr unsigned int border_width = 2;
+	constexpr int border_growth = border_width + 1;
+
 	const std::string callsign = rt.GetCallsign();
 	if (!rt.IsValid())
 		return;
@@ -123,16 +127,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	// Would the start of a right-aligned tag be to the left of the tag start?
 	const bool right_align = acPosPix.x > TagCenter.x;
 
-	// Duplicate for now, might change when we correct for top vs bottom
-	const POINT tag_start = TagCenter;
-	/*
-	 * The tag drawing logic is _slightly_ broken when tags are drawn on the top vs. bottom of the aircraft.
-	 * tag_start is the top left when in the right semicircle or the top left when on the left,
-	 * but this causes a different effective default distance between the tag and aircraft on top vs bottom,
-	 * causing overlap with bottom of the tag and the aircraft.
-	 * The leaderlinelength should be the actual length of the line, even if connected to the bottom left corner of the tag,
-	 * regardless of line count.
-	 */
+	// Set up an offscreen buffer to draw to
+	// that way, we can measure the tag while drawing and position it _perfectly_.
+	Bitmap mem_buffer(mem_buffer_size, mem_buffer_size);
+	Graphics graphics(&mem_buffer);
+
+	// We can't just share the start, otherwise we draw out of buffer
+	const POINT tag_start = right_align ? POINT{ mem_buffer_size - border_growth, border_growth } : POINT{ border_growth, border_growth };
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -258,6 +259,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		LabelLines.insert(LabelLines.begin(), std::move(val));
 	}
 
+	vector<std::tuple<int, CRect>> interactables;
+
 
 	vector<PointF> border_points;
 	border_points.reserve(2 + 2 * LabelLines.size());
@@ -305,7 +308,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				font = customFonts[currentFontSize + 10];
 			}
 
-			tdc.graphics->MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
+			graphics.MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
 			                            font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
 			// Setup text colors
@@ -340,7 +343,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			const auto draw_start = right_align
 				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width
 				                        : tag_start.x + TempTagWidth;
-			tdc.graphics->FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
+			graphics.FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
 			                            static_cast<int>(mesureRect.Width) + tdc.blank_width,
 			                            static_cast<int>(mesureRect.Height));
 
@@ -348,14 +351,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			                       static_cast<Gdiplus::REAL>(tag_start.y + TagHeight),
 			                       mesureRect.Width + tdc.blank_width,
 			                       mesureRect.Height);
-			tdc.graphics->DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
+			graphics.DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
 			                         color);
 
 			CRect ItemRect(floor(layoutRect.GetLeft()), floor(layoutRect.GetTop()),
 			               floor(layoutRect.GetRight()),
 			               floor(layoutRect.GetBottom()));
-			AddScreenObject(TagClickableMap[element], rt.GetCallsign(), ItemRect, true,
-			                GetBottomLine(rt.GetCallsign()).c_str());
+			interactables.push_back({ TagClickableMap[element], ItemRect });
 
 			TempTagWidth += static_cast<int>(mesureRect.GetRight());
 			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
@@ -397,11 +399,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	                        tag_start.y + TagHeight);
 
 
-	// Drawing the symbol to tag line
-	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
-	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", dimming, Color::White));
-	UIHelper::drawLeaderLine(border_points, acPosF, &leaderLinePen, tdc.graphics);
-
 
 	// If we use a RIMCAS label only, we display it, and adapt the rectangle
 	CRect oldCrectSave = TagBackgroundRect;
@@ -427,7 +424,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 			RectF RectRimcas_height;
 
-			tdc.graphics->MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
+			graphics.MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
 			                            customFonts[currentFontSize],
 			                            PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
 			rimcas_height = int(RectRimcas_height.GetBottom());
@@ -437,7 +434,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			CRect RimcasLabelRect(
 				min(border_points.front().X, border_points[1].X), border_points.front().Y - rimcas_height,
 				max(border_points.front().X, border_points[1].X), border_points.front().Y);
-			tdc.graphics->FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
+			graphics.FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
 			TagBackgroundRect.top -= rimcas_height;
 
 			// Drawing the text
@@ -447,7 +444,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
 			const RectF string_rect(RimcasLabelRect.TopLeft().x, RimcasLabelRect.TopLeft().y, RimcasLabelRect.Width(),
 			                        RimcasLabelRect.Height());
-			tdc.graphics->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
+			graphics.DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
 			                         string_rect, &stformat, tdc.rimcas_text_color);
 
 			// Modify the border points, so the border appropriately surrounds the warning
@@ -467,19 +464,51 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			                     ? Color::Yellow
 			                     : Color::AlphaMask;
 
-		constexpr unsigned int border_width = 2;
-		constexpr int growth = border_width + 1;
 		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
 		// We should expand the polygon
-		const auto grown_points = UIHelper::grow_border(border_points, growth, right_align);
+		const auto grown_points = UIHelper::grow_border(border_points, border_growth, right_align);
 
 		Gdiplus::Pen pen(ColorManager->get_corrected_color("label", border_color), border_width);
 		pen.SetAlignment(Gdiplus::PenAlignmentInset);
-		tdc.graphics->DrawPolygon(&pen, grown_points.data(), grown_points.size());
+		graphics.DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}
 
+	const POINT tag_top_left = POINT{ TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2)};
+	const auto x1 = right_align ? mem_buffer_size - TagWidth - 3 * border_growth : 0.0f;
+
+	// Drawing the symbol to tag line to actual screen, then blit the actual tag
+	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
+	const Pen leaderLinePen = Pen(ColorManager->get_corrected_color("label", dimming, Color::White));
+	vector<PointF> transformed_border_points(border_points.size());
+	for (auto border_point : border_points)
+	{
+		border_point.X += tag_top_left.x - x1;
+		border_point.Y += tag_top_left.y;
+		transformed_border_points.push_back(border_point);
+	}
+
+	UIHelper::drawLeaderLine(transformed_border_points, acPosF, &leaderLinePen, tdc.graphics);
+
+	// Now blit to the correct size...
+	const RectF sub_rect(x1, 0.0f, TagWidth + 3 * border_growth, TagHeight + 2 * border_growth);
+	Bitmap* useful_area = mem_buffer.Clone(sub_rect, PixelFormatDontCare);
+	// x1 needs to be adjusted in case of right_align...
+	tdc.graphics->DrawImage(useful_area, tag_top_left.x, tag_top_left.y);
+
 	// Adding the tag screen object
+	TagBackgroundRect.MoveToXY(tag_top_left.x + border_growth, tag_top_left.y + border_growth);
+	TagBackgroundRect.right += border_growth;
 	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
+
+	const auto bottom_line = GetBottomLine(rt.GetCallsign());
+	for (auto value : interactables)
+	{
+		CRect loc = std::get<CRect>(value);
+		loc.MoveToXY(loc.left + tag_top_left.x - x1, loc.top + tag_top_left.y);
+		AddScreenObject(std::get<int>(value), rt.GetCallsign(), loc, true,
+						bottom_line.c_str());
+	}
+
 
 	/*
 	 * Let me explain...
@@ -2931,7 +2960,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 	// Drawing the Tags
 	auto tdc = TagDrawingContext{
-		&dc,
 		&graphics,
 		oneLineHeight,
 		blankWidth,

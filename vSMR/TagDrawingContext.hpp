@@ -10,7 +10,6 @@ using namespace EuroScopePlugIn;
 
 struct TagDrawingContext
 {
-	CDC *dc;
 	Gdiplus::Graphics* graphics;
 	int line_height;
 	int blank_width;

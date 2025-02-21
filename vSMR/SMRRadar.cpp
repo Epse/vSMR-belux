@@ -2450,14 +2450,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	Logger::info("Patatoides cleanup");
 	{
 		const auto time = clock();
-		for (auto it = Patatoides.begin(); it != Patatoides.end();)
+		for (auto it = Patatoides.begin(); it != Patatoides.end(); ++it)
 		{
 			if ((time - it->second.touched) / CLOCKS_PER_SEC >= AFTERGLOW_CLEANUP_SEC)
 			{
-				it = Patatoides.erase(it);
-			} else
-			{
-				++it;
+				it->second.History_one_points.clear();
+				it->second.History_two_points.clear();
+				it->second.History_three_points.clear();
 			}
 		}
 	}

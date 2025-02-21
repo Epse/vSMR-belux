@@ -26,6 +26,8 @@ const int TAG_FUNC_DATALINK_MESSAGE = 549;
 
 constexpr BYTE TAG_DIMMING = 15;
 
+constexpr unsigned int AFTERGLOW_CLEANUP_SEC = 10;
+
 
 
 inline static bool startsWith(const char* pre, const char* str)

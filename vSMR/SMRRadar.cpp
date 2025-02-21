@@ -1913,12 +1913,14 @@ void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 
 	const CRadarTargetPositionData RtPos = RadarTarget.GetPosition();
 
+	Patatoides[RadarTarget.GetCallsign()].touched = clock();
 	Patatoides[RadarTarget.GetCallsign()].History_three_points = Patatoides[RadarTarget.GetCallsign()].
 		History_two_points;
 	Patatoides[RadarTarget.GetCallsign()].History_two_points = Patatoides[RadarTarget.GetCallsign()].History_one_points;
 	Patatoides[RadarTarget.GetCallsign()].History_one_points = Patatoides[RadarTarget.GetCallsign()].points;
 
-	Patatoides[RadarTarget.GetCallsign()].points.clear();
+	constexpr size_t patatoide_size = 11 * 7 + 6;
+	Patatoides[RadarTarget.GetCallsign()].points.assign(patatoide_size + 1, POINT2{ 0.0f, 0.0f });
 
 	const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(RadarTarget.GetCallsign());
 
@@ -2430,6 +2432,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 {
 	Logger::info(string(__FUNCSIG__));
+
+	Logger::info("Patatoides cleanup");
+	{
+		const auto time = clock();
+		for (auto it = Patatoides.begin(); it != Patatoides.end();)
+		{
+			if ((time - it->second.touched) / CLOCKS_PER_SEC >= AFTERGLOW_CLEANUP_SEC)
+			{
+				it = Patatoides.erase(it);
+			} else
+			{
+				++it;
+			}
+		}
+	}
 
 	const bool alt_mode = GetAsyncKeyState(VK_MENU) & 0x8000;
 

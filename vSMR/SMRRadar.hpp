@@ -87,10 +87,11 @@ public:
 	} POINT2;
 
 	struct Patatoide_Points {
-		map<int, POINT2> points;
-		map<int, POINT2> History_one_points;
-		map<int, POINT2> History_two_points;
-		map<int, POINT2> History_three_points;
+		clock_t touched;
+		vector<POINT2> points;
+		vector<POINT2> History_one_points;
+		vector<POINT2> History_two_points;
+		vector<POINT2> History_three_points;
 	};
 
 	map<const char *, Patatoide_Points> Patatoides;

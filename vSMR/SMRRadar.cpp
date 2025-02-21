@@ -115,7 +115,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	Graphics graphics(&mem_buffer);
 
 	// We can't just share the start, otherwise we draw out of buffer
-	const POINT tag_start = right_align ? POINT{ mem_buffer_size - border_growth, border_growth } : POINT{ border_growth, border_growth };
+	const POINT tag_start = right_align
+		                        ? POINT{mem_buffer_size - border_growth, border_growth}
+		                        : POINT{border_growth, border_growth};
 
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
@@ -291,10 +293,10 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			}
 
 			graphics.MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
-			                            font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
+			                       font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
 			// Setup text colors
-			Brush* color = nullptr;
+			const Brush* color = nullptr;
 
 			if (is_asel && ColorTagType == TagTypes::Airborne)
 			{
@@ -306,19 +308,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				color = tdc.squawk_error_color->Clone();
 
 			if (RimcasInstance->getAlert(rt.GetCallsign()) != CRimcas::NoAlert)
-				color = FontColor.Clone();
+				color = &FontColor;
 
 			// Ground tag colors
 			if (strcmp(element.c_str(), "PUSH") == 0)
-				color = tdc.ground_push_color->Clone();
+				color = tdc.ground_push_color;
 			if (strcmp(element.c_str(), "TAXI") == 0)
-				color = tdc.ground_taxi_color->Clone();
+				color = tdc.ground_taxi_color;
 			if (strcmp(element.c_str(), "DEPA") == 0)
-				color = tdc.ground_depa_color->Clone();
+				color = tdc.ground_depa_color;
 
 			if (color == nullptr) // default case
 			{
-				color = FontColor.Clone();
+				color = &FontColor;
 			}
 
 			// Drawing!
@@ -326,20 +328,20 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width
 				                        : tag_start.x + TempTagWidth;
 			graphics.FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
-			                            static_cast<int>(mesureRect.Width) + tdc.blank_width,
-			                            static_cast<int>(mesureRect.Height));
+			                       static_cast<int>(mesureRect.Width) + tdc.blank_width,
+			                       static_cast<int>(mesureRect.Height));
 
 			const RectF layoutRect(draw_start,
 			                       static_cast<Gdiplus::REAL>(tag_start.y + TagHeight),
 			                       mesureRect.Width + tdc.blank_width,
 			                       mesureRect.Height);
 			graphics.DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
-			                         color);
+			                    color);
 
 			CRect ItemRect(floor(layoutRect.GetLeft()), floor(layoutRect.GetTop()),
 			               floor(layoutRect.GetRight()),
 			               floor(layoutRect.GetBottom()));
-			interactables.push_back({ TagClickableMap[element], ItemRect });
+			interactables.push_back({TagClickableMap[element], ItemRect});
 
 			TempTagWidth += static_cast<int>(mesureRect.GetRight());
 			TempTagHeight = max(TempTagHeight, static_cast<int>(mesureRect.GetBottom()));
@@ -381,7 +383,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	                        tag_start.y + TagHeight);
 
 
-
 	// If we use a RIMCAS label only, we display it, and adapt the rectangle
 	CRect oldCrectSave = TagBackgroundRect;
 
@@ -407,8 +408,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			RectF RectRimcas_height;
 
 			graphics.MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
-			                            customFonts[currentFontSize],
-			                            PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
+			                       customFonts[currentFontSize],
+			                       PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
 			rimcas_height = int(RectRimcas_height.GetBottom());
 
 			// Drawing the rectangle
@@ -427,7 +428,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			const RectF string_rect(RimcasLabelRect.TopLeft().x, RimcasLabelRect.TopLeft().y, RimcasLabelRect.Width(),
 			                        RimcasLabelRect.Height());
 			graphics.DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
-			                         string_rect, &stformat, tdc.rimcas_text_color);
+			                    string_rect, &stformat, tdc.rimcas_text_color);
 
 			// Modify the border points, so the border appropriately surrounds the warning
 			border_points.front().Y -= rimcas_height;
@@ -476,8 +477,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[callsign]))));
 	TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[callsign]))));
 
-	const POINT tag_top_left = POINT{ TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2)};
-	const auto x1 = right_align ? mem_buffer_size - TagWidth - 3 * border_growth : 0.0f;
+	const POINT tag_top_left = POINT{TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2)};
+	const INT x1 = right_align ? mem_buffer_size - TagWidth - 3 * border_growth : 0;
 
 	// Drawing the symbol to tag line to actual screen, then blit the actual tag
 	const PointF acPosF = PointF(static_cast<Gdiplus::REAL>(acPosPix.x), static_cast<Gdiplus::REAL>(acPosPix.y));
@@ -490,13 +491,15 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		transformed_border_points.push_back(border_point);
 	}
 
+	Logger::info("Leader line..");
 	UIHelper::drawLeaderLine(transformed_border_points, acPosF, &leaderLinePen, tdc.graphics);
 
-	// Now blit to the correct size...
-	const RectF sub_rect(x1, 0.0f, TagWidth + 3 * border_growth, TagHeight + 2 * border_growth);
-	Bitmap* useful_area = mem_buffer.Clone(sub_rect, PixelFormatDontCare);
-	// x1 needs to be adjusted in case of right_align...
-	tdc.graphics->DrawImage(useful_area, tag_top_left.x, tag_top_left.y);
+
+	// Blit to screen without copying
+	tdc.graphics->DrawImage(&mem_buffer,
+		static_cast<INT>(tag_top_left.x), static_cast<INT>(tag_top_left.y), x1, 0, TagWidth + 3 * border_growth, TagHeight + 2 * border_growth, 
+		Unit::UnitPixel
+	);
 
 	// Adding the tag screen object
 	TagBackgroundRect.MoveToXY(tag_top_left.x + border_growth, tag_top_left.y + border_growth);
@@ -509,7 +512,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		CRect loc = std::get<CRect>(value);
 		loc.MoveToXY(loc.left + tag_top_left.x - x1, loc.top + tag_top_left.y);
 		AddScreenObject(std::get<int>(value), rt.GetCallsign(), loc, true,
-						bottom_line.c_str());
+		                bottom_line.c_str());
 	}
 
 
@@ -598,7 +601,8 @@ void CSMRRadar::draw_context_menu(HDC hdc)
 	                }, false,
 	                GetBottomLine(flight.callsign.c_str()).c_str());;
 
-	const std::string strip_seven = GetPlugIn()->RadarTargetSelectASEL().GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
+	const std::string strip_seven = GetPlugIn()->RadarTargetSelectASEL().GetCorrelatedFlightPlan().
+	                                             GetControllerAssignedData().GetFlightStripAnnotation(7);
 	const bool cleared = strip_seven.find("K") != std::string::npos;
 	const WCHAR* land_label = cleared ? L"XLand" : L"Land";
 	graphics.DrawString(land_label, -1, &font, RectF(draw_at.x, draw_at.y + 3 * line_height, width, line_height),
@@ -1098,7 +1102,7 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 
 			TagAngles[sObjectId] = angle;
 			TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
-													 LeaderLineDefaultlenght * 4);
+			                                     LeaderLineDefaultlenght * 4);
 
 
 			GetPlugIn()->SetASELAircraft(GetPlugIn()->FlightPlanSelect(sObjectId));
@@ -1611,17 +1615,22 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 		const auto rt = GetPlugIn()->RadarTargetSelectASEL();
 		if (strcmp(rt.GetSystemID(), sObjectId) == 0)
 		{
-			std::string strip_seven = rt.GetCorrelatedFlightPlan().GetControllerAssignedData().GetFlightStripAnnotation(7);
-			const bool cleared = strip_seven.find("K") != std::string::npos || strip_seven.find("R") != std::string::npos;
+			std::string strip_seven = rt.GetCorrelatedFlightPlan().GetControllerAssignedData().
+			                             GetFlightStripAnnotation(7);
+			const bool cleared = strip_seven.find("K") != std::string::npos || strip_seven.find("R") !=
+				std::string::npos;
 			if (cleared)
 			{
 				replaceAll(strip_seven, "K", "");
 				replaceAll(strip_seven, "R", "");
-				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
-			} else
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(
+					7, strip_seven.c_str());
+			}
+			else
 			{
 				strip_seven.push_back('K');
-				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(7, strip_seven.c_str());
+				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(
+					7, strip_seven.c_str());
 			}
 		}
 	}
@@ -1904,12 +1913,14 @@ void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 
 	const CRadarTargetPositionData RtPos = RadarTarget.GetPosition();
 
+	Patatoides[RadarTarget.GetCallsign()].touched = clock();
 	Patatoides[RadarTarget.GetCallsign()].History_three_points = Patatoides[RadarTarget.GetCallsign()].
 		History_two_points;
 	Patatoides[RadarTarget.GetCallsign()].History_two_points = Patatoides[RadarTarget.GetCallsign()].History_one_points;
 	Patatoides[RadarTarget.GetCallsign()].History_one_points = Patatoides[RadarTarget.GetCallsign()].points;
 
-	Patatoides[RadarTarget.GetCallsign()].points.clear();
+	constexpr size_t patatoide_size = 11 * 7 + 6;
+	Patatoides[RadarTarget.GetCallsign()].points.assign(patatoide_size + 1, POINT2{ 0.0f, 0.0f });
 
 	const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(RadarTarget.GetCallsign());
 
@@ -2421,6 +2432,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 {
 	Logger::info(string(__FUNCSIG__));
+
+	Logger::info("Patatoides cleanup");
+	{
+		const auto time = clock();
+		for (auto it = Patatoides.begin(); it != Patatoides.end();)
+		{
+			if ((time - it->second.touched) / CLOCKS_PER_SEC >= AFTERGLOW_CLEANUP_SEC)
+			{
+				it = Patatoides.erase(it);
+			} else
+			{
+				++it;
+			}
+		}
+	}
 
 	const bool alt_mode = GetAsyncKeyState(VK_MENU) & 0x8000;
 
@@ -2972,6 +2998,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		&AselTextColor
 	};
 
+
+	// Releasing the hDC after the drawing
+	graphics.ReleaseHDC(hDC);
+
 	Logger::info("Tags loop");
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
 	     rt.IsValid();
@@ -2981,9 +3011,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 #pragma endregion Drawing of the tags
-
-	// Releasing the hDC after the drawing
-	graphics.ReleaseHDC(hDC);
 
 	int TextHeight = dc.GetTextExtent("60").cy;
 	Logger::info("RIMCAS Loop");

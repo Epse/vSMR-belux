@@ -16,7 +16,13 @@ string UIHelper::getEnumString(TagTypes type)
 void UIHelper::drawLeaderLine(const std::vector<PointF>& points, const PointF& acPos, const Gdiplus::Pen* pen,
                               Gdiplus::Graphics* graphics)
 {
-	PointF point;
+	if (points.empty())
+	{
+		Logger::info("No points in drawLeaderLine");
+		return;
+	}
+
+	PointF point = points[0];
 	float distance = FLT_MAX;
 
 	for (const PointF& p : points)

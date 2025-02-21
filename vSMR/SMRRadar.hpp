@@ -64,6 +64,8 @@ private:
 	void draw_context_menu(HDC hdc);
 	void manually_correlate(const char* system_id);
 	void manually_release(const char* system_id);
+
+	char alt_mode_keycode = VK_MENU;
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();

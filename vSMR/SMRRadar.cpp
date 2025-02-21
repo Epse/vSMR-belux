@@ -865,6 +865,11 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		filters = filters_from_char(*p_value);
 	}
 
+	if ((p_value = GetDataFromAsr("AltModeKeyCode")) != NULL)
+	{
+		alt_mode_keycode = atoi(p_value);
+	}
+
 	string temp;
 
 	for (int i = 1; i < 3; i++)
@@ -953,6 +958,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("ShiftTopBar", "Shift top menu bar downwards", shift_top_bar ? "on" : "off");
 
 	SaveDataToAsr("ShowErrLines", "Show TAG error lines", show_err_lines ? "on" : "off");
+
+	SaveDataToAsr("AltModeKeyCode", "Keycode to trigger alt mode", std::to_string(alt_mode_keycode).c_str());
 
 	const char filter_char = char_from_filters(filters);
 	SaveDataToAsr("Filters", "Filter settings", &filter_char);
@@ -2113,6 +2120,13 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 		return true;
 	}
 
+	if (startsWith(".smr alt-mode ", sCommandLine))
+	{
+		const char* substring = &sCommandLine[14];
+		alt_mode_keycode = atoi(substring);
+		return true;
+	}
+
 	return false;
 }
 
@@ -2448,7 +2462,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 	}
 
-	const bool alt_mode = GetAsyncKeyState(VK_MENU) & 0x8000;
+	const bool alt_mode = GetAsyncKeyState(alt_mode_keycode) & 0x8000;
 
 	// First, we define some constants
 	// These could probably be persisted across redraws,

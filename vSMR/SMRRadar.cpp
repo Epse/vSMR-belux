@@ -2321,7 +2321,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                                                                   LabelsSettings["groundstatus_colors"][
 			                                                                   "depa"])));
 	const SolidBrush AselTextColor(ColorManager->get_corrected_color("label", Color::Yellow));
-	CBrush BrushGrey(RGB(150, 150, 150));
 
 	// Changing the mouse cursor
 	if (initCursor)
@@ -2603,32 +2602,22 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		constexpr float symbol_line_thickness = 2.0;
 		// Draw target symbols
-		CPen qTrailPen(PS_SOLID, symbol_line_thickness,
-		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
-		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
-
+		const Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+		const Pen pen(color, symbol_line_thickness);
 		if (mouseWithin(
 			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
-			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-			dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
-			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-			dc.LineTo(acPosPix.x + 6, acPosPix.y - 12);
+			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y - 8, acPosPix.x - 6, acPosPix.y - 12);
+			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y - 8, acPosPix.x + 6, acPosPix.y - 12);
 
-			dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-			dc.LineTo(acPosPix.x - 6, acPosPix.y + 12);
-			dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-			dc.LineTo(acPosPix.x + 6, acPosPix.y + 12);
+			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y + 8, acPosPix.x - 6, acPosPix.y + 12);
+			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y + 8, acPosPix.x + 6, acPosPix.y + 12);
 
-			dc.MoveTo(acPosPix.x - 8, acPosPix.y);
-			dc.LineTo(acPosPix.x - 12, acPosPix.y - 6);
-			dc.MoveTo(acPosPix.x - 8, acPosPix.y);
-			dc.LineTo(acPosPix.x - 12, acPosPix.y + 6);
+			graphics.DrawLine(&pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y - 6);
+			graphics.DrawLine(&pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y + 6);
 
-			dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-			dc.LineTo(acPosPix.x + 12, acPosPix.y - 6);
-			dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-			dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
+			graphics.DrawLine(&pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y - 6);
+			graphics.DrawLine(&pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y + 6);
 
 			/*
 			Stef, why are we getting interaction straight from the Windows APIS?
@@ -2666,8 +2655,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-		const Pen pen(color, symbol_line_thickness);
 		if (RtPos.GetTransponderC())
 		{
 			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
@@ -2688,9 +2675,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		// Predicted Track Line
 		// It starts 20 seconds away from the ac
-		CPen qTrackPen(PS_SOLID, 1,
-		               ColorManager->get_corrected_color("target", Gdiplus::Color::White).ToCOLORREF());
-		dc.SelectObject(qTrackPen);
+		const Pen trackPen(color, 1);
 		if (reportedGs > 50 && PredictedLength > 0)
 		{
 			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;
@@ -2699,11 +2684,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			d = double(rt.GetPosition().GetReportedGS() * 0.514444) * (PredictedLength * 60) - 10;
 			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
 
-			dc.MoveTo(ConvertCoordFromPositionToPixel(AwayBase));
-			dc.LineTo(ConvertCoordFromPositionToPixel(PredictedEnd));
+			const POINT start = ConvertCoordFromPositionToPixel(AwayBase);
+			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
+			graphics.DrawLine(&trackPen, start.x, start.y, end.x, end.y);
 		}
-
-		dc.SelectObject(pqOrigPen);
 	}
 
 #pragma endregion Drawing of the symbols
@@ -2746,7 +2730,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 
 	// Releasing the hDC after the drawing
-	graphics.ReleaseHDC(hDC);
+	// FIXME should not be necessary
+	//graphics.ReleaseHDC(hDC);
 
 	Logger::info("Tags loop");
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
@@ -2758,8 +2743,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 #pragma endregion Drawing of the tags
 
-	int TextHeight = dc.GetTextExtent("60").cy;
+	const int TextHeight = dc.GetTextExtent("60").cy;
 	Logger::info("RIMCAS Loop");
+	const SolidBrush timeBackgroundBrush(Color(150, 150, 150));
 	for (std::map<string, bool>::iterator it = RimcasInstance->MonitoredRunwayArr.begin(); it != RimcasInstance->
 	     MonitoredRunwayArr.end(); ++it)
 	{
@@ -2776,7 +2762,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		CRect CRectTime = TimePopupAreas[it->first];
 		CRectTime.NormalizeRect();
 
-		dc.FillRect(CRectTime, &BrushGrey);
+		const auto res = graphics.FillRectangle(&timeBackgroundBrush, CRectTime.left, CRectTime.top, CRectTime.Width(), CRectTime.Height());
 
 		// Drawing the runway name
 		string tempS = it->first;

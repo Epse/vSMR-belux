@@ -3,6 +3,7 @@
 #include "SMRRadar.hpp"
 #include <cmath>
 #include <boost/geometry.hpp>
+#include "PlaneShapeBuilder.h"
 using namespace std::string_literals;
 
 ULONG_PTR m_gdiplusToken;
@@ -1914,131 +1915,6 @@ void CSMRRadar::RefreshAirportActivity(void)
 
 void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 {
-	Logger::info(string(__FUNCSIG__));
-	if (!RadarTarget.IsValid() || !RadarTarget.GetPosition().IsValid())
-		return;
-
-	const CRadarTargetPositionData RtPos = RadarTarget.GetPosition();
-
-	Patatoides[RadarTarget.GetCallsign()].touched = clock();
-	Patatoides[RadarTarget.GetCallsign()].History_three_points = Patatoides[RadarTarget.GetCallsign()].
-		History_two_points;
-	Patatoides[RadarTarget.GetCallsign()].History_two_points = Patatoides[RadarTarget.GetCallsign()].History_one_points;
-	Patatoides[RadarTarget.GetCallsign()].History_one_points = Patatoides[RadarTarget.GetCallsign()].points;
-
-	constexpr size_t patatoide_size = 11 * 7 + 6;
-	Patatoides[RadarTarget.GetCallsign()].points.assign(patatoide_size + 1, POINT2{ 0.0f, 0.0f });
-
-	const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(RadarTarget.GetCallsign());
-
-	// All units in M
-	float width = 34.0f;
-	float cabin_width = 4.0f;
-	float length = 38.0f;
-
-	if (fp.IsValid())
-	{
-		const char wtc = fp.GetFlightPlanData().GetAircraftWtc();
-
-		if (wtc == 'L')
-		{
-			width = 13.0f;
-			cabin_width = 2.0f;
-			length = 12.0f;
-		}
-
-		if (wtc == 'H')
-		{
-			width = 61.0f;
-			cabin_width = 7.0f;
-			length = 64.0f;
-		}
-
-		if (wtc == 'J')
-		{
-			width = 80.0f;
-			cabin_width = 7.0f;
-			length = 73.0f;
-		}
-	}
-
-
-	width = width + float((rand() % 5) - 2);
-	cabin_width = cabin_width + float((rand() % 3) - 1);
-	length = length + float((rand() % 5) - 2);
-
-
-	const auto trackHead = float(RadarTarget.GetPosition().GetReportedHeadingTrueNorth());
-	const auto inverseTrackHead = float(fmod(trackHead + 180.0f, 360));
-	const auto leftTrackHead = float(fmod(trackHead - 90.0f, 360));
-	const auto rightTrackHead = float(fmod(trackHead + 90.0f, 360));
-
-	const float HalfLenght = length / 2.0f;
-	const float HalfCabWidth = cabin_width / 2.0f;
-	const float HalfSpanWidth = width / 2.0f;
-
-	// Base shape is like a deformed cross
-
-
-	const CPosition topMiddle = Haversine(RtPos.GetPosition(), trackHead, HalfLenght);
-	const CPosition topLeft = Haversine(topMiddle, leftTrackHead, HalfCabWidth);
-	const CPosition topRight = Haversine(topMiddle, rightTrackHead, HalfCabWidth);
-
-	const CPosition bottomMiddle = Haversine(RtPos.GetPosition(), inverseTrackHead, HalfLenght);
-	const CPosition bottomLeft = Haversine(bottomMiddle, leftTrackHead, HalfCabWidth);
-	const CPosition bottomRight = Haversine(bottomMiddle, rightTrackHead, HalfCabWidth);
-
-	const CPosition middleTopLeft = Haversine(topLeft, float(fmod(inverseTrackHead + 25.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleTopRight = Haversine(topRight, float(fmod(inverseTrackHead - 25.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleBottomLeft = Haversine(bottomLeft, float(fmod(trackHead - 15.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleBottomRight = Haversine(bottomRight, float(fmod(trackHead + 15.0f, 360)), 0.8f * HalfLenght);
-
-	const CPosition rightTop = Haversine(middleBottomRight, rightTrackHead, 0.7f * HalfSpanWidth);
-	const CPosition rightBottom = Haversine(rightTop, inverseTrackHead, cabin_width);
-
-	const CPosition leftTop = Haversine(middleBottomLeft, leftTrackHead, 0.7f * HalfSpanWidth);
-	const CPosition leftBottom = Haversine(leftTop, inverseTrackHead, cabin_width);
-
-	CPosition basePoints[12];
-	basePoints[0] = topLeft;
-	basePoints[1] = middleTopLeft;
-	basePoints[2] = leftTop;
-	basePoints[3] = leftBottom;
-	basePoints[4] = middleBottomLeft;
-	basePoints[5] = bottomLeft;
-	basePoints[6] = bottomRight;
-	basePoints[7] = middleBottomRight;
-	basePoints[8] = rightBottom;
-	basePoints[9] = rightTop;
-	basePoints[10] = middleTopRight;
-	basePoints[11] = topRight;
-
-	// 12 points total, so 11 from 0
-	// ------
-
-	// Random points between points of base shape
-
-	for (int i = 0; i < 12; i++)
-	{
-		CPosition lastPoint, endPoint, startPoint;
-
-		startPoint = basePoints[i];
-		if (i == 11) endPoint = basePoints[0];
-		else endPoint = basePoints[i + 1];
-
-		const double dist = startPoint.DistanceTo(endPoint);
-
-		Patatoides[RadarTarget.GetCallsign()].points[i * 7] = {startPoint.m_Latitude, startPoint.m_Longitude};
-		lastPoint = startPoint;
-
-		for (int k = 1; k < 7; k++)
-		{
-			const double rndHeading = float(fmod(lastPoint.DirectionTo(endPoint) + (-25.0 + (rand() % 50 + 1)), 360));
-			const CPosition newPoint = Haversine(lastPoint, rndHeading, dist * 200);
-			Patatoides[RadarTarget.GetCallsign()].points[(i * 7) + k] = {newPoint.m_Latitude, newPoint.m_Longitude};
-			lastPoint = newPoint;
-		}
-	}
 }
 
 string CSMRRadar::GetBottomLine(const char* Callsign)
@@ -2447,21 +2323,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 {
 	Logger::info(string(__FUNCSIG__));
 
-	Logger::info("Patatoides cleanup");
-	{
-		const auto time = clock();
-		for (auto it = Patatoides.begin(); it != Patatoides.end();)
-		{
-			if ((time - it->second.touched) / CLOCKS_PER_SEC >= AFTERGLOW_CLEANUP_SEC)
-			{
-				it = Patatoides.erase(it);
-			} else
-			{
-				++it;
-			}
-		}
-	}
-
 	const bool alt_mode = GetAsyncKeyState(alt_mode_keycode) & 0x8000;
 
 	// First, we define some constants
@@ -2747,102 +2608,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		POINT acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
-		if (rt.GetGS() > 5)
-		{
-			CRadarTargetPositionData pAcPos = rt.GetPosition();
-
-			for (int i = 1; i <= 2; i++)
-			{
-				pAcPos = rt.GetPreviousPosition(pAcPos);
-				acPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
-
-				if (i == 1 && !Patatoides[rt.GetCallsign()].History_one_points.empty() && Afterglow && CurrentConfig->
-					getActiveProfile()["targets"]["show_primary_target"].GetBool())
-				{
-					SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-					                                                     CConfig::getConfigColor(
-						                                                     CurrentConfig->getActiveProfile()[
-							                                                     "targets"]["history_one_color"])));
-
-					PointF lpPoints[100];
-					for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_one_points.size(); i1++)
-					{
-						CPosition pos;
-						pos.m_Latitude = Patatoides[rt.GetCallsign()].History_one_points[i1].x;
-						pos.m_Longitude = Patatoides[rt.GetCallsign()].History_one_points[i1].y;
-
-						lpPoints[i1] = {
-							REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y)
-						};
-					}
-					graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].History_one_points.size());
-				}
-
-				if (i != 2)
-				{
-					if (!Patatoides[rt.GetCallsign()].History_two_points.empty() && Afterglow && CurrentConfig->
-						getActiveProfile()["targets"]["show_primary_target"].GetBool())
-					{
-						SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-						                                                     CConfig::getConfigColor(
-							                                                     CurrentConfig->getActiveProfile()[
-								                                                     "targets"]["history_two_color"])));
-
-						PointF lpPoints[100];
-						for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_two_points.size(); i1++)
-						{
-							CPosition pos;
-							pos.m_Latitude = Patatoides[rt.GetCallsign()].History_two_points[i1].x;
-							pos.m_Longitude = Patatoides[rt.GetCallsign()].History_two_points[i1].y;
-
-							lpPoints[i1] = {
-								REAL(ConvertCoordFromPositionToPixel(pos).x),
-								REAL(ConvertCoordFromPositionToPixel(pos).y)
-							};
-						}
-						graphics.FillPolygon(&H_Brush, lpPoints,
-						                     Patatoides[rt.GetCallsign()].History_two_points.size());
-					}
-				}
-
-				if (i == 2 && !Patatoides[rt.GetCallsign()].History_three_points.empty() && Afterglow && CurrentConfig->
-					getActiveProfile()["targets"]["show_primary_target"].GetBool())
-				{
-					SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-					                                                     CConfig::getConfigColor(
-						                                                     CurrentConfig->getActiveProfile()[
-							                                                     "targets"]["history_three_color"])));
-
-					PointF lpPoints[100];
-					for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_three_points.size(); i1++)
-					{
-						CPosition pos;
-						pos.m_Latitude = Patatoides[rt.GetCallsign()].History_three_points[i1].x;
-						pos.m_Longitude = Patatoides[rt.GetCallsign()].History_three_points[i1].y;
-
-						lpPoints[i1] = {
-							REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y)
-						};
-					}
-					graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].History_three_points.size());
-				}
-			}
-
-			int TrailNumber = Trail_Gnd;
-			if (reportedGs > 50)
-				TrailNumber = Trail_App;
-
-			CRadarTargetPositionData previousPos = rt.GetPreviousPosition(rt.GetPosition());
-			for (int j = 1; j <= TrailNumber; j++)
-			{
-				POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
-
-				graphics.FillRectangle(&SolidBrush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White)),
-				                       pCoord.x - 1, pCoord.y - 1, 2, 2);
-
-				previousPos = rt.GetPreviousPosition(previousPos);
-			}
-		}
+		draw_after_glow(rt, graphics);
 
 
 		if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
@@ -2852,19 +2618,17 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				                                                     CurrentConfig->getActiveProfile()["targets"][
 					                                                     "target_color"])));
 
-			PointF lpPoints[100];
-			for (unsigned int i = 0; i < Patatoides[rt.GetCallsign()].points.size(); i++)
+			const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
+			const auto shape = PlaneShapeBuilder::build(rt.GetPosition(), fp);
+			PointF lpPoints[PlaneShapeBuilder::patatoide_size];
+			for (auto i = 0; i < shape.size(); ++i)
 			{
-				CPosition pos;
-				pos.m_Latitude = Patatoides[rt.GetCallsign()].points[i].x;
-				pos.m_Longitude = Patatoides[rt.GetCallsign()].points[i].y;
-
 				lpPoints[i] = {
-					REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y)
+					REAL(ConvertCoordFromPositionToPixel(shape[i]).x), REAL(ConvertCoordFromPositionToPixel(shape[i]).y)
 				};
 			}
 
-			graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].points.size());
+			graphics.FillPolygon(&H_Brush, lpPoints, shape.size());
 		}
 		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
@@ -3535,5 +3299,76 @@ void CSMRRadar::manually_release(const char* system_id)
 	else
 	{
 		ReleasedTracks.erase(std::find(ReleasedTracks.begin(), ReleasedTracks.end(), system_id));
+	}
+}
+
+void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
+{
+	const auto ground_speed = rt.GetGS();
+
+	constexpr size_t afterglow_count = 3;
+
+	if (ground_speed <= 5) return;
+
+	const CRadarTargetPositionData current_position = rt.GetPosition();
+
+
+	// First, fill with historic positions
+	CRadarTargetPositionData historic_positions[afterglow_count];
+	CRadarTargetPositionData previous_position = current_position;
+	for (auto i = 0; i < afterglow_count; i++)
+	{
+		previous_position = rt.GetPreviousPosition(previous_position);
+		historic_positions[i] = previous_position;
+	}
+
+	// Reusable buffer
+	PointF pixel_points[PlaneShapeBuilder::patatoide_size];
+	// Render oldest afterglow first (requires signed math)
+	for (int i = afterglow_count - 1; i >= 0; --i)
+	{
+		std::string color_name;
+		switch (i)
+		{
+		case 0:
+			color_name = "history_one_color";
+			break;
+		case 1:
+			color_name = "history_two_color";
+			break;
+		default:
+			color_name = "history_three_color";
+			break;
+		}
+		const SolidBrush brush(ColorManager->get_corrected_color(
+			"afterglow",
+			CConfig::getConfigColor(CurrentConfig->getActiveProfile()["targets"][color_name.c_str()])
+		));
+
+		const auto pos = historic_positions[i];
+		const auto fp = rt.GetCorrelatedFlightPlan();
+		const auto shape = PlaneShapeBuilder::build(pos, fp, false);
+
+		// Convert CPositions to pixel positions
+		for (auto j = 0; j < shape.size(); ++j)
+		{
+			const auto pixel = ConvertCoordFromPositionToPixel(shape[j]);
+			pixel_points[j] = PointF{
+				static_cast<float>(pixel.x), static_cast<float>(pixel.y)
+			};
+		}
+		graphics.FillPolygon(&brush, pixel_points, shape.size());
+	}
+
+	const int TrailNumber = ground_speed > 50 ? Trail_App : Trail_Gnd;
+	CRadarTargetPositionData previousPos = rt.GetPreviousPosition(rt.GetPosition());
+	const SolidBrush trail_brush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White));
+	for (int j = 1; j <= TrailNumber; j++)
+	{
+		const POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
+
+		graphics.FillRectangle(&trail_brush, pCoord.x - 1, pCoord.y - 1, 2, 2);
+
+		previousPos = rt.GetPreviousPosition(previousPos);
 	}
 }

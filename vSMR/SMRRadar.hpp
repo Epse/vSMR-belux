@@ -66,6 +66,8 @@ private:
 	void manually_release(const char* system_id);
 
 	char alt_mode_keycode = VK_MENU;
+
+	void draw_after_glow(CRadarTarget rt, Graphics& graphics);
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();
@@ -82,21 +84,6 @@ public:
 	COLORREF SMR_H1_COLOR = RGB(0, 255, 255);
 	COLORREF SMR_H2_COLOR = RGB(0, 219, 219);
 	COLORREF SMR_H3_COLOR = RGB(0, 183, 183);
-
-	typedef struct tagPOINT2 {
-		double x;
-		double y;
-	} POINT2;
-
-	struct Patatoide_Points {
-		clock_t touched;
-		vector<POINT2> points;
-		vector<POINT2> History_one_points;
-		vector<POINT2> History_two_points;
-		vector<POINT2> History_three_points;
-	};
-
-	map<const char *, Patatoide_Points> Patatoides;
 
 	map<string, bool> ClosedRunway;
 
@@ -330,31 +317,6 @@ public:
 		return isAcDisplayed;
 	}
 
-	//---Haversine---------------------------------------------
-	// Heading in deg, distance in m
-	const double PI = (double)M_PI;
-
-	inline virtual CPosition Haversine(CPosition origin, double heading, double distance) {
-
-		CPosition newPos;
-
-		const double d = (distance*0.00053996) / 60 * PI / 180;
-		const double trk = DegToRad(heading);
-		const double lat0 = DegToRad(origin.m_Latitude);
-		const double lon0 = DegToRad(origin.m_Longitude);
-
-		const double lat = asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(trk));
-		const double lon = cos(lat) == 0 ? lon0 : fmod(lon0 + asin(sin(trk) * sin(d) / cos(lat)) + PI, 2 * PI) - PI;
-
-		newPos.m_Latitude = RadToDeg(lat);
-		newPos.m_Longitude = RadToDeg(lon);
-
-		return newPos;
-	}
-
-	inline virtual float randomizeHeading(float originHead) {
-		return float(fmod(originHead + float((rand() % 5) - 2), 360));
-	}
 
 	//---GetBottomLine---------------------------------------------
 

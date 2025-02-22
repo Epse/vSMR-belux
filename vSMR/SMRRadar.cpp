@@ -107,7 +107,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	}
 
 	// Would the start of a right-aligned tag be to the left of the tag start?
-	const auto angle = fmod(abs(TagAngles[callsign]), 360);
 	const bool right_align = fmod(abs(TagAngles[callsign] + 90), 360) > 180;
 
 	// Set up an offscreen buffer to draw to
@@ -228,7 +227,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	const Color TagBackgroundColor = ColorManager->get_corrected_color("label", dimming, definedBackgroundColor);
 
 
-	SolidBrush TagBackgroundBrush(TagBackgroundColor);
 	SolidBrush FontColor(ColorManager
 		->get_corrected_color("label",
 		                      CurrentConfig->getConfigColor(
@@ -236,11 +234,19 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				                      ColorTagType).c_str()]["text_color"])));
 
 	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
+	const bool is_rimcas_err = RimcasInstance->getAlert(callsign) != CRimcas::NoAlert;
 
 	if (is_assr_err && show_err_lines)
 	{
 		auto val = vector<string>();
 		val.emplace_back("SSR/FPL");
+		LabelLines.insert(LabelLines.begin(), std::move(val));
+	}
+
+	if (is_rimcas_err)
+	{
+		auto val = vector<string>();
+		val.emplace_back("ALERT");
 		LabelLines.insert(LabelLines.begin(), std::move(val));
 	}
 
@@ -288,7 +294,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 			wstring wstr = wstring(element.begin(), element.end());
 			Gdiplus::Font* font = customFonts[currentFontSize];
-			if ((element_was == "callsign" || i == 0) && TagType != TagTypes::Uncorrelated)
+			if ((element_was == "callsign" || element_was == "SSR/FPL" || i == 0 || element_was == "ALERT") && TagType != TagTypes::Uncorrelated)
 			{
 				font = customFonts[currentFontSize + 10];
 			}
@@ -328,7 +334,22 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			const auto draw_start = right_align
 				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width
 				                        : tag_start.x + TempTagWidth;
-			graphics.FillRectangle(&TagBackgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
+
+			// Adjust background to RIMCAS color, if this row is ALERT
+			const Color BackgroundColor = element == "ALERT"
+				                              ? RimcasInstance->GetAircraftColor(
+					                              rt.GetCallsign(), TagBackgroundColor, TagBackgroundColor,
+					                              CurrentConfig->getConfigColor(
+						                              CurrentConfig->getActiveProfile()["rimcas"][
+							                              "background_color_stage_one"]
+					                              ),
+					                              CurrentConfig->getConfigColor(
+						                              CurrentConfig->getActiveProfile()["rimcas"][
+							                              "background_color_stage_two"]
+					                              ))
+				                              : TagBackgroundColor;
+			const SolidBrush backgroundBrush(BackgroundColor);
+			graphics.FillRectangle(&backgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
 			                       static_cast<int>(mesureRect.Width) + tdc.blank_width,
 			                       static_cast<int>(mesureRect.Height));
 
@@ -384,61 +405,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	                        tag_start.y + TagHeight);
 
 
-	// If we use a RIMCAS label only, we display it, and adapt the rectangle
-	CRect oldCrectSave = TagBackgroundRect;
-
-	// We need to figure out if the tag color changes according to RIMCAS alerts, or not
-	const bool rimcasLabelOnly = CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
-	if (rimcasLabelOnly)
-	{
-		Color RimcasLabelColor = RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
-		                                                          CurrentConfig->getConfigColor(
-			                                                          CurrentConfig->getActiveProfile()["rimcas"][
-				                                                          "background_color_stage_one"]),
-		                                                          CurrentConfig->getConfigColor(
-			                                                          CurrentConfig->getActiveProfile()["rimcas"][
-				                                                          "background_color_stage_two"]));
-
-		if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF())
-		{
-			RimcasLabelColor = ColorManager->get_corrected_color("label", RimcasLabelColor);
-			int rimcas_height = 0;
-
-			wstring wrimcas_height = wstring(L"ALERT");
-
-			RectF RectRimcas_height;
-
-			graphics.MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
-			                       customFonts[currentFontSize],
-			                       PointF(0, 0), &Gdiplus::StringFormat(), &RectRimcas_height);
-			rimcas_height = int(RectRimcas_height.GetBottom());
-
-			// Drawing the rectangle
-
-			CRect RimcasLabelRect(
-				min(border_points.front().X, border_points[1].X), border_points.front().Y - rimcas_height,
-				max(border_points.front().X, border_points[1].X), border_points.front().Y);
-			graphics.FillRectangle(&SolidBrush(RimcasLabelColor), CopyRect(RimcasLabelRect));
-			TagBackgroundRect.top -= rimcas_height;
-
-			// Drawing the text
-
-			const wstring rimcasw = wstring(L"ALERT");
-			StringFormat stformat = new StringFormat();
-			stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
-			const RectF string_rect(RimcasLabelRect.TopLeft().x, RimcasLabelRect.TopLeft().y, RimcasLabelRect.Width(),
-			                        RimcasLabelRect.Height());
-			graphics.DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), customFonts[currentFontSize],
-			                    string_rect, &stformat, tdc.rimcas_text_color);
-
-			// Modify the border points, so the border appropriately surrounds the warning
-			border_points.front().Y -= rimcas_height;
-			border_points[1].Y -= rimcas_height;
-		}
-	}
-
 	// Drawing the border
-	if ((is_asel || is_assr_err) && ColorTagType != TagTypes::Airborne)
+	const bool is_rimcas_stage_two = RimcasInstance->getAlert(callsign) == CRimcas::StageTwo;
+	if ((is_asel || is_assr_err || is_rimcas_stage_two) && ColorTagType != TagTypes::Airborne)
 	{
 		Color border_color = is_assr_err
 			                     ? is_asel
@@ -447,6 +416,11 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			                     : is_asel
 			                     ? Color::Yellow
 			                     : Color::AlphaMask;
+
+		if (is_rimcas_stage_two)
+		{
+			border_color = Color(255, 0, 255);
+		}
 
 		// Width of border. 4 is realistic-ish. I've taken that into account above. Sorry for magic numbers
 		// We should expand the polygon
@@ -498,8 +472,9 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 	// Blit to screen without copying
 	tdc.graphics->DrawImage(&mem_buffer,
-		static_cast<INT>(tag_top_left.x), static_cast<INT>(tag_top_left.y), x1, 0, TagWidth + 3 * border_growth, TagHeight + 2 * border_growth, 
-		Unit::UnitPixel
+	                        static_cast<INT>(tag_top_left.x), static_cast<INT>(tag_top_left.y), x1, 0,
+	                        TagWidth + 3 * border_growth, TagHeight + 2 * border_growth,
+	                        Unit::UnitPixel
 	);
 
 	// Adding the tag screen object
@@ -524,8 +499,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	 * I'll leave this line here for posterity
 	 */
 	//AddScreenObject(DRAWING_TAG, rt.GetCallsign(), TagBackgroundRect, true, GetBottomLine(rt.GetCallsign()).c_str());
-
-	TagBackgroundRect = oldCrectSave;
 }
 
 void CSMRRadar::draw_context_menu(HDC hdc)

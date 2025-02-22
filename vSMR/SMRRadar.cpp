@@ -558,7 +558,7 @@ void CSMRRadar::draw_context_menu(HDC hdc)
 	                    &callsign_format, &background_brush);
 
 	// Release
-	const WCHAR* release_label = this->is_manually_released(flight.system_id.c_str()) ? L"XRelease" : L"Release";
+	const WCHAR* release_label = this->is_manually_released(flight.system_id.c_str()) ? L"XDrop" : L"Drop";
 	graphics.DrawString(release_label, -1, &font, RectF(draw_at.x, draw_at.y + 1 * line_height, width, line_height),
 	                    &generic_format, &contrast_brush);
 	AddScreenObject(CONTEXT_RELEASE, flight.system_id.c_str(), RECT{
@@ -1331,7 +1331,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("APPR Trail Dots", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Predicted Track Line", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Acquire", "", RIMCAS_UPDATE_ACQUIRE);
-			GetPlugIn()->AddPopupListElement("Release", "", RIMCAS_UPDATE_RELEASE);
+			GetPlugIn()->AddPopupListElement("Drop", "", RIMCAS_UPDATE_RELEASE);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 

@@ -2471,9 +2471,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		{
 			if (RimcasInstance->ClosedRunway[RwName])
 			{
-				CPen RedPen(PS_SOLID, 2, RGB(150, 0, 0));
-				CPen* oldPen = dc.SelectObject(&RedPen);
-
 				if (CurrentConfig->isCustomRunwayAvail(getActiveAirport(), runway_name, runway_name2))
 				{
 					const Value& Runways = CustomMap["runways"];
@@ -2532,8 +2529,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 					graphics.FillPolygon(&SolidBrush(Color(150, 0, 0)), lpPoints, w);
 				}
-
-				dc.SelectObject(oldPen);
 			}
 		}
 	}

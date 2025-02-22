@@ -29,6 +29,10 @@ constexpr BYTE TAG_DIMMING = 15;
 constexpr unsigned int AFTERGLOW_CLEANUP_SEC = 10;
 
 
+typedef struct tagPOINT2 {
+	double x;
+	double y;
+} POINT2;
 
 inline static bool startsWith(const char* pre, const char* str)
 {
@@ -349,3 +353,30 @@ constexpr int RIMCAS_BRIGHTNESS_SYMBOL = 302;
 constexpr int RIMCAS_BRIGHTNESS_AFTERGLOW = 303;
 
 constexpr int RIMCAS_DISTANCE_TOOL = 201;
+
+//---Haversine---------------------------------------------
+// Heading in deg, distance in m
+constexpr double PI = (double)M_PI;
+
+inline CPosition Haversine(CPosition origin, double heading, double distance) {
+
+	CPosition newPos;
+
+	const double d = (distance*0.00053996) / 60 * PI / 180;
+	const double trk = DegToRad(heading);
+	const double lat0 = DegToRad(origin.m_Latitude);
+	const double lon0 = DegToRad(origin.m_Longitude);
+
+	const double lat = asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(trk));
+	const double lon = cos(lat) == 0 ? lon0 : fmod(lon0 + asin(sin(trk) * sin(d) / cos(lat)) + PI, 2 * PI) - PI;
+
+	newPos.m_Latitude = RadToDeg(lat);
+	newPos.m_Longitude = RadToDeg(lon);
+
+	return newPos;
+}
+
+inline float randomizeHeading(float originHead) {
+	return float(fmod(originHead + float((rand() % 5) - 2), 360));
+}
+

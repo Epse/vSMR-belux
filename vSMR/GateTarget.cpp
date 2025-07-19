@@ -86,7 +86,7 @@ double GateTarget::calculateAsrAngle(EuroScopePlugIn::CRadarScreen* radar_screen
 	end.m_Longitude = zero.m_Longitude + 0.05;
 	const auto px_end = radar_screen->ConvertCoordFromPositionToPixel(end);
 
-	return RadToDeg(atan(static_cast<double>(px_end.y) / static_cast<double>(px_end.x)));
+	return RadToDeg(atan2(px_end.y, px_end.x));
 }
 
 unsigned char GateTarget::calculateTargetSize(EuroScopePlugIn::CRadarScreen* radar_screen)

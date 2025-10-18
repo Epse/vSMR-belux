@@ -829,6 +829,12 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		}
 	}
 
+	if ((p_value = GetDataFromAsr("AlwaysVector")) != NULL)
+	{
+		AlwaysVector = atoi(p_value) == 1;
+	}
+
+
 	if ((p_value = GetDataFromAsr("BeluxProMode")) != NULL)
 		belux_promode = (strcmp(p_value, "on") == 0);
 
@@ -932,6 +938,7 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("GndTrailsDots", "vSMR GRND Trail Dots", std::to_string(Trail_Gnd).c_str());
 
 	SaveDataToAsr("PredictedLine", "vSMR Predicted Track Lines", std::to_string(PredictedLength).c_str());
+	SaveDataToAsr("AlwaysVector", "vSMR Always show speed vector", AlwaysVector ? "1" : "0");
 
 	SaveDataToAsr("BeluxProMode", "vSMR Belux pro mode", (belux_promode ? "on" : "off"));
 	SaveDataToAsr("BeluxProModeEasy", "vSMR Belux pro mode - easy version", (belux_promode_easy ? "on" : "off"));
@@ -1802,7 +1809,13 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 
 	if (FunctionId == RIMCAS_UPDATE_PTL)
 	{
-		PredictedLength = atoi(sItemString);
+		if (strcmp(sItemString, "Always") == 0)
+		{
+			AlwaysVector = !AlwaysVector;
+		} else
+		{
+			PredictedLength = atoi(sItemString);
+		}
 
 		ShowLists["Predicted Track Line"] = true;
 	}
@@ -2681,10 +2694,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 
 		// Predicted Track Line
-		if (PredictedLength > 0)
+		if (PredictedLength > 0 || AlwaysVector)
 		{
-			double meters = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (PredictedLength);
-			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), meters);
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
+			if (AlwaysVector)
+				meters = max(meters, symbol_size_meters);
+			const double angle = rt.GetPosition().GetReportedGS() > 5 ? rt.GetTrackHeading() : rt.GetPosition().GetReportedHeading();
+			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
 
 			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
 			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
@@ -2924,6 +2940,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		GetPlugIn()->AddPopupListElement("15", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 15)));
 		GetPlugIn()->AddPopupListElement("30", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 30)));
 		GetPlugIn()->AddPopupListElement("60", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 60)));
+		GetPlugIn()->AddPopupListElement("Always", "", RIMCAS_UPDATE_PTL, false, AlwaysVector);
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Predicted Track Line"] = false;
 	}

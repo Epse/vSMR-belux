@@ -137,6 +137,7 @@ public:
 	int Trail_Gnd = 4;
 	int Trail_App = 4;
 	int PredictedLength = 0;
+	bool AlwaysVector = false;
 
 	bool NeedCorrelateCursor = false;
 	bool ReleaseInProgress = false;

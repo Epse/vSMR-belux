@@ -12,6 +12,9 @@
 
 #define VSTRIPS_PORT 53487
 
+// 1 knot == MPS_PER_KNOT m/s
+#define MPS_PER_KNOT 0.5144444
+
 using namespace std;
 using namespace EuroScopePlugIn;
 

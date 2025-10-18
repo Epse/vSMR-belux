@@ -820,7 +820,14 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		Trail_Gnd = atoi(p_value);
 
 	if ((p_value = GetDataFromAsr("PredictedLine")) != NULL)
+	{
 		PredictedLength = atoi(p_value);
+		if (PredictedLength == 1)
+		{
+			// Set to new default
+			PredictedLength = 15;
+		}
+	}
 
 	if ((p_value = GetDataFromAsr("BeluxProMode")) != NULL)
 		belux_promode = (strcmp(p_value, "on") == 0);
@@ -2603,21 +2610,21 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		constexpr float symbol_line_thickness = 2.0;
 		// Draw target symbols
 		const Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-		const Pen pen(color, symbol_line_thickness);
+		const Pen symbol_pen(color, symbol_line_thickness);
 		if (mouseWithin(
 			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
-			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y - 8, acPosPix.x - 6, acPosPix.y - 12);
-			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y - 8, acPosPix.x + 6, acPosPix.y - 12);
+			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y - 8, acPosPix.x - 6, acPosPix.y - 12);
+			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y - 8, acPosPix.x + 6, acPosPix.y - 12);
 
-			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y + 8, acPosPix.x - 6, acPosPix.y + 12);
-			graphics.DrawLine(&pen, acPosPix.x, acPosPix.y + 8, acPosPix.x + 6, acPosPix.y + 12);
+			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y + 8, acPosPix.x - 6, acPosPix.y + 12);
+			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y + 8, acPosPix.x + 6, acPosPix.y + 12);
 
-			graphics.DrawLine(&pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y - 6);
-			graphics.DrawLine(&pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y + 6);
+			graphics.DrawLine(&symbol_pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y - 6);
+			graphics.DrawLine(&symbol_pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y + 6);
 
-			graphics.DrawLine(&pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y - 6);
-			graphics.DrawLine(&pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y + 6);
+			graphics.DrawLine(&symbol_pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y - 6);
+			graphics.DrawLine(&symbol_pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y + 6);
 
 			/*
 			Stef, why are we getting interaction straight from the Windows APIS?
@@ -2657,11 +2664,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		if (RtPos.GetTransponderC())
 		{
-			graphics.DrawEllipse(&pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
+			graphics.DrawEllipse(&symbol_pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
 		}
 		else // We still want the primary return square, but we simulate only getting a good lock if its moving
 		{
-			graphics.DrawRectangle(&pen, acPosPix.x - half_size, acPosPix.y - half_size, size, size);
+			graphics.DrawRectangle(&symbol_pen, acPosPix.x - half_size, acPosPix.y - half_size, size, size);
 		}
 
 		if (TargetIsAsel)
@@ -2674,19 +2681,14 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 
 		// Predicted Track Line
-		// It starts 20 seconds away from the ac
-		const Pen trackPen(color, 1);
-		if (reportedGs > 50 && PredictedLength > 0)
+		if (PredictedLength > 0)
 		{
-			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;
-			CPosition AwayBase = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), d);
+			double meters = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (PredictedLength);
+			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), meters);
 
-			d = double(rt.GetPosition().GetReportedGS() * 0.514444) * (PredictedLength * 60) - 10;
-			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
-
-			const POINT start = ConvertCoordFromPositionToPixel(AwayBase);
+			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
 			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-			graphics.DrawLine(&trackPen, start.x, start.y, end.x, end.y);
+			graphics.DrawLine(&symbol_pen, start.x, start.y, end.x, end.y);
 		}
 	}
 
@@ -2918,11 +2920,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	{
 		GetPlugIn()->OpenPopupList(ListAreas["Predicted Track Line"], "Predicted Track Line", 1);
 		GetPlugIn()->AddPopupListElement("0", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 0)));
-		GetPlugIn()->AddPopupListElement("1", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 1)));
-		GetPlugIn()->AddPopupListElement("2", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 2)));
-		GetPlugIn()->AddPopupListElement("3", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 3)));
-		GetPlugIn()->AddPopupListElement("4", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 4)));
-		GetPlugIn()->AddPopupListElement("5", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 5)));
+		GetPlugIn()->AddPopupListElement("10", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 10)));
+		GetPlugIn()->AddPopupListElement("15", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 15)));
+		GetPlugIn()->AddPopupListElement("30", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 30)));
+		GetPlugIn()->AddPopupListElement("60", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 60)));
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Predicted Track Line"] = false;
 	}

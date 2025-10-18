@@ -341,17 +341,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		}
 
 		// Predicted Track Line
-		// It starts 10 seconds away from the ac
 		if (radar_screen->PredictedLength > 0) {
-			double d = double(rt.GetPosition().GetReportedGS() * 0.514444) * 10;
-			CPosition AwayBase = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), d);
-
-			d = double(rt.GetPosition().GetReportedGS() * 0.514444) * (radar_screen->PredictedLength * 60) - 10;
-			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
+			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->PredictedLength);
+			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), distance);
 
 			POINT liangOne, liangTwo;
 
-			if (LiangBarsky(m_Area, projectPoint(AwayBase), projectPoint(PredictedEnd), liangOne, liangTwo))
+			if (LiangBarsky(m_Area, projectPoint(rt.GetPosition().GetPosition()), projectPoint(PredictedEnd), liangOne, liangTwo))
 			{
 				dc.SelectObject(&WhitePen);
 				dc.MoveTo(liangOne);

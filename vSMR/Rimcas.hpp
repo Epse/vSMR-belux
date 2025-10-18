@@ -135,6 +135,13 @@ public:
 			ClosedRunway[runway] = !ClosedRunway[runway];
 	}
 
+	void toggleTaxiwayRunway(const string& runway) {
+		if (const auto pos = std::find(RunwayTaxiway.begin(), RunwayTaxiway.end(), runway); pos != RunwayTaxiway.end())
+			RunwayTaxiway.erase(pos);
+		else
+			RunwayTaxiway.emplace_back(runway);
+	}
+
 	void toggleMonitoredRunwayDep(const string& runway) {
 		if (MonitoredRunwayDep.find(runway) == MonitoredRunwayDep.end())
 			MonitoredRunwayDep[runway] = true;
@@ -150,4 +157,5 @@ public:
 	}
 
 	map<string, bool> ClosedRunway;
+	vector<string> RunwayTaxiway;
 };

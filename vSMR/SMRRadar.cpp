@@ -1385,6 +1385,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("Conflict Alert ARR", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Conflict Alert DEP", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Runway closed", "", RIMCAS_OPEN_LIST);
+			GetPlugIn()->AddPopupListElement("Runway taxiway", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Visibility", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
@@ -1769,6 +1770,15 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		RimcasInstance->toggleClosedRunway(string(sItemString));
 
 		ShowLists["Runway closed"] = true;
+
+		RequestRefresh();
+	}
+
+	if (FunctionId == RIMCAS_TAXIWAY_RUNWAYS_FUNC)
+	{
+		RimcasInstance->toggleTaxiwayRunway(string(sItemString));
+
+		ShowLists["Runway taxiway"] = true;
 
 		RequestRefresh();
 	}
@@ -2467,6 +2477,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 	Logger::info("Runway loop");
+	const Value& CustomMap = CurrentConfig->getAirportMapIfAny(getActiveAirport());
 	CSectorElement rwy;
 	for (rwy = GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_RUNWAY);
 	     rwy.IsValid();
@@ -2485,75 +2496,23 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		string runway_name = rwy.GetRunwayName(0);
 		string runway_name2 = rwy.GetRunwayName(1);
 
-		const Value& CustomMap = CurrentConfig->getAirportMapIfAny(getActiveAirport());
-
 		RimcasInstance->AddRunwayArea(this, runway_name, runway_name2, RimcasInstance->GetRunwayArea(Left, Right));
 
 		string RwName = runway_name + " / " + runway_name2;
 
-		if (RimcasInstance->ClosedRunway.find(RwName) != RimcasInstance->ClosedRunway.end())
+		if (const auto closed = RimcasInstance->ClosedRunway.find(RwName); closed != RimcasInstance->ClosedRunway.end() && closed->second)
 		{
-			if (RimcasInstance->ClosedRunway[RwName])
-			{
-				if (CurrentConfig->isCustomRunwayAvail(getActiveAirport(), runway_name, runway_name2))
-				{
-					const Value& Runways = CustomMap["runways"];
+			const Color color(150, 0, 0);
+			const SolidBrush brush(color);
+			fill_runway(runway_name, runway_name2, graphics, CustomMap, Left, Right, brush);
+		}
 
-					if (Runways.IsArray())
-					{
-						for (SizeType i = 0; i < Runways.Size(); i++)
-						{
-							if (!startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) && !startsWith(
-								runway_name2.c_str(), Runways[i]["runway_name"].GetString()))
-								continue;
-
-							string path_name = "path";
-
-							if (isLVP)
-								path_name = "path_lvp";
-
-							const Value& Path = Runways[i][path_name.c_str()];
-
-							PointF lpPoints[5000];
-
-							int k = 1;
-							int l = 0;
-							for (SizeType w = 0; w < Path.Size(); w++)
-							{
-								CPosition position;
-								position.LoadFromStrings(Path[w][static_cast<SizeType>(1)].GetString(),
-								                         Path[w][static_cast<SizeType>(0)].GetString());
-
-								POINT cv = ConvertCoordFromPositionToPixel(position);
-								lpPoints[l] = {REAL(cv.x), REAL(cv.y)};
-
-								k++;
-								l++;
-							}
-
-							graphics.FillPolygon(&SolidBrush(Color(150, 0, 0)), lpPoints, k - 1);
-
-							break;
-						}
-					}
-				}
-				else
-				{
-					vector<CPosition> Area = RimcasInstance->GetRunwayArea(Left, Right);
-
-					PointF lpPoints[5000];
-					int w = 0;
-					for (auto& Point : Area)
-					{
-						POINT toDraw = ConvertCoordFromPositionToPixel(Point);
-
-						lpPoints[w] = {REAL(toDraw.x), REAL(toDraw.y)};
-						w++;
-					}
-
-					graphics.FillPolygon(&SolidBrush(Color(150, 0, 0)), lpPoints, w);
-				}
-			}
+		if (std::find(RimcasInstance->RunwayTaxiway.begin(), RimcasInstance->RunwayTaxiway.end(), RwName) != RimcasInstance->RunwayTaxiway.end())
+		{
+			// Roughly 80% opacity
+			const Color color(200, 255, 133, 0);
+			const SolidBrush brush(color);
+			fill_runway(runway_name, runway_name2, graphics, CustomMap, Left, Right, brush);
 		}
 	}
 
@@ -2869,6 +2828,19 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		}
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Runway closed"] = false;
+	}
+
+	if (ShowLists["Runway taxiway"])
+	{
+		GetPlugIn()->OpenPopupList(ListAreas["Runway taxiway"], "Runway Taxiway", 1);
+		for (std::map<string, CRimcas::RunwayAreaType>::iterator it = RimcasInstance->RunwayAreas.begin(); it !=
+		     RimcasInstance->RunwayAreas.end(); ++it)
+		{
+			const bool active = std::find(RimcasInstance->RunwayTaxiway.begin(), RimcasInstance->RunwayTaxiway.end(), it->first) != RimcasInstance->RunwayTaxiway.end();
+			GetPlugIn()->AddPopupListElement(it->first.c_str(), "", RIMCAS_TAXIWAY_RUNWAYS_FUNC, false, active);
+		}
+		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
+		ShowLists["Runway taxiway"] = false;
 	}
 
 	if (ShowLists["Visibility"])
@@ -3349,3 +3321,66 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 		previousPos = rt.GetPreviousPosition(previousPos);
 	}
 }
+
+void CSMRRadar::fill_runway(const std::string runway_name, const std::string runway_name2, Graphics &graphics, const Value& CustomMap, CPosition& Left, CPosition& Right, const Brush& brush)
+{
+	if (CurrentConfig->isCustomRunwayAvail(getActiveAirport(), runway_name, runway_name2))
+	{
+		const Value& Runways = CustomMap["runways"];
+
+		if (Runways.IsArray())
+		{
+			for (SizeType i = 0; i < Runways.Size(); i++)
+			{
+				if (!startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) && !startsWith(
+					runway_name2.c_str(), Runways[i]["runway_name"].GetString()))
+					continue;
+
+				string path_name = "path";
+
+				if (isLVP)
+					path_name = "path_lvp";
+
+				const Value& Path = Runways[i][path_name.c_str()];
+
+				PointF lpPoints[5000];
+
+				int k = 1;
+				int l = 0;
+				for (SizeType w = 0; w < Path.Size(); w++)
+				{
+					CPosition position;
+					position.LoadFromStrings(Path[w][static_cast<SizeType>(1)].GetString(),
+						Path[w][static_cast<SizeType>(0)].GetString());
+
+					POINT cv = ConvertCoordFromPositionToPixel(position);
+					lpPoints[l] = { REAL(cv.x), REAL(cv.y) };
+
+					k++;
+					l++;
+				}
+
+				graphics.FillPolygon(&brush, lpPoints, k - 1);
+
+				break;
+			}
+		}
+	}
+	else
+	{
+		vector<CPosition> Area = RimcasInstance->GetRunwayArea(Left, Right);
+
+		PointF lpPoints[5000];
+		int w = 0;
+		for (auto& Point : Area)
+		{
+			POINT toDraw = ConvertCoordFromPositionToPixel(Point);
+
+			lpPoints[w] = { REAL(toDraw.x), REAL(toDraw.y) };
+			w++;
+		}
+
+		graphics.FillPolygon(&brush, lpPoints, w);
+	}
+}
+

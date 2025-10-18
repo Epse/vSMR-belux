@@ -206,6 +206,11 @@ void CRimcas::OnRefreshEnd(CRadarScreen* instance, int threshold) {
 		if (!MonitoredRunwayArr[string(it->first)] && !MonitoredRunwayDep[string(it->first)])
 			continue;
 
+		if (std::find(RunwayTaxiway.begin(), RunwayTaxiway.end(), it->first) != RunwayTaxiway.end())
+		{
+			continue;
+		}
+
 		bool isOnClosedRunway = false;
 		if (ClosedRunway.find(it->first) != ClosedRunway.end()) {
 			if (ClosedRunway[it->first])

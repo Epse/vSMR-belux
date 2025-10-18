@@ -177,6 +177,14 @@ void pollMessages(void * arg) {
 
 			i++;
 		}
+
+		if (message.from == logonCallsign)
+		{
+			// Idk why we sending messages to ourselves, but no thanks
+			raw.erase(0, pos + delimiter.length());
+			continue;
+		}
+
 		if (message.type.find("telex") != std::string::npos || message.type.find("cpdlc") != std::string::npos) {
 			if (message.message.find("REQ") != std::string::npos || message.message.find("CLR") != std::string::npos || message.message.find("PDC") != std::string::npos || message.message.find("PREDEP") != std::string::npos || message.message.find("REQUEST") != std::string::npos) {
 				if (message.message.find("LOGON") != std::string::npos) {

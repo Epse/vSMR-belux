@@ -68,6 +68,9 @@ private:
 	char alt_mode_keycode = VK_MENU;
 
 	void draw_after_glow(CRadarTarget rt, Graphics& graphics);
+
+	void fill_runway(const std::string runway_name, const std::string runway_name2, Graphics& graphics, const Value& CustomMap, CPosition&
+	                 Left, CPosition& Right, const Brush& brush);
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();

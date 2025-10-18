@@ -74,27 +74,32 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	// Alt mode makes me pretend its correlated
 	bool AcisCorrelated = alt_mode || IsCorrelated(fp, rt);
 
-	if (!filters.show_free && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
-		isAcDisplayed = false;
+	if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) == ManuallyCorrelated.end())
+	{
+		// Target not manually acquired, set filters
 
-	if (!filters.show_nonmine && strlen(fp.GetTrackingControllerId()) != 0 && !fp.GetTrackingControllerIsMe() && !fp.
-		GetCoordinatedNextController())
-		isAcDisplayed = false;
+		if (!filters.show_free && strlen(rt.GetCorrelatedFlightPlan().GetTrackingControllerId()) == 0)
+			isAcDisplayed = false;
 
-	if (!AcisCorrelated && belux_promode && !belux_promode_easy)
-		isAcDisplayed = false;
+		if (!filters.show_nonmine && strlen(fp.GetTrackingControllerId()) != 0 && !fp.GetTrackingControllerIsMe() && !fp.
+			GetCoordinatedNextController())
+			isAcDisplayed = false;
 
-	if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
-		isAcDisplayed = false;
+		if (!AcisCorrelated && belux_promode && !belux_promode_easy)
+			isAcDisplayed = false;
 
-	if (!filters.show_on_blocks && gate_target->isOnBlocks(this, &rt))
-		isAcDisplayed = false;
+		if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
+			isAcDisplayed = false;
 
-	// NSTS shows up as "" here
-	if (!filters.show_nsts && strlen(fp.GetGroundState()) == 0)
-		isAcDisplayed = false;
-	if (!filters.show_stup && strcmp(fp.GetGroundState(), "STUP") == 0)
-		isAcDisplayed = false;
+		if (!filters.show_on_blocks && gate_target->isOnBlocks(this, &rt))
+			isAcDisplayed = false;
+
+		// NSTS shows up as "" here
+		if (!filters.show_nsts && strlen(fp.GetGroundState()) == 0)
+			isAcDisplayed = false;
+		if (!filters.show_stup && strcmp(fp.GetGroundState(), "STUP") == 0)
+			isAcDisplayed = false;
+	}
 
 	if (!isAcDisplayed && !alt_mode)
 	{

@@ -2502,7 +2502,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		if (const auto closed = RimcasInstance->ClosedRunway.find(RwName); closed != RimcasInstance->ClosedRunway.end() && closed->second)
 		{
-			const Color color(150, 0, 0);
+			// Roughly 80% opacity
+			const Color color(200, 150, 0, 0);
 			const SolidBrush brush(color);
 			fill_runway(runway_name, runway_name2, graphics, CustomMap, Left, Right, brush);
 		}

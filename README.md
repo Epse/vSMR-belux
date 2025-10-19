@@ -27,6 +27,25 @@ Features:
 * Realistic tag borders
 * Support for the TopSky menubar
 
+### Aircraft Size Database
+
+We load aircraft sizes from a file, a default one is included in this repo.
+We base this information on the [FAA Aircraft Characteristics Database](https://www.faa.gov/airports/engineering/aircraft_char_database).
+To convert that Excel document to our needed CSV, see below spoiler.
+
+<details>
+<summary>Creating an Aircraft Size Database</summary>
+<!-- Markdown lets us keep the below numbering each at 1 and it'll renumber, fun! -->
+
+1. Downlaod the Excel file from the FAA
+1. Keep the columns `ICAO_Code`, Length, Tail Height and Main Gear Width. We use Main Gear Width to approximate cabin width.
+1. Convert each column to meters. This is a simple multiplication by 0.3048. Make sure to convert to value (Data, Calculate, Formula to Value in LibreOffice Calc)
+1. Drop the columns in feet.
+1. Keep the heading row, pick any titles you like. They are ignored by the tooling.
+1. Export as TSV. In LibreOffice, you use Save As, select csv, pick no quoting and Tab as field delimiter. The file should be called `aircraft_data.tsv`.
+
+</details>
+
 ### Release
 
 This is the latest stable release, which has been tested and the one you should use for day to day use.

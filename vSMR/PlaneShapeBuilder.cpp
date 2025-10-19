@@ -1,10 +1,24 @@
 #include "stdafx.h"
 #include "PlaneShapeBuilder.h"
+#include <fstream>
 
 using namespace EuroScopePlugIn;
 
-std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const bool randomise)
+/*
+ * Notes on the rework:
+ * using https://www.faa.gov/airports/engineering/aircraft_char_database
+ * we should be able to get actual aircraft sizes.
+ * Then we load that from a file,
+ * and have a noisy ellipse.
+ */
+
+std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const bool randomise) const
 {
+	if (!initialized)
+	{
+		throw logic_error("PlaneShapeBuilder not initialized.");
+	}
+
 	CPosition placeholder;
 	placeholder.m_Latitude = 0.0f;
 	placeholder.m_Longitude = 0.0f;
@@ -128,4 +142,49 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 	}
 
     return result;
+}
+
+void PlaneShapeBuilder::init()
+{
+	if (initialized) return;
+
+	// Getting the DLL file folder
+	char dll_path_file[MAX_PATH];
+	GetModuleFileNameA(HINSTANCE(&__ImageBase), dll_path_file, sizeof(dll_path_file));
+	std::filesystem::path aircraft_data_path(dll_path_file);
+	aircraft_data_path.replace_filename("aircraft_data.tsv");
+
+	{
+		std::ifstream stream(aircraft_data_path);
+		load_file(stream);
+	}
+
+	initialized = true;
+}
+
+size_t PlaneShapeBuilder::load_file(std::istream& str)
+{
+	types.clear();
+	for (std::string line; std::getline(str, line);)
+	{
+		std::stringstream linestr(line);
+		AircraftType type{};
+		std::string item;
+
+		std::getline(linestr, item, '\t');
+		type.type = item;
+
+		std::getline(linestr, line, '\t');
+		type.length = atof(item.c_str());
+
+		std::getline(linestr, line, '\t');
+		type.tail_height = atof(item.c_str());
+
+		std::getline(linestr, line, '\t');
+		type.width = atof(item.c_str());
+
+		types[type.type] = type;
+	}
+
+	return types.size();
 }

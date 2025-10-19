@@ -672,6 +672,8 @@ CSMRRadar::CSMRRadar()
 
 	gate_target = new GateTarget();
 	gate_target->loadGates();
+
+	plane_shape_builder->init();
 }
 
 CSMRRadar::~CSMRRadar()
@@ -2571,8 +2573,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 					                                                     "target_color"])));
 
 			const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
-			const auto shape = PlaneShapeBuilder::build(rt.GetPosition(), fp);
-			PointF lpPoints[PlaneShapeBuilder::patatoide_size];
+			const auto shape = plane_shape_builder->build(rt.GetPosition(), fp);
+			PointF lpPoints[PlaneShapeBuilder::shape_size];
 			for (auto i = 0; i < shape.size(); ++i)
 			{
 				lpPoints[i] = {
@@ -3273,7 +3275,7 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 	}
 
 	// Reusable buffer
-	PointF pixel_points[PlaneShapeBuilder::patatoide_size];
+	PointF pixel_points[PlaneShapeBuilder::shape_size];
 	// Render oldest afterglow first (requires signed math)
 	for (int i = afterglow_count - 1; i >= 0; --i)
 	{
@@ -3297,7 +3299,7 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 
 		const auto pos = historic_positions[i];
 		const auto fp = rt.GetCorrelatedFlightPlan();
-		const auto shape = PlaneShapeBuilder::build(pos, fp, false);
+		const auto shape = plane_shape_builder->build(pos, fp, false);
 
 		// Convert CPositions to pixel positions
 		for (auto j = 0; j < shape.size(); ++j)

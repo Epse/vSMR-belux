@@ -25,6 +25,7 @@
 #include "GateTarget.hpp"
 #include "TagDrawingContext.hpp"
 #include "Filters.h"
+#include "PlaneShapeBuilder.h"
 
 using namespace std;
 using namespace Gdiplus;
@@ -67,6 +68,8 @@ private:
 
 	char alt_mode_keycode = VK_MENU;
 
+	std::unique_ptr<PlaneShapeBuilder> plane_shape_builder = std::make_unique<PlaneShapeBuilder>();
+
 	void draw_after_glow(CRadarTarget rt, Graphics& graphics);
 
 	void fill_runway(const std::string runway_name, const std::string runway_name2, Graphics& graphics, const Value& CustomMap, CPosition&
@@ -90,7 +93,7 @@ public:
 
 	map<string, bool> ClosedRunway;
 
-	char DllPathFile[_MAX_PATH];
+	char DllPathFile[MAX_PATH];
 	string DllPath;
 	string ConfigPath;
 	CCallsignLookup * Callsigns = nullptr;

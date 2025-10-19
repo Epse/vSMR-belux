@@ -38,10 +38,11 @@ To convert that Excel document to our needed CSV, see below spoiler.
 <!-- Markdown lets us keep the below numbering each at 1 and it'll renumber, fun! -->
 
 1. Downlaod the Excel file from the FAA
-1. Keep the columns `ICAO_Code`, Length, Tail Height and Main Gear Width. We use Main Gear Width to approximate cabin width.
+1. Keep the columns `ICAO_Code`, Length, Tail Height and Main Gear Width. Keep both wingspan columns, but merge them (only one is filled). We use Main Gear Width to approximate cabin width.
 1. Convert each column to meters. This is a simple multiplication by 0.3048. Make sure to convert to value (Data, Calculate, Formula to Value in LibreOffice Calc)
 1. Drop the columns in feet.
 1. Keep the heading row, pick any titles you like. They are ignored by the tooling.
+1. Set the column order to type, wingspan, length, tail, main gear
 1. Export as TSV. In LibreOffice, you use Save As, select csv, pick no quoting and Tab as field delimiter. The file should be called `aircraft_data.tsv`.
 
 </details>

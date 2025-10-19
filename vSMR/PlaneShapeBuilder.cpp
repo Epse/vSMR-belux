@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "PlaneShapeBuilder.h"
 #include <fstream>
+#include <random>
 
 using namespace EuroScopePlugIn;
 
@@ -10,138 +11,63 @@ using namespace EuroScopePlugIn;
  * we should be able to get actual aircraft sizes.
  * Then we load that from a file,
  * and have a noisy ellipse.
+ *
+ * An A320 or similar should be pretty much a blobby circle
+ * whereas a B78X gets a more defined long shape, but with a similar width.
+ *
  */
 
-std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const bool randomise) const
+PlaneShapeBuilder::PlaneShapeBuilder()
 {
-	if (!initialized)
-	{
-		throw logic_error("PlaneShapeBuilder not initialized.");
-	}
+	ren = std::default_random_engine{ std::random_device{}() };
+}
 
+std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const bool randomise)
+{
 	CPosition placeholder;
 	placeholder.m_Latitude = 0.0f;
 	placeholder.m_Longitude = 0.0f;
+	std::vector<CPosition> result(shape_size, placeholder);
 
-	// All units in M
-	float width = 34.0f;
-	float cabin_width = 4.0f;
-	float length = 38.0f;
+	if (!initialized)
+	{
+		return result;
+	}
+
+
+	AircraftType type{
+		"C170",
+		7.6f,2.0f,3.0f
+	};
 
 	if (flight_plan.IsValid())
 	{
-		const char wtc = flight_plan.GetFlightPlanData().GetAircraftWtc();
-
-		if (wtc == 'L')
+		const std::string icao = flight_plan.GetFlightPlanData().GetAircraftFPType();
+		if (const auto found = types.find(icao); found != types.end())
 		{
-			width = 13.0f;
-			cabin_width = 2.0f;
-			length = 12.0f;
-		}
-
-		if (wtc == 'H')
-		{
-			width = 61.0f;
-			cabin_width = 7.0f;
-			length = 64.0f;
-		}
-
-		if (wtc == 'J')
-		{
-			width = 80.0f;
-			cabin_width = 7.0f;
-			length = 73.0f;
+			type = found->second;
 		}
 	}
 
+	/*
+	 * Concept: Take a normal noise distribution (below).
+	 * Assume this to be distance from centre.
+	 * Sample this at a few angles around the centre.
+	 * Done??
+	 */
+	std::normal_distribution distance_dist{ type.tail_height, type.tail_height / 5 };
 
-	if (randomise)
+	const auto heading = position.GetReportedHeadingTrueNorth();
+	const CPosition centre = position.GetPosition();
+
+	for (size_t i = 0; i < shape_size; ++i)
 	{
-		width = width + float((rand() % 5) - 2);
-		cabin_width = cabin_width + float((rand() % 3) - 1);
-		length = length + float((rand() % 5) - 2);
+		const auto angle = (heading + i * 360 / shape_size) % 360;
+		const auto distance = max(distance_dist(ren), 0);
+		result[i] = BetterHarversine(centre, static_cast<double>(angle), distance);
 	}
 
-
-	const auto trackHead = float(position.GetReportedHeadingTrueNorth());
-	const auto inverseTrackHead = float(fmod(trackHead + 180.0f, 360));
-	const auto leftTrackHead = float(fmod(trackHead - 90.0f, 360));
-	const auto rightTrackHead = float(fmod(trackHead + 90.0f, 360));
-
-	const float HalfLenght = length / 2.0f;
-	const float HalfCabWidth = cabin_width / 2.0f;
-	const float HalfSpanWidth = width / 2.0f;
-
-	// Base shape is like a deformed cross
-
-
-	const CPosition topMiddle = Haversine(position.GetPosition(), trackHead, HalfLenght);
-	const CPosition topLeft = Haversine(topMiddle, leftTrackHead, HalfCabWidth);
-	const CPosition topRight = Haversine(topMiddle, rightTrackHead, HalfCabWidth);
-
-	const CPosition bottomMiddle = Haversine(position.GetPosition(), inverseTrackHead, HalfLenght);
-	const CPosition bottomLeft = Haversine(bottomMiddle, leftTrackHead, HalfCabWidth);
-	const CPosition bottomRight = Haversine(bottomMiddle, rightTrackHead, HalfCabWidth);
-
-	const CPosition middleTopLeft = Haversine(topLeft, float(fmod(inverseTrackHead + 25.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleTopRight = Haversine(topRight, float(fmod(inverseTrackHead - 25.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleBottomLeft = Haversine(bottomLeft, float(fmod(trackHead - 15.0f, 360)), 0.8f * HalfLenght);
-	const CPosition middleBottomRight = Haversine(bottomRight, float(fmod(trackHead + 15.0f, 360)), 0.8f * HalfLenght);
-
-	const CPosition rightTop = Haversine(middleBottomRight, rightTrackHead, 0.7f * HalfSpanWidth);
-	const CPosition rightBottom = Haversine(rightTop, inverseTrackHead, cabin_width);
-
-	const CPosition leftTop = Haversine(middleBottomLeft, leftTrackHead, 0.7f * HalfSpanWidth);
-	const CPosition leftBottom = Haversine(leftTop, inverseTrackHead, cabin_width);
-
-	CPosition basePoints[12];
-	basePoints[0] = topLeft;
-	basePoints[1] = middleTopLeft;
-	basePoints[2] = leftTop;
-	basePoints[3] = leftBottom;
-	basePoints[4] = middleBottomLeft;
-	basePoints[5] = bottomLeft;
-	basePoints[6] = bottomRight;
-	basePoints[7] = middleBottomRight;
-	basePoints[8] = rightBottom;
-	basePoints[9] = rightTop;
-	basePoints[10] = middleTopRight;
-	basePoints[11] = topRight;
-
-	if (!randomise)
-	{
-		return {std::begin(basePoints), std::end(basePoints)};
-	}
-
-	// 12 points total, so 11 from 0
-	// ------
-
-	// Random points between points of base shape
-
-    std::vector<CPosition> result(patatoide_size, placeholder);
-	for (int i = 0; i < 12; i++)
-	{
-		CPosition lastPoint, endPoint, startPoint;
-
-		startPoint = basePoints[i];
-		if (i == 11) endPoint = basePoints[0];
-		else endPoint = basePoints[i + 1];
-
-		const double dist = startPoint.DistanceTo(endPoint);
-
-		result[i * 7] = startPoint;
-		lastPoint = startPoint;
-
-		for (int k = 1; k < 7; k++)
-		{
-			const double rndHeading = float(fmod(lastPoint.DirectionTo(endPoint) + (-25.0 + (rand() % 50 + 1)), 360));
-			const CPosition newPoint = Haversine(lastPoint, rndHeading, dist * 200);
-			result[(i * 7) + k] = newPoint;
-			lastPoint = newPoint;
-		}
-	}
-
-    return result;
+	return result;
 }
 
 void PlaneShapeBuilder::init()
@@ -156,7 +82,11 @@ void PlaneShapeBuilder::init()
 
 	{
 		std::ifstream stream(aircraft_data_path);
-		load_file(stream);
+		const auto loaded = load_file(stream);
+		if (loaded < 1)
+		{
+			AfxMessageBox("Could not load a reasonable amount of aircraft types. Is the file present?");
+		}
 	}
 
 	initialized = true;
@@ -174,13 +104,16 @@ size_t PlaneShapeBuilder::load_file(std::istream& str)
 		std::getline(linestr, item, '\t');
 		type.type = item;
 
-		std::getline(linestr, line, '\t');
+		std::getline(linestr, item, '\t');
+		type.wingspan = atof(item.c_str());
+
+		std::getline(linestr, item, '\t');
 		type.length = atof(item.c_str());
 
-		std::getline(linestr, line, '\t');
+		std::getline(linestr, item, '\t');
 		type.tail_height = atof(item.c_str());
 
-		std::getline(linestr, line, '\t');
+		std::getline(linestr, item, '\t');
 		type.width = atof(item.c_str());
 
 		types[type.type] = type;

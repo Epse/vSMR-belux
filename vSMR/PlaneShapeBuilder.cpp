@@ -55,16 +55,32 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 	 * Sample this at a few angles around the centre.
 	 * Done??
 	 */
-	std::normal_distribution distance_dist{ type.tail_height, type.tail_height / 5 };
+	std::normal_distribution distance_dist{ type.tail_height * 0.8f, type.tail_height / 5 };
 
 	const auto heading = position.GetReportedHeadingTrueNorth();
 	const CPosition centre = position.GetPosition();
 
+	// For the reason of squeezing the middle a little... [0, 1[
+	const float squeeze = 0.15f;
+
 	for (size_t i = 0; i < shape_size; ++i)
 	{
-		const auto angle = (heading + i * 360 / shape_size) % 360;
+		/*
+		 * We want to make this thing a tiny bit narrower around the waist, overall.
+		 * We have N datapoints (shape_size, but N is shorter).
+		 * Every N / 2 points, we effectively repeat the shape.
+		 *
+		 * 0 and N/2 should have full extent.
+		 * N/4 and 3N/4 should be narrower by a bit.
+		 *
+		 * So, x=n/N gives a float [0, 1[. Yay no units.
+		 * 
+		 */
+		const float angle = i * 360 / shape_size;
+		const double real_angle = static_cast<int>(angle + heading) % 360;
 		const auto distance = max(distance_dist(ren), 0);
-		result[i] = BetterHarversine(centre, static_cast<double>(angle), distance);
+		const auto mult = squeeze * sin(2 * DegToRad(angle) + PI / 2) + (1 - squeeze);
+		result[i] = BetterHarversine(centre, static_cast<double>(real_angle), distance * mult);
 	}
 
 	return result;

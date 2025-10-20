@@ -66,6 +66,8 @@ private:
 	void manually_correlate(const char* system_id);
 	void manually_release(const char* system_id);
 
+	std::map<size_t, int> aircraft_scans;
+
 	char alt_mode_keycode = VK_MENU;
 
 	std::unique_ptr<PlaneShapeBuilder> plane_shape_builder = std::make_unique<PlaneShapeBuilder>();

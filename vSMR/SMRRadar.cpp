@@ -1924,6 +1924,14 @@ void CSMRRadar::RefreshAirportActivity(void)
 
 void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 {
+	const auto hash = std::hash<std::string>{}(std::string(RadarTarget.GetSystemID()));
+	if (const auto found = aircraft_scans.find(hash); found != aircraft_scans.end())
+	{
+		found->second += 1;
+	} else
+	{
+		aircraft_scans[hash] = 1;
+	}
 }
 
 string CSMRRadar::GetBottomLine(const char* Callsign)
@@ -2580,7 +2588,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 					                                                     "target_color"])));
 
 			const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
-			const auto shape = plane_shape_builder->build(rt.GetPosition(), fp);
+			const auto id = std::hash<std::string>{}(std::string(rt.GetSystemID()));
+			int scans = 0;
+			if (const auto found = aircraft_scans.find(id); found != aircraft_scans.end())
+			{
+				scans = found->second;
+			}
+			const auto shape = plane_shape_builder->build(rt.GetPosition(), fp, scans);
 			PointF lpPoints[PlaneShapeBuilder::shape_size];
 			for (auto i = 0; i < shape.size(); ++i)
 			{
@@ -3305,7 +3319,15 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 
 		const auto pos = historic_positions[i];
 		const auto fp = rt.GetCorrelatedFlightPlan();
-		const auto shape = plane_shape_builder->build(pos, fp, false);
+
+		const auto id = std::hash<std::string>{}(std::string(rt.GetSystemID()));
+		auto scans = 0;
+		if (const auto found = aircraft_scans.find(id); found != aircraft_scans.end())
+		{
+			scans = found->second;
+		}
+
+		const auto shape = plane_shape_builder->build(pos, fp, scans - i - 1);
 
 		// Convert CPositions to pixel positions
 		for (auto j = 0; j < shape.size(); ++j)

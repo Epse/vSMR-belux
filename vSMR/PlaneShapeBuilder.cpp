@@ -20,19 +20,27 @@ using namespace EuroScopePlugIn;
 PlaneShapeBuilder::PlaneShapeBuilder()
 {
 	ren = std::default_random_engine{ std::random_device{}() };
+	extra_seed += std::uniform_int_distribution{ 0, 10 }(ren);
 }
 
-std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const bool randomise)
+std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, int time_offset)
 {
 	CPosition placeholder;
 	placeholder.m_Latitude = 0.0f;
 	placeholder.m_Longitude = 0.0f;
 	std::vector<CPosition> result(shape_size, placeholder);
+	// Trim off the /
+	const auto id = std::hash<std::string>{}(std::string(flight_plan.GetCorrelatedRadarTarget().GetSystemID()));
+
 
 	if (!initialized)
 	{
 		return result;
 	}
+
+
+	// Make the shape consistent per target!
+	ren.seed(id + extra_seed + time_offset);
 
 
 	AircraftType type{
@@ -106,6 +114,11 @@ void PlaneShapeBuilder::init()
 	}
 
 	initialized = true;
+}
+
+void PlaneShapeBuilder::radar_scan()
+{
+	extra_seed++;
 }
 
 size_t PlaneShapeBuilder::load_file(std::istream& str)

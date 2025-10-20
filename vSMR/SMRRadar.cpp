@@ -23,8 +23,6 @@ WNDPROC gSourceProc;
 HWND pluginWindow;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-map<string, string> CSMRRadar::vStripsStands;
-
 map<int, CInsetWindow*> appWindows;
 
 inline double closest(std::vector<double> const& vec, double value)
@@ -1925,6 +1923,9 @@ void CSMRRadar::RefreshAirportActivity(void)
 void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 {
 	const auto hash = std::hash<std::string>{}(std::string(RadarTarget.GetSystemID()));
+
+	last_seen_at.insert_or_assign(hash, clock());
+
 	if (const auto found = aircraft_scans.find(hash); found != aircraft_scans.end())
 	{
 		found->second += 1;
@@ -2443,6 +2444,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		clock_init = clock();
 		BLINK = !BLINK;
 		RefreshAirportActivity();
+		cleanup_old_aircraft();
 	}
 
 	if (!QDMenabled && !QDMSelectEnabled)
@@ -3415,6 +3417,23 @@ void CSMRRadar::fill_runway(const std::string runway_name, const std::string run
 		}
 
 		graphics.FillPolygon(&brush, lpPoints, w);
+	}
+}
+
+void CSMRRadar::cleanup_old_aircraft()
+{
+	const auto now = clock();
+	for (auto it = last_seen_at.cbegin(); it != last_seen_at.cend();)
+	{
+		if ((now - it->second) / CLOCKS_PER_SEC <= CLEANUP_AFTER_SEC)
+		{
+			++it;
+			continue;
+		}
+
+		// It's old, time to clean
+		aircraft_scans.erase(it->first);
+		it = last_seen_at.erase(it);
 	}
 }
 

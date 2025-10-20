@@ -67,6 +67,7 @@ private:
 	void manually_release(const char* system_id);
 
 	std::map<size_t, int> aircraft_scans;
+	std::map<size_t, clock_t> last_seen_at;
 
 	char alt_mode_keycode = VK_MENU;
 
@@ -76,11 +77,11 @@ private:
 
 	void fill_runway(const std::string runway_name, const std::string runway_name2, Graphics& graphics, const Value& CustomMap, CPosition&
 	                 Left, CPosition& Right, const Brush& brush);
+
+	void cleanup_old_aircraft();
 public:
 	CSMRRadar();
 	virtual ~CSMRRadar();
-
-	static map<string, string> vStripsStands;
 
 	bool BLINK = false;
 

@@ -2,9 +2,10 @@
 #include "InsetWindow.h"
 
 
-CInsetWindow::CInsetWindow(int Id)
+CInsetWindow::CInsetWindow(int Id, CSMRRadar* radar)
 {
 	m_Id = Id;
+	this->radar = radar;
 }
 
 CInsetWindow::~CInsetWindow() = default;
@@ -390,7 +391,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		// Drawing the tags, what a mess
 
 		// ----- Generating the replacing map -----
-		map<string, string> TagReplacingMap = CSMRRadar::GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt), radar_screen->CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool(), radar_screen->GetPlugIn()->GetTransitionAltitude(), radar_screen->CurrentConfig->getActiveProfile()["labels"]["use_aspeed_for_gate"].GetBool(), icao);
+		map<string, string> TagReplacingMap = radar->GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt), radar_screen->CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool(), radar_screen->GetPlugIn()->GetTransitionAltitude(), radar_screen->CurrentConfig->getActiveProfile()["labels"]["use_aspeed_for_gate"].GetBool(), icao);
 
 		// ----- Generating the clickable map -----
 		map<string, int> TagClickableMap;
@@ -450,8 +451,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 		int TagWidth = 0, TagHeight = 0;
 		RectF mesureRect;
-		gdi->MeasureString(L" ", wcslen(L" "), radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
-		int blankWidth = (int)mesureRect.GetRight();
 
 		mesureRect = RectF(0, 0, 0, 0);
 		gdi->MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN"),
@@ -491,9 +490,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
 
 				TempTagWidth += (int)mesureRect.GetRight();
-
-				if (j != line.Size() - 1)
-					TempTagWidth += (int)blankWidth;
 			}
 
 			TagWidth = max(TagWidth, TempTagWidth);
@@ -578,7 +574,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 					radar_screen->AddScreenObject(TagClickableMap[element], rt.GetCallsign(), ItemRect, false, radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
 
 					widthOffset += (int)mRect.GetRight();
-					widthOffset += blankWidth;
 				}
 
 				heightOffset += oneLineHeight;

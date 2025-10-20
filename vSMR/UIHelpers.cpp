@@ -126,3 +126,11 @@ std::optional<std::vector<std::vector<std::string>>> UIHelper::parse_label_lines
 	return { output };
 }
 
+std::string UIHelper::altitude(const int x, const unsigned int transition)
+{
+	if (x > transition)
+		return "F" + std::to_string(x / 100);
+	else
+		return "A" + std::to_string(x / 100);
+}
+

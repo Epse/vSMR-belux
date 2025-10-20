@@ -107,8 +107,9 @@ public:
 
 	map<int, bool> appWindowDisplays;
 
-	map<string, CRect> tagAreas;
+	// TODO
 	map<string, double> TagAngles;
+	// TODO
 	map<string, int> TagLeaderLineLength;
 
 	bool QDMenabled = false;

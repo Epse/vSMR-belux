@@ -482,7 +482,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	// Adding the tag screen object
 	TagBackgroundRect.MoveToXY(tag_top_left.x + border_growth, tag_top_left.y + border_growth);
 	TagBackgroundRect.right += border_growth;
-	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
 
 	const auto bottom_line = GetBottomLine(rt.GetCallsign());
 	for (auto value : interactables)
@@ -2709,7 +2708,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	TimePopupData.clear();
 	AcOnRunway.clear();
 	ColorAC.clear();
-	tagAreas.clear();
 
 	RimcasInstance->OnRefreshEnd(
 		this, CurrentConfig->getActiveProfile()["rimcas"]["rimcas_stage_two_speed_threshold"].GetInt());

@@ -447,8 +447,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 	POINT TagCenter;
 	int length = LeaderLineDefaultlenght;
-	if (TagLeaderLineLength.find(callsign) != TagLeaderLineLength.end())
-		length = TagLeaderLineLength[callsign];
+	if (TagLeaderLineLength.find(id) != TagLeaderLineLength.end())
+		length = TagLeaderLineLength[id];
 
 	length += extension;
 
@@ -1101,7 +1101,7 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 
 			const auto id = UIHelper::id(rt);
 			TagAngles[id] = angle;
-			TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
+			TagLeaderLineLength[id] = min(int(DistancePts(AcPosPix, TagCenterPix)),
 			                                     LeaderLineDefaultlenght * 4);
 
 
@@ -3435,6 +3435,7 @@ void CSMRRadar::cleanup_old_aircraft()
 		// It's old, time to clean
 		aircraft_scans.erase(it->first);
 		TagAngles.erase(it->first);
+		TagLeaderLineLength.erase(it->first());
 		it = last_seen_at.erase(it);
 	}
 }

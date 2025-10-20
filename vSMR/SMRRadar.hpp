@@ -108,8 +108,7 @@ public:
 	map<int, bool> appWindowDisplays;
 
 	map<size_t, double> TagAngles;
-	// TODO
-	map<string, int> TagLeaderLineLength;
+	map<size_t, int> TagLeaderLineLength;
 
 	bool QDMenabled = false;
 	bool QDMSelectEnabled = false;

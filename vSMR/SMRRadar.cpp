@@ -2332,6 +2332,9 @@ void CSMRRadar::OnFlightPlanDisconnect(CFlightPlan FlightPlan)
 		if (itr->first == callsign || itr->second == callsign)
 			itr = DistanceTools.erase(itr);
 	}
+
+	const auto id = std::hash<std::string>{}(std::string(FlightPlan.GetCorrelatedRadarTarget().GetSystemID()));
+	aircraft_scans.erase(id);
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

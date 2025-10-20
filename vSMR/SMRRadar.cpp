@@ -2673,7 +2673,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
 			if (AlwaysVector)
 				meters = max(meters, symbol_size_meters);
-			const double angle = rt.GetPosition().GetReportedGS() > 5 ? rt.GetTrackHeading() : rt.GetPosition().GetReportedHeading();
+			const auto track = rt.GetTrackHeading();
+			const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
+			const auto gs = rt.GetPosition().GetReportedGS();
+			const double angle = track < 0 || gs < 1 ? head : track;
 			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
 
 			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());

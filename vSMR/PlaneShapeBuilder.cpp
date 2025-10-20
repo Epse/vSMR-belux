@@ -3,6 +3,8 @@
 #include <fstream>
 #include <random>
 
+#include "UIHelpers.hpp"
+
 using namespace EuroScopePlugIn;
 
 /*
@@ -30,7 +32,7 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 	placeholder.m_Longitude = 0.0f;
 	std::vector<CPosition> result(shape_size, placeholder);
 	// Trim off the /
-	const auto id = std::hash<std::string>{}(std::string(flight_plan.GetCorrelatedRadarTarget().GetSystemID()));
+	const auto id = UIHelper::id(flight_plan);
 
 
 	if (!initialized)

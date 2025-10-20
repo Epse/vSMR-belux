@@ -107,8 +107,7 @@ public:
 
 	map<int, bool> appWindowDisplays;
 
-	// TODO
-	map<string, double> TagAngles;
+	map<size_t, double> TagAngles;
 	// TODO
 	map<string, int> TagLeaderLineLength;
 

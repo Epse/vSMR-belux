@@ -3435,7 +3435,7 @@ void CSMRRadar::cleanup_old_aircraft()
 		// It's old, time to clean
 		aircraft_scans.erase(it->first);
 		TagAngles.erase(it->first);
-		TagLeaderLineLength.erase(it->first());
+		TagLeaderLineLength.erase(it->first);
 		it = last_seen_at.erase(it);
 	}
 }

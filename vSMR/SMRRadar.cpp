@@ -23,8 +23,6 @@ WNDPROC gSourceProc;
 HWND pluginWindow;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-map<string, string> CSMRRadar::vStripsStands;
-
 map<int, CInsetWindow*> appWindows;
 
 inline double closest(std::vector<double> const& vec, double value)
@@ -56,6 +54,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	constexpr int border_growth = border_width + 1;
 
 	const std::string callsign = rt.GetCallsign();
+	const auto id = UIHelper::id(rt);
 	if (!rt.IsValid())
 		return;
 
@@ -106,13 +105,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		return;
 	}
 
-	if (TagAngles.find(callsign) == TagAngles.end())
+	if (TagAngles.find(id) == TagAngles.end())
 	{
-		TagAngles[callsign] = 360 - 45.0f;
+		TagAngles[id] = 360 - 45.0f;
 	}
 
 	// Would the start of a right-aligned tag be to the left of the tag start?
-	const bool right_align = fmod(abs(TagAngles[callsign] + 90), 360) > 180;
+	const bool right_align = fmod(abs(TagAngles[id] + 90), 360) > 180;
 
 	// Set up an offscreen buffer to draw to
 	// that way, we can measure the tag while drawing and position it _perfectly_.
@@ -435,7 +434,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		graphics.DrawPolygon(&pen, grown_points.data(), grown_points.size());
 	}
 
-	const auto angle_rad = DegToRad(TagAngles[callsign]);
+	const auto angle_rad = DegToRad(TagAngles[id]);
 
 	// This needs to be ever so slightly further from the TagCenter,
 	// as to make the length var the distance between tag edge and PRS.
@@ -448,13 +447,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 	POINT TagCenter;
 	int length = LeaderLineDefaultlenght;
-	if (TagLeaderLineLength.find(callsign) != TagLeaderLineLength.end())
-		length = TagLeaderLineLength[callsign];
+	if (TagLeaderLineLength.find(id) != TagLeaderLineLength.end())
+		length = TagLeaderLineLength[id];
 
 	length += extension;
 
-	TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[callsign]))));
-	TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[callsign]))));
+	TagCenter.x = long(acPosPix.x + float(length * cos(DegToRad(TagAngles[id]))));
+	TagCenter.y = long(acPosPix.y + float(length * sin(DegToRad(TagAngles[id]))));
 
 	const POINT tag_top_left = POINT{TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2)};
 	const INT x1 = right_align ? mem_buffer_size - TagWidth - 3 * border_growth : 0;
@@ -484,7 +483,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	// Adding the tag screen object
 	TagBackgroundRect.MoveToXY(tag_top_left.x + border_growth, tag_top_left.y + border_growth);
 	TagBackgroundRect.right += border_growth;
-	tagAreas[rt.GetCallsign()] = TagBackgroundRect;
 
 	const auto bottom_line = GetBottomLine(rt.GetCallsign());
 	for (auto value : interactables)
@@ -1101,8 +1099,9 @@ void CSMRRadar::OnMoveScreenObject(int ObjectType, const char* sObjectId, POINT 
 			double angle = RadToDeg(atan2(CustomTag.y, CustomTag.x));
 			angle = fmod(angle + 360, 360);
 
-			TagAngles[sObjectId] = angle;
-			TagLeaderLineLength[sObjectId] = min(int(DistancePts(AcPosPix, TagCenterPix)),
+			const auto id = UIHelper::id(rt);
+			TagAngles[id] = angle;
+			TagLeaderLineLength[id] = min(int(DistancePts(AcPosPix, TagCenterPix)),
 			                                     LeaderLineDefaultlenght * 4);
 
 
@@ -1476,13 +1475,14 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			{
 				if (Button == BUTTON_LEFT)
 				{
-					if (TagAngles.find(sObjectId) == TagAngles.end())
+					const auto id = std::hash<std::string>{}(std::string(sObjectId));
+					if (TagAngles.find(id) == TagAngles.end())
 					{
-						TagAngles[sObjectId] = 0;
+						TagAngles[id] = 0;
 					}
 					else
 					{
-						TagAngles[sObjectId] = fmod(TagAngles[sObjectId] - 22.5, 360);
+						TagAngles[id] = fmod(TagAngles[id] - 22.5, 360);
 					}
 				}
 
@@ -1924,7 +1924,10 @@ void CSMRRadar::RefreshAirportActivity(void)
 
 void CSMRRadar::OnRadarTargetPositionUpdate(CRadarTarget RadarTarget)
 {
-	const auto hash = std::hash<std::string>{}(std::string(RadarTarget.GetSystemID()));
+	const auto hash = UIHelper::id(RadarTarget);
+
+	last_seen_at.insert_or_assign(hash, clock());
+
 	if (const auto found = aircraft_scans.find(hash); found != aircraft_scans.end())
 	{
 		found->second += 1;
@@ -2333,7 +2336,7 @@ void CSMRRadar::OnFlightPlanDisconnect(CFlightPlan FlightPlan)
 			itr = DistanceTools.erase(itr);
 	}
 
-	const auto id = std::hash<std::string>{}(std::string(FlightPlan.GetCorrelatedRadarTarget().GetSystemID()));
+	const auto id = UIHelper::id(FlightPlan);
 	aircraft_scans.erase(id);
 }
 
@@ -2443,6 +2446,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		clock_init = clock();
 		BLINK = !BLINK;
 		RefreshAirportActivity();
+		cleanup_old_aircraft();
 	}
 
 	if (!QDMenabled && !QDMSelectEnabled)
@@ -2591,7 +2595,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 					                                                     "target_color"])));
 
 			const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
-			const auto id = std::hash<std::string>{}(std::string(rt.GetSystemID()));
+			const auto id = UIHelper::id(rt);
 			int scans = 0;
 			if (const auto found = aircraft_scans.find(id); found != aircraft_scans.end())
 			{
@@ -2707,7 +2711,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	TimePopupData.clear();
 	AcOnRunway.clear();
 	ColorAC.clear();
-	tagAreas.clear();
 
 	RimcasInstance->OnRefreshEnd(
 		this, CurrentConfig->getActiveProfile()["rimcas"]["rimcas_stage_two_speed_threshold"].GetInt());
@@ -3323,7 +3326,7 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 		const auto pos = historic_positions[i];
 		const auto fp = rt.GetCorrelatedFlightPlan();
 
-		const auto id = std::hash<std::string>{}(std::string(rt.GetSystemID()));
+		const auto id = UIHelper::id(rt);
 		auto scans = 0;
 		if (const auto found = aircraft_scans.find(id); found != aircraft_scans.end())
 		{
@@ -3415,6 +3418,25 @@ void CSMRRadar::fill_runway(const std::string runway_name, const std::string run
 		}
 
 		graphics.FillPolygon(&brush, lpPoints, w);
+	}
+}
+
+void CSMRRadar::cleanup_old_aircraft()
+{
+	const auto now = clock();
+	for (auto it = last_seen_at.cbegin(); it != last_seen_at.cend();)
+	{
+		if ((now - it->second) / CLOCKS_PER_SEC <= CLEANUP_AFTER_SEC)
+		{
+			++it;
+			continue;
+		}
+
+		// It's old, time to clean
+		aircraft_scans.erase(it->first);
+		TagAngles.erase(it->first);
+		TagLeaderLineLength.erase(it->first());
+		it = last_seen_at.erase(it);
 	}
 }
 

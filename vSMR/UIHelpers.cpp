@@ -134,3 +134,13 @@ std::string UIHelper::altitude(const int x, const unsigned int transition)
 		return "A" + std::to_string(x / 100);
 }
 
+size_t UIHelper::id(const CRadarTarget& rt)
+{
+	return std::hash<std::string>{}(std::string(rt.GetSystemID()));
+}
+
+size_t UIHelper::id(const CFlightPlan& fp)
+{
+	return id(fp.GetCorrelatedRadarTarget());
+}
+

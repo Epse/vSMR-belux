@@ -31,6 +31,8 @@ constexpr BYTE TAG_DIMMING = 15;
 
 constexpr unsigned int AFTERGLOW_CLEANUP_SEC = 10;
 
+constexpr unsigned int CLEANUP_AFTER_SEC = 120;
+
 
 typedef struct tagPOINT2 {
 	double x;

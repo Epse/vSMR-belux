@@ -11,7 +11,7 @@ using namespace EuroScopePlugIn;
 class CInsetWindow
 {
 public:
-	CInsetWindow(int Id);
+	CInsetWindow(int Id, CSMRRadar* radar);
 	virtual ~CInsetWindow();
 
 	// Definition
@@ -32,5 +32,7 @@ public:
 private:
 	string icao;
 	map<string, CPosition> AptPositions;
+
+	CSMRRadar* radar;
 };
 

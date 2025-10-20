@@ -12,7 +12,6 @@ struct TagDrawingContext
 {
 	Gdiplus::Graphics* graphics;
 	int line_height;
-	int blank_width;
 	const rapidjson::Value* labels_settings;
 	const Gdiplus::SolidBrush* squawk_error_color;
 	const Gdiplus::SolidBrush* rimcas_text_color;

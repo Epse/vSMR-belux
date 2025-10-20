@@ -337,7 +337,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 
 			// Drawing!
 			const auto draw_start = right_align
-				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width) - tdc.blank_width
+				                        ? tag_start.x - TempTagWidth - floor(mesureRect.Width)
 				                        : tag_start.x + TempTagWidth;
 
 			// Adjust background to RIMCAS color, if this row is ALERT
@@ -355,12 +355,12 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				                              : TagBackgroundColor;
 			const SolidBrush backgroundBrush(BackgroundColor);
 			graphics.FillRectangle(&backgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
-			                       static_cast<int>(mesureRect.Width) + tdc.blank_width,
+			                       static_cast<int>(mesureRect.Width),
 			                       static_cast<int>(mesureRect.Height));
 
 			const RectF layoutRect(draw_start,
 			                       static_cast<Gdiplus::REAL>(tag_start.y + TagHeight),
-			                       mesureRect.Width + tdc.blank_width,
+			                       mesureRect.Width,
 			                       mesureRect.Height);
 			graphics.DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
 			                    color);
@@ -376,7 +376,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			// If we're not looking at the last element
 			if ((right_align && el != 0) || (!right_align && el != line.size() - 1))
 			{
-				TempTagWidth += tdc.blank_width;
 			}
 			else if (!right_align)
 			{
@@ -659,8 +658,8 @@ CSMRRadar::CSMRRadar()
 	// Setting up the data for the 2 approach windows
 	appWindowDisplays[1] = false;
 	appWindowDisplays[2] = false;
-	appWindows[1] = new CInsetWindow(APPWINDOW_ONE);
-	appWindows[2] = new CInsetWindow(APPWINDOW_TWO);
+	appWindows[1] = new CInsetWindow(APPWINDOW_ONE, this);
+	appWindows[2] = new CInsetWindow(APPWINDOW_TWO, this);
 
 	Logger::info("Loading profile");
 
@@ -2042,6 +2041,8 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	// ssid: a short version of the SID
 	// origin: origin aerodrome
 	// dest: destination aerodrome
+	// aalt: Assigned altitude
+	// space: A literal space
 	// ----
 
 	bool IsPrimary = !rt.GetPosition().GetTransponderC();
@@ -2253,6 +2254,12 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	TagReplacingMap["systemid"] = "T:";
 	string tpss = rt.GetSystemID();
 	TagReplacingMap["systemid"].append(tpss.substr(1, 6));
+
+	// aalt: Assigned altitude
+	TagReplacingMap["aalt"] = UIHelper::altitude(fp.GetClearedAltitude(), GetPlugIn()->GetTransitionAltitude());
+
+	// space: A literal space
+	TagReplacingMap["space"] = " ";
 
 	// Pro mode data here
 	if (isProMode)
@@ -2689,9 +2696,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 #pragma region tags
 	RectF mesureRect;
-	graphics.MeasureString(L" ", wcslen(L" "), customFonts[currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(),
-	                       &mesureRect);
-	int blankWidth = (int)mesureRect.GetRight();
 	mesureRect = RectF(0, 0, 0, 0);
 	graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
 	                       customFonts[currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
@@ -2703,7 +2707,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	auto tdc = TagDrawingContext{
 		&graphics,
 		oneLineHeight,
-		blankWidth,
 		&LabelsSettings,
 		&SquawkErrorColor,
 		&RimcasTextColor,

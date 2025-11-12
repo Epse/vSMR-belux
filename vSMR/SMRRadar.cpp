@@ -4,6 +4,7 @@
 #include <cmath>
 #include <boost/geometry.hpp>
 #include "PlaneShapeBuilder.h"
+#include "SMRPlugin.hpp"
 using namespace std::string_literals;
 
 ULONG_PTR m_gdiplusToken;
@@ -2601,7 +2602,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			{
 				scans = found->second;
 			}
-			const auto shape = plane_shape_builder->build(rt.GetPosition(), fp, scans);
+			const auto shape = plane_shape_builder->build(rt.GetPosition(), fp, static_cast<CSMRPlugin*>(GetPlugIn())->type_for(fp.GetCallsign()), scans);
 			PointF lpPoints[PlaneShapeBuilder::shape_size];
 			for (auto i = 0; i < shape.size(); ++i)
 			{
@@ -3333,7 +3334,7 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 			scans = found->second;
 		}
 
-		const auto shape = plane_shape_builder->build(pos, fp, scans - i - 1);
+		const auto shape = plane_shape_builder->build(pos, fp, {}, scans - i - 1);
 
 		// Convert CPositions to pixel positions
 		for (auto j = 0; j < shape.size(); ++j)

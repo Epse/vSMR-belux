@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <random>
 #include <vector>
 
@@ -22,7 +23,7 @@ public:
 	PlaneShapeBuilder();
 	///	Number of points in resulting shape
 	static constexpr size_t shape_size = 9;
-	std::vector < CPosition > build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, int time_offset = 0);
+	std::vector < CPosition > build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const optional<std::string>& known_type, int time_offset = 0);
 	void init();
 	void radar_scan();
 private:
@@ -31,5 +32,7 @@ private:
 	std::map<std::string, AircraftType> types;
 	size_t load_file(std::istream& str);
 	unsigned int extra_seed = 0;
+
+	static std::optional<std::string> find_type(const EuroScopePlugIn::CFlightPlan& fp, const std::optional<std::string>& known_type);
 };
 

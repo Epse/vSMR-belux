@@ -25,7 +25,7 @@ PlaneShapeBuilder::PlaneShapeBuilder()
 	extra_seed += std::uniform_int_distribution{ 0, 10 }(ren);
 }
 
-std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, int time_offset)
+std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadarTargetPositionData &position, const EuroScopePlugIn::CFlightPlan &flight_plan, const std::optional<std::string>& known_type, int time_offset)
 {
 	CPosition placeholder;
 	placeholder.m_Latitude = 0.0f;
@@ -33,6 +33,8 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 	std::vector<CPosition> result(shape_size, placeholder);
 	// Trim off the /
 	const auto id = UIHelper::id(flight_plan);
+
+	const auto cs = flight_plan.GetCallsign();
 
 
 	if (!initialized)
@@ -50,10 +52,11 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 		7.6f,2.0f,3.0f
 	};
 
-	if (flight_plan.IsValid())
+
+	const auto icao = find_type(flight_plan, known_type);
+	if (icao.has_value())
 	{
-		const std::string icao = flight_plan.GetFlightPlanData().GetAircraftFPType();
-		if (const auto found = types.find(icao); found != types.end())
+		if (const auto found = types.find(*icao); found != types.end())
 		{
 			type = found->second;
 		}
@@ -151,4 +154,20 @@ size_t PlaneShapeBuilder::load_file(std::istream& str)
 	}
 
 	return types.size();
+}
+
+std::optional<std::string> PlaneShapeBuilder::find_type(const EuroScopePlugIn::CFlightPlan& fp,
+	const std::optional<std::string>& known_type)
+{
+	if (known_type.has_value())
+	{
+		return known_type;
+	}
+
+	if (fp.IsValid())
+	{
+		return { fp.GetFlightPlanData().GetAircraftFPType() };
+	}
+
+	return {};
 }

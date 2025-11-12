@@ -24,21 +24,27 @@ using namespace EuroScopePlugIn;
 class CSMRPlugin :
 	public EuroScopePlugIn::CPlugIn
 {
+	// Map of (identifier, callback)
+	std::map<std::string, std::pair<std::string, std::clock_t>> type_map;
+
+	void cleanup_type_map();
+
 public:
 	CSMRPlugin();
 	virtual ~CSMRPlugin();
 
 	//---OnCompileCommand------------------------------------------
 
-	bool OnCompileCommand(const char * sCommandLine) override;
+	bool OnCompileCommand(const char* sCommandLine) override;
 
 	//---OnFunctionCall------------------------------------------
 
-	void OnFunctionCall(int FunctionId, const char * sItemString, POINT Pt, RECT Area) override;
+	void OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt, RECT Area) override;
 
 	//---OnGetTagItem------------------------------------------
 
-	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int ItemCode, int TagData, char sItemString[16], int * pColorCode, COLORREF * pRGB, double * pFontSize) override;
+	void OnGetTagItem(CFlightPlan FlightPlan, CRadarTarget RadarTarget, int ItemCode, int TagData, char sItemString[16],
+	                  int* pColorCode, COLORREF* pRGB, double* pFontSize) override;
 
 	//---OnFlightPlanDisconnect------------------------------------------
 
@@ -50,6 +56,10 @@ public:
 
 	//---OnRadarScreenCreated------------------------------------------
 
-	CRadarScreen * OnRadarScreenCreated(const char * sDisplayName, bool NeedRadarContent, bool GeoReferenced, bool CanBeSaved, bool CanBeCreated) override;
-};
+	CRadarScreen* OnRadarScreenCreated(const char* sDisplayName, bool NeedRadarContent, bool GeoReferenced,
+	                                   bool CanBeSaved, bool CanBeCreated) override;
 
+	void OnPlaneInformationUpdate(const char* sCallsign, const char* sLivery, const char* sPlaneType) override;
+
+	std::optional<std::string> type_for(const std::string& callsign) const;
+};

@@ -329,6 +329,21 @@ std::string buildStandbyMessage(std::string callsign) {
 	return buildDCLStatusMessage(std::move(callsign), "RCD RECEIVED @REQUEST BEING PROCESSED @STANDBY");
 }
 
+void CSMRPlugin::cleanup_type_map()
+{
+	const auto now = clock();
+	for (auto it = type_map.begin(); it != type_map.end();)
+	{
+		if ((now - it->second.second) / CLOCKS_PER_SEC < (60 * 5))
+		{
+			++it;
+			continue;
+		}
+
+		it = type_map.erase(it);
+	}
+}
+
 CSMRPlugin::CSMRPlugin(void) :CPlugIn(EuroScopePlugIn::COMPATIBILITY_CODE, MY_PLUGIN_NAME, MY_PLUGIN_VERSION, MY_PLUGIN_DEVELOPER, MY_PLUGIN_COPYRIGHT)
 {
 
@@ -732,6 +747,11 @@ void CSMRPlugin::OnTimer(int Counter)
 			}
 		}
 	}
+
+	if ((clock() - timer) / CLOCKS_PER_SEC > 60)
+	{
+		cleanup_type_map();
+	}
 };
 
 CRadarScreen * CSMRPlugin::OnRadarScreenCreated(const char * sDisplayName, bool NeedRadarContent, bool GeoReferenced, bool CanBeSaved, bool CanBeCreated)
@@ -744,6 +764,22 @@ CRadarScreen * CSMRPlugin::OnRadarScreenCreated(const char * sDisplayName, bool 
 	}
 
 	return nullptr;
+}
+
+void CSMRPlugin::OnPlaneInformationUpdate(const char* sCallsign, const char* sLivery, const char* sPlaneType)
+{
+	const std::string callsign = sCallsign;
+	const std::string type = sPlaneType;
+	type_map.insert_or_assign(callsign, std::pair{ type, std::clock()});
+}
+
+std::optional<std::string> CSMRPlugin::type_for(const std::string& callsign) const
+{
+	if (const auto found = type_map.find(callsign); found != type_map.end())
+	{
+		return found->second.first;
+	}
+	return {};
 }
 
 //---EuroScopePlugInExit-----------------------------------------------

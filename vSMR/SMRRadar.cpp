@@ -2668,6 +2668,23 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                }, false,
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
+		// Predicted Track Line
+		if (PredictedLength > 0 || AlwaysVector || alt_mode)
+		{
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
+			if (AlwaysVector || alt_mode)
+				meters = max(meters, symbol_size_meters);
+			const auto track = rt.GetTrackHeading();
+			const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
+			const auto gs = rt.GetPosition().GetReportedGS();
+			const double angle = track < 0 || gs < 1 ? head : track;
+			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
+
+			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
+			graphics.DrawLine(&symbol_pen, start.x, start.y, end.x, end.y);
+		}
+
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
@@ -2687,23 +2704,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			const int asel_size = size + 2 * symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
 			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size,
 			                     asel_size);
-		}
-
-		// Predicted Track Line
-		if (PredictedLength > 0 || AlwaysVector)
-		{
-			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
-			if (AlwaysVector)
-				meters = max(meters, symbol_size_meters);
-			const auto track = rt.GetTrackHeading();
-			const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
-			const auto gs = rt.GetPosition().GetReportedGS();
-			const double angle = track < 0 || gs < 1 ? head : track;
-			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
-
-			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
-			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-			graphics.DrawLine(&symbol_pen, start.x, start.y, end.x, end.y);
 		}
 	}
 

@@ -836,6 +836,11 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		}
 	}
 
+	if ((p_value = GetDataFromAsr("InsetSpeedVector")) != NULL)
+	{
+		InsetSpeedVector = std::stoi(p_value);
+	}
+
 	if ((p_value = GetDataFromAsr("AlwaysVector")) != NULL)
 	{
 		AlwaysVector = atoi(p_value) == 1;
@@ -946,6 +951,7 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("GndTrailsDots", "vSMR GRND Trail Dots", std::to_string(Trail_Gnd).c_str());
 
 	SaveDataToAsr("PredictedLine", "vSMR Predicted Track Lines", std::to_string(PredictedLength).c_str());
+	SaveDataToAsr("InsetSpeedVector", "vSMR Inset window Speed Vector Length", std::to_string(InsetSpeedVector).c_str());
 	SaveDataToAsr("AlwaysVector", "vSMR Always show speed vector", AlwaysVector ? "1" : "0");
 
 	SaveDataToAsr("BeluxProMode", "vSMR Belux pro mode", (belux_promode ? "on" : "off"));
@@ -1353,6 +1359,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("GRND Trail Dots", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("APPR Trail Dots", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Predicted Track Line", "", RIMCAS_OPEN_LIST);
+			GetPlugIn()->AddPopupListElement("Inset Speed Vector", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Acquire", "", RIMCAS_UPDATE_ACQUIRE);
 			GetPlugIn()->AddPopupListElement("Drop", "", RIMCAS_UPDATE_RELEASE);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
@@ -1838,6 +1845,13 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		}
 
 		ShowLists["Predicted Track Line"] = true;
+	}
+
+	if (FunctionId == UPDATE_INSET_SV)
+	{
+		InsetSpeedVector = atoi(sItemString);
+
+		ShowLists["Inset Speed Vector"] = true;
 	}
 
 	if (FunctionId == RIMCAS_BRIGHTNESS_LABEL)
@@ -2959,9 +2973,20 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		GetPlugIn()->AddPopupListElement("15", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 15)));
 		GetPlugIn()->AddPopupListElement("30", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 30)));
 		GetPlugIn()->AddPopupListElement("60", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 60)));
-		GetPlugIn()->AddPopupListElement("Always", "", RIMCAS_UPDATE_PTL, false, AlwaysVector);
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Predicted Track Line"] = false;
+	}
+
+	if (ShowLists["Inset Speed Vector"])
+	{
+		GetPlugIn()->OpenPopupList(ListAreas["Inset Speed Vector"], "Inset Speed Vector", 1);
+		GetPlugIn()->AddPopupListElement("0", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 0)));
+		GetPlugIn()->AddPopupListElement("15", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 15)));
+		GetPlugIn()->AddPopupListElement("30", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 30)));
+		GetPlugIn()->AddPopupListElement("60", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 60)));
+		GetPlugIn()->AddPopupListElement("120", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 120)));
+		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
+		ShowLists["Inset Speed Vector"] = false;
 	}
 
 	if (ShowLists["Brightness"])

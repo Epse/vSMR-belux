@@ -856,7 +856,8 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 
 	if ((p_value = GetDataFromAsr("Filters")) != NULL)
 	{
-		filters = filters_from_char(*p_value);
+		const std::string str = p_value;
+		filters = filters_from_str(str);
 	}
 
 	if ((p_value = GetDataFromAsr("AltModeKeyCode")) != NULL)
@@ -956,8 +957,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 
 	SaveDataToAsr("AltModeKeyCode", "Keycode to trigger alt mode", std::to_string(alt_mode_keycode).c_str());
 
-	const char filter_char = char_from_filters(filters);
-	SaveDataToAsr("Filters", "Filter settings", &filter_char);
+	const auto filter_char = str_from_filters(filters);
+	SaveDataToAsr("Filters", "Filter settings", filter_char.c_str());
 
 	string temp = "";
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <bit>
 
 struct Filters
 {
@@ -20,45 +21,21 @@ inline Filters new_filters()
 	};
 }
 
-inline char char_from_filters(const Filters &filters)
+inline std::string str_from_filters(const Filters &filters)
 {
-	// Initialize the top 4 bits to true
-	// Those were unused and thus 0 before introduction of show_stup,
-	// which would make show_stup default to false on existing installs.
-	// Thus, we set bits if the field is set for the low bits,
-	// and unset them for the high bits.
-	unsigned char converted = 0xf0;
-	if (filters.show_free)
-	{
-		converted |= 1;
-	}
-	if (filters.show_nonmine)
-	{
-		converted |= (1 << 1);
-	}
-	if (filters.show_on_blocks)
-	{
-		converted |= (1 << 2);
-	}
-	if (filters.show_nsts)
-	{
-		converted |= (1 << 3);
-	}
-	if (filters.show_stup)
-	{
-		converted &= ~(1 << 4);
-	}
-	return static_cast<char>(converted);
+	// Make it a "readable" number, to avoid odd characters formed by the bitfield breaking encoding
+	const auto num = std::bit_cast<uint8_t>(filters);
+	return std::to_string(num);
 }
 
-inline Filters filters_from_char(const char filters)
+inline Filters filters_from_str(const std::string &filters)
 {
-	// Same as above, low bits: 1 means true, high bits are flipped.
-	return Filters{
-		(filters & 1) > 0,
-		(filters & (1 << 1)) > 0,
-		(filters & (1 << 2)) > 0,
-		(filters & (1 << 3)) > 0,
-		(filters & (1 << 4)) == 0,
-	};
+	try
+	{
+		const uint8_t num = static_cast<uint8_t>(std::stoul(filters));
+		return std::bit_cast<Filters>(num);
+	} catch (...)
+	{
+		return new_filters();
+	}
 }

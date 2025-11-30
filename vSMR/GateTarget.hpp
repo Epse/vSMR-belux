@@ -31,7 +31,7 @@ private:
 	static unsigned char calculateTargetSize(EuroScopePlugIn::CRadarScreen* radar_screen);
 	std::optional<Gate> maybe_get_gate(CSMRRadar* radar_screen, const EuroScopePlugIn::CFlightPlan* fp) const;
 public:
-	void GateTarget::OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font) const;
+	void OnRefresh(CSMRRadar* radar_screen, Gdiplus::Graphics* graphics, Gdiplus::Font* font) const;
 	void loadGates();
 	bool isOnBlocks(CSMRRadar* radar_screen, EuroScopePlugIn::CRadarTarget* target) const;
 };

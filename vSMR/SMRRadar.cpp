@@ -127,6 +127,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	TagTypes TagType = TagTypes::Departure;
 	TagTypes ColorTagType = TagTypes::Departure;
 
+	const auto string_format = Gdiplus::StringFormat();
+
 	if (fp.IsValid() && strcmp(fp.GetFlightPlanData().GetDestination(), getActiveAirport().c_str()) == 0)
 	{
 		// Circuit aircraft are treated as departures; not arrivals
@@ -305,7 +307,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			}
 
 			graphics.MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
-			                       font, PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
+			                       font, PointF(0, 0), &string_format, &mesureRect);
 
 			// Setup text colors
 			const Brush* color = nullptr;
@@ -362,7 +364,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			                       static_cast<Gdiplus::REAL>(tag_start.y + TagHeight),
 			                       mesureRect.Width,
 			                       mesureRect.Height);
-			graphics.DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &Gdiplus::StringFormat(),
+			graphics.DrawString(wstr.c_str(), wcslen(wstr.c_str()), font, layoutRect, &string_format,
 			                    color);
 
 			CRect ItemRect(floor(layoutRect.GetLeft()), floor(layoutRect.GetTop()),
@@ -2424,7 +2426,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			RadarArea.top = RadarArea.top - 1;
 			RadarArea.bottom = GetChatArea().bottom;
 
-			graphics.FillRectangle(&AlphaBrush, CopyRect(CRect(RadarArea)));
+			graphics.FillRectangle(&AlphaBrush, CopyRect(RadarArea));
 
 			graphics.ReleaseHDC(hDC);
 		}
@@ -2623,17 +2625,19 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (mouseWithin(
 			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
-			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y - 8, acPosPix.x - 6, acPosPix.y - 12);
-			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y - 8, acPosPix.x + 6, acPosPix.y - 12);
+			const auto acPosX = static_cast<int>(acPosPix.x);
+			const auto acPosY = static_cast<int>(acPosPix.y);
+			graphics.DrawLine(&symbol_pen, acPosX, acPosY - 8, acPosX - 6, acPosY - 12);
+			graphics.DrawLine(&symbol_pen, acPosX, acPosY - 8, acPosX + 6, acPosY - 12);
 
-			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y + 8, acPosPix.x - 6, acPosPix.y + 12);
-			graphics.DrawLine(&symbol_pen, acPosPix.x, acPosPix.y + 8, acPosPix.x + 6, acPosPix.y + 12);
+			graphics.DrawLine(&symbol_pen, acPosX, acPosY + 8, acPosX - 6, acPosY + 12);
+			graphics.DrawLine(&symbol_pen, acPosX, acPosY + 8, acPosX + 6, acPosY + 12);
 
-			graphics.DrawLine(&symbol_pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y - 6);
-			graphics.DrawLine(&symbol_pen, acPosPix.x - 8, acPosPix.y, acPosPix.x - 12, acPosPix.y + 6);
+			graphics.DrawLine(&symbol_pen, acPosX - 8, acPosY, acPosX - 12, acPosY - 6);
+			graphics.DrawLine(&symbol_pen, acPosX - 8, acPosY, acPosX - 12, acPosY + 6);
 
-			graphics.DrawLine(&symbol_pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y - 6);
-			graphics.DrawLine(&symbol_pen, acPosPix.x + 8, acPosPix.y, acPosPix.x + 12, acPosPix.y + 6);
+			graphics.DrawLine(&symbol_pen, acPosX + 8, acPosY, acPosX + 12, acPosY - 6);
+			graphics.DrawLine(&symbol_pen, acPosX + 8, acPosY, acPosX + 12, acPosY + 6);
 
 			/*
 			Stef, why are we getting interaction straight from the Windows APIS?
@@ -2682,7 +2686,12 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
 			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-			graphics.DrawLine(&symbol_pen, start.x, start.y, end.x, end.y);
+			graphics.DrawLine(
+				&symbol_pen, 
+				static_cast<int>(start.x), 
+				static_cast<int>(start.y), 
+				static_cast<int>(end.x), 
+				static_cast<int>(end.y));
 		}
 
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
@@ -2721,11 +2730,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 #pragma region tags
 	RectF mesureRect;
 	mesureRect = RectF(0, 0, 0, 0);
+	const auto string_format = Gdiplus::StringFormat();
+
 	graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
-	                       customFonts[currentFontSize], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
+	                       customFonts[currentFontSize], PointF(0, 0), &string_format, &mesureRect);
 	int oneLineHeight = (int)mesureRect.GetBottom();
 	graphics.MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN0", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN0"),
-	                       customFonts[currentFontSize + 10], PointF(0, 0), &Gdiplus::StringFormat(), &mesureRect);
+	                       customFonts[currentFontSize + 10], PointF(0, 0), &string_format, &mesureRect);
 
 	// Drawing the Tags
 	auto tdc = TagDrawingContext{
@@ -3071,6 +3082,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 	// Distance tools here
+	const auto distance_brush = SolidBrush(Color(127, 122, 122));
 	for (auto&& kv : DistanceTools)
 	{
 		CRadarTarget one = GetPlugIn()->RadarTargetSelect(kv.first.c_str());
@@ -3111,7 +3123,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			TextPos.x - 2, TextPos.y, TextPos.x + dc.GetTextExtent(text.c_str()).cx + 2,
 			TextPos.y + dc.GetTextExtent(text.c_str()).cy
 		};
-		graphics.FillRectangle(&SolidBrush(Color(127, 122, 122)), CopyRect(ClickableRect));
+		graphics.FillRectangle(&distance_brush, CopyRect(ClickableRect));
 		dc.Draw3dRect(ClickableRect, RGB(75, 75, 75), RGB(45, 45, 45));
 		dc.TextOutA(TextPos.x, TextPos.y, text.c_str());
 
@@ -3203,7 +3215,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	};
 	if (DistanceToolActive)
 	{
-		graphics.DrawRectangle(&Pen(Color::White), CopyRect(barDistanceRect));
+		const auto pen = Pen(Color::White);
+		graphics.DrawRectangle(&pen, CopyRect(barDistanceRect));
 	}
 	AddScreenObject(RIMCAS_MENU, "/", barDistanceRect, false, "Distance tool");
 

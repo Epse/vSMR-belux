@@ -786,7 +786,7 @@ std::optional<std::string> CSMRPlugin::type_for(const std::string& callsign) con
 
 void __declspec (dllexport) EuroScopePlugInExit(void)
 {
-	for each (auto var in RadarScreensOpened)
+	for (const auto var : RadarScreensOpened)
 	{
 		var->EuroScopePlugInExitCustom();
 	}

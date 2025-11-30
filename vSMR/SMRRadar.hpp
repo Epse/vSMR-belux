@@ -364,7 +364,7 @@ public:
 
 	//---OnAsrContentToBeClosed-----------------------------------------
 
-	void CSMRRadar::EuroScopePlugInExitCustom();
+	void EuroScopePlugInExitCustom();
 
 	//  This gets called before OnAsrContentToBeSaved()
 	// -> we can't delete CurrentConfig just yet otherwise we can't save the active profile

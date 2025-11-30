@@ -145,6 +145,7 @@ public:
 	int Trail_Gnd = 4;
 	int Trail_App = 4;
 	int PredictedLength = 0;
+	unsigned int InsetSpeedVector = 30;
 	bool AlwaysVector = false;
 
 	bool NeedCorrelateCursor = false;

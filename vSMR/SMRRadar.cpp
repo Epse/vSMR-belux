@@ -2973,6 +2973,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		GetPlugIn()->AddPopupListElement("15", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 15)));
 		GetPlugIn()->AddPopupListElement("30", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 30)));
 		GetPlugIn()->AddPopupListElement("60", "", RIMCAS_UPDATE_PTL, false, int(bool(PredictedLength == 60)));
+		GetPlugIn()->AddPopupListElement("Always", "", RIMCAS_UPDATE_PTL, false, AlwaysVector);
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Predicted Track Line"] = false;
 	}

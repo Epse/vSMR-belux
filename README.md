@@ -27,6 +27,18 @@ Features:
 * Realistic tag borders
 * Support for the TopSky menubar
 
+## Requirements to run
+
+To run with full functionality, vSMR requires a few files to run.
+The first is `ICAO_airlines.txt`, identical to the file Euroscope already uses.
+vSMR will try to find this in your EuroScope installation, but for best results you should place a copy next to the vSMR dll.
+
+Second is an airports definition json. We suggest [this one from mwgg](https://raw.githubusercontent.com/mwgg/Airports/refs/heads/master/airports.json).
+You may also truncate it to only contain airports you are interested in, or write your own in the same format. Make sure elevation is in ft.
+Also place this next to the dll.
+
+Third is the aircraft size database, defined below.
+
 ### Aircraft Size Database
 
 We load aircraft sizes from a file, a default one is included in this repo.
@@ -47,17 +59,17 @@ To convert that Excel document to our needed CSV, see below spoiler.
 
 </details>
 
-### Release
+## Release
 
 This is the latest stable release, which has been tested and the one you should use for day to day use.
 
 Download the latest release here: <https://github.com/Epse/vSMR-belux/releases>
 
-### Nightly builds
+## Nightly builds
 
 If you know what you're doing, you can nab the latest dev builds here: <https://github.com/Epse/vSMR-belux/actions> under Artifacts of an MSBuild workflow. Try to grab one from the master branch.
 
-### Thanks
+## Thanks
 
 Thanks to pierr3 for the original version of this plugin and Nicola Macoir for the original Belux fork.
 

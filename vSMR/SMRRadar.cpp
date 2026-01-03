@@ -836,9 +836,14 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		}
 	}
 
-	if ((p_value = GetDataFromAsr("InsetSpeedVector")) != NULL)
+	if ((p_value = GetDataFromAsr("AirborneSpeedVector")) != NULL)
 	{
-		InsetSpeedVector = std::stoi(p_value);
+		AirborneSpeedVector = std::stoi(p_value);
+	}
+
+	if ((p_value = GetDataFromAsr("SplitSpeedVector")) != NULL)
+	{
+		split_speed_vectors = strcmp(p_value, "on") == 0;
 	}
 
 	if ((p_value = GetDataFromAsr("AlwaysVector")) != NULL)
@@ -951,7 +956,8 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("GndTrailsDots", "vSMR GRND Trail Dots", std::to_string(Trail_Gnd).c_str());
 
 	SaveDataToAsr("PredictedLine", "vSMR Predicted Track Lines", std::to_string(PredictedLength).c_str());
-	SaveDataToAsr("InsetSpeedVector", "vSMR Inset window Speed Vector Length", std::to_string(InsetSpeedVector).c_str());
+	SaveDataToAsr("AirborneSpeedVector", "vSMR airborne Speed Vector Length", std::to_string(AirborneSpeedVector).c_str());
+	SaveDataToAsr("SplitSpeedVector", "vSMR Airborne speed vector in main view", split_speed_vectors ? "on" : "off");
 	SaveDataToAsr("AlwaysVector", "vSMR Always show speed vector", AlwaysVector ? "1" : "0");
 
 	SaveDataToAsr("BeluxProMode", "vSMR Belux pro mode", (belux_promode ? "on" : "off"));
@@ -1359,7 +1365,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement("GRND Trail Dots", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("APPR Trail Dots", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Predicted Track Line", "", RIMCAS_OPEN_LIST);
-			GetPlugIn()->AddPopupListElement("Inset Speed Vector", "", RIMCAS_OPEN_LIST);
+			GetPlugIn()->AddPopupListElement("Airborne Speed Vector", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Acquire", "", RIMCAS_UPDATE_ACQUIRE);
 			GetPlugIn()->AddPopupListElement("Drop", "", RIMCAS_UPDATE_RELEASE);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
@@ -1847,11 +1853,17 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		ShowLists["Predicted Track Line"] = true;
 	}
 
-	if (FunctionId == UPDATE_INSET_SV)
+	if (FunctionId == UPDATE_AIRBORNE_SV)
 	{
-		InsetSpeedVector = atoi(sItemString);
+		if (strcmp(sItemString, "In Main View") == 0)
+		{
+			split_speed_vectors = !split_speed_vectors;
+		} else
+		{
+			AirborneSpeedVector = atoi(sItemString);
+		}
 
-		ShowLists["Inset Speed Vector"] = true;
+		ShowLists["Airborne Speed Vector"] = true;
 	}
 
 	if (FunctionId == RIMCAS_BRIGHTNESS_LABEL)
@@ -2025,6 +2037,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 	{
 		CurrentConfig = new CConfig(ConfigPath);
 		LoadProfile(CurrentConfig->getActiveProfileName());
+		airport_elevation = UIHelper::get_airport_elevation(ActiveAirport, DllPath).value_or(airport_elevation);
 		return true;
 	}
 
@@ -2688,9 +2701,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
 		// Predicted Track Line
-		if (PredictedLength > 0 || AlwaysVector || alt_mode)
+		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + AIRBORNE_MARGIN_FT);
+		const auto line_length = is_airborne ? AirborneSpeedVector : PredictedLength;
+		if (line_length > 0 || AlwaysVector || alt_mode)
 		{
-			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
 			if (AlwaysVector || alt_mode)
 				meters = max(meters, symbol_size_meters);
 			const auto track = rt.GetTrackHeading();
@@ -2978,16 +2993,17 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		ShowLists["Predicted Track Line"] = false;
 	}
 
-	if (ShowLists["Inset Speed Vector"])
+	if (ShowLists["Airborne Speed Vector"])
 	{
-		GetPlugIn()->OpenPopupList(ListAreas["Inset Speed Vector"], "Inset Speed Vector", 1);
-		GetPlugIn()->AddPopupListElement("0", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 0)));
-		GetPlugIn()->AddPopupListElement("15", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 15)));
-		GetPlugIn()->AddPopupListElement("30", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 30)));
-		GetPlugIn()->AddPopupListElement("60", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 60)));
-		GetPlugIn()->AddPopupListElement("120", "", UPDATE_INSET_SV, false, int(bool(InsetSpeedVector == 120)));
+		GetPlugIn()->OpenPopupList(ListAreas["Airborne Speed Vector"], "Airborne Speed Vector", 1);
+		GetPlugIn()->AddPopupListElement("0", "", UPDATE_AIRBORNE_SV, false, int(bool(AirborneSpeedVector == 0)));
+		GetPlugIn()->AddPopupListElement("15", "", UPDATE_AIRBORNE_SV, false, int(bool(AirborneSpeedVector == 15)));
+		GetPlugIn()->AddPopupListElement("30", "", UPDATE_AIRBORNE_SV, false, int(bool(AirborneSpeedVector == 30)));
+		GetPlugIn()->AddPopupListElement("60", "", UPDATE_AIRBORNE_SV, false, int(bool(AirborneSpeedVector == 60)));
+		GetPlugIn()->AddPopupListElement("120", "", UPDATE_AIRBORNE_SV, false, int(bool(AirborneSpeedVector == 120)));
+		GetPlugIn()->AddPopupListElement("In Main View", "", UPDATE_AIRBORNE_SV, false, split_speed_vectors);
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
-		ShowLists["Inset Speed Vector"] = false;
+		ShowLists["Airborne Speed Vector"] = false;
 	}
 
 	if (ShowLists["Brightness"])
@@ -3481,3 +3497,7 @@ void CSMRRadar::cleanup_old_aircraft()
 	}
 }
 
+string CSMRRadar::setActiveAirport(const string& value) {
+	airport_elevation = UIHelper::get_airport_elevation(value, DllPath).value_or(0);
+	return ActiveAirport = value;
+}

@@ -2701,9 +2701,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
 		// Predicted Track Line
-		if (PredictedLength > 0 || AlwaysVector || alt_mode)
+		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + 2);
+		const auto line_length = is_airborne ? AirborneSpeedVector : PredictedLength;
+		if (line_length > 0 || AlwaysVector || alt_mode)
 		{
-			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (PredictedLength);
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
 			if (AlwaysVector || alt_mode)
 				meters = max(meters, symbol_size_meters);
 			const auto track = rt.GetTrackHeading();

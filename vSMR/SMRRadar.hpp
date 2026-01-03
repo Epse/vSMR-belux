@@ -61,7 +61,7 @@ private:
 	bool shift_top_bar = false;
 	bool show_err_lines = true;
 	bool split_speed_vectors = false; /// True when main radar speed vectors should follow inset.
-	int32_t airport_elevation = 0; /// Elevation in m for current airport. Valid after ASR loaded.
+	int32_t airport_elevation = 0; /// Elevation in ft for current airport. Valid after ASR loaded.
 	std::optional<ContextMenuData> context_menu_for = {};
 	POINT context_menu_pos = POINT{ 0, 0 };
 	void draw_context_menu(HDC hdc);

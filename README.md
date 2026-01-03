@@ -34,7 +34,7 @@ The first is `ICAO_airlines.txt`, identical to the file Euroscope already uses.
 vSMR will try to find this in your EuroScope installation, but for best results you should place a copy next to the vSMR dll.
 
 Second is an airports definition json. We suggest [this one from mwgg](https://raw.githubusercontent.com/mwgg/Airports/refs/heads/master/airports.json).
-You may also truncate it to only contain airports you are interested in, or write your own in the same format.
+You may also truncate it to only contain airports you are interested in, or write your own in the same format. Make sure elevation is in ft.
 Also place this next to the dll.
 
 Third is the aircraft size database, defined below.

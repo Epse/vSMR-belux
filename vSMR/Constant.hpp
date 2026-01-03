@@ -25,6 +25,8 @@ constexpr unsigned int AFTERGLOW_CLEANUP_SEC = 10;
 
 constexpr unsigned int CLEANUP_AFTER_SEC = 120;
 
+constexpr int AIRBORNE_MARGIN_FT = 50;
+
 
 typedef struct tagPOINT2 {
 	double x;

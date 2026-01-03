@@ -2701,7 +2701,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
 		// Predicted Track Line
-		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + 2);
+		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + AIRBORNE_MARGIN_FT);
 		const auto line_length = is_airborne ? AirborneSpeedVector : PredictedLength;
 		if (line_length > 0 || AlwaysVector || alt_mode)
 		{

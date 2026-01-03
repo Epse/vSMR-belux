@@ -60,6 +60,7 @@ private:
 	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode = false);
 	bool shift_top_bar = false;
 	bool show_err_lines = true;
+	bool split_speed_vectors = false; /// True when main radar speed vectors should follow inset.
 	int32_t airport_elevation = 0; /// Elevation in m for current airport. Valid after ASR loaded.
 	std::optional<ContextMenuData> context_menu_for = {};
 	POINT context_menu_pos = POINT{ 0, 0 };
@@ -146,7 +147,7 @@ public:
 	int Trail_Gnd = 4;
 	int Trail_App = 4;
 	int PredictedLength = 0;
-	unsigned int InsetSpeedVector = 30;
+	unsigned int AirborneSpeedVector = 30;
 	bool AlwaysVector = false;
 
 	bool NeedCorrelateCursor = false;
@@ -169,10 +170,7 @@ public:
 		return ActiveAirport;
 	}
 
-	string setActiveAirport(const string& value) {
-		airport_elevation = UIHelper::get_airport_elevation(value, DllPath).value_or(0);
-		return ActiveAirport = value;
-	}
+	string setActiveAirport(const string& value);
 
 	//---GenerateTagData--------------------------------------------
 

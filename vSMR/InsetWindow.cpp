@@ -344,8 +344,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		}
 
 		// Predicted Track Line
-		if (radar_screen->InsetSpeedVector > 0) {
-			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->InsetSpeedVector);
+		if (radar_screen->AirborneSpeedVector > 0) {
+			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->AirborneSpeedVector);
 			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), distance);
 
 			POINT liangOne, liangTwo;

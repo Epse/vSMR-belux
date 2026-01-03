@@ -358,7 +358,7 @@ enum EsConst: std::uint16_t
 	RIMCAS_UPDATE_RELEASE = 8034,
 	RIMCAS_UPDATE_ACQUIRE = 8035,
 	
-	UPDATE_INSET_SV, // Inset speed vector
+	UPDATE_AIRBORNE_SV, // Inset speed vector
 	
 	RIMCAS_IAW = 7000,
 	

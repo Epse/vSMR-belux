@@ -16,6 +16,7 @@
 #ifndef MY_PLUGIN_VERSION
 #define MY_PLUGIN_VERSION   "UNKNOWN"
 #endif
+#pragma message( "Version set to " MY_PLUGIN_VERSION )
 #define MY_PLUGIN_DEVELOPER "Pierre Ferran, Stef Pletinck, DrFreas, Keanu73, Lionel Bischof, blt950, Goulven Guinel, Nicola Macoir, hpeter, EvenAR, Sam W, Wenjen Zhou"
 #define MY_PLUGIN_COPYRIGHT "GPL v3"
 #define MY_PLUGIN_VIEW_AVISO  "SMR radar display"

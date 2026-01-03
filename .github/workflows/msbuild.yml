@@ -29,8 +29,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - name: Ensure tags are present
-      run: git fetch --tags
+      with:
+        fetch-depth: 20
+        fetch-tags: true
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
@@ -43,10 +44,13 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:VcsVersion=$(git describe) ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:VcsVersion=$(git describe --always) ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Airports json
+      run: https://raw.githubusercontent.com/mwgg/Airports/refs/heads/master/airports.json
 
     - name: Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dll
-        path: Release/vSMR.dll
+        name: release
+        path: Release/

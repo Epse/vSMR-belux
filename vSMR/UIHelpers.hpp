@@ -15,4 +15,5 @@ static std::optional<std::vector<std::vector<std::string>>> parse_label_lines(co
 static std::string altitude(const int x, const unsigned int transition = 6000);
 static size_t id(const CRadarTarget& rt);
 static size_t id(const CFlightPlan& fp);
+static std::optional<int64_t> get_airport_elevation(const std::string& icao, const std::string& dll_path);
 };

@@ -60,6 +60,7 @@ private:
 	void draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool alt_mode = false);
 	bool shift_top_bar = false;
 	bool show_err_lines = true;
+	int32_t airport_elevation = 0; /// Elevation in m for current airport. Valid after ASR loaded.
 	std::optional<ContextMenuData> context_menu_for = {};
 	POINT context_menu_pos = POINT{ 0, 0 };
 	void draw_context_menu(HDC hdc);
@@ -168,7 +169,8 @@ public:
 		return ActiveAirport;
 	}
 
-	inline string setActiveAirport(const string& value) {
+	string setActiveAirport(const string& value) {
+		airport_elevation = UIHelper::get_airport_elevation(value, DllPath).value_or(0);
 		return ActiveAirport = value;
 	}
 

@@ -2025,6 +2025,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 	{
 		CurrentConfig = new CConfig(ConfigPath);
 		LoadProfile(CurrentConfig->getActiveProfileName());
+		airport_elevation = UIHelper::get_airport_elevation(ActiveAirport, DllPath).value_or(airport_elevation);
 		return true;
 	}
 

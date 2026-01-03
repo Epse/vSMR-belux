@@ -144,3 +144,42 @@ size_t UIHelper::id(const CFlightPlan& fp)
 	return id(fp.GetCorrelatedRadarTarget());
 }
 
+std::optional<int64_t> UIHelper::get_airport_elevation(const std::string& icao, const std::string& dll_path)
+{
+	const auto file_path = dll_path + "\\airports.json";
+	rapidjson::Document document;
+
+	stringstream ss;
+	ifstream ifs;
+	ifs.open(file_path.c_str(), std::ios::binary);
+	ss << ifs.rdbuf();
+	ifs.close();
+
+	if (document.Parse<0>(ss.str().c_str()).HasParseError()) {
+		AfxMessageBox("Failed to parse airports.json . Airport elevation may be incorrect. You may try again using .smr reload", MB_OK);
+		return {};
+	}
+
+	if (!document.IsObject() || !document.HasMember(icao.c_str()))
+	{
+		AfxMessageBox("Invalid airports.json format. You may try again using .smr reload", MB_OK);
+		return {};
+	}
+
+	const auto member = &document[icao.c_str()];
+	if (!member->IsObject() || !member->HasMember("elevation"))
+	{
+		AfxMessageBox("Invalid airports.json format for your airport. You may try again using .smr reload", MB_OK);
+		return {};
+	}
+	
+	const auto elev = &member->operator[]("elevation");
+	if (!elev->IsInt64())
+	{
+		AfxMessageBox("Invalid airports.json elevation format for your airport. You may try again using .smr reload", MB_OK);
+		return {};
+	}
+
+	return { elev->GetInt64() };
+}
+

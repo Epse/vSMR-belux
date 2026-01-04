@@ -5,6 +5,7 @@ on:
     types:
       - created
       - edited
+      - released
 
 env:
   # Path to the solution file relative to the root of the project.

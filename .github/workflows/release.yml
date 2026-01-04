@@ -58,4 +58,4 @@ jobs:
     - name: Add to release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload $GITHUB_REF Release.zip --clobber
+      run: gh release upload ${{ github.event.release.name }} Release.zip --clobber

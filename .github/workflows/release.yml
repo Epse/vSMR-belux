@@ -20,9 +20,16 @@ permissions:
   contents: write
 
 jobs:
+  check-aircraft:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: "Run checks"
+      run: './validate_aircraft.ps1'
+      shell: pwsh
   build:
     runs-on: windows-latest
-
+    needs: "check-aircraft"
     steps:
     - uses: actions/checkout@v5
       with:

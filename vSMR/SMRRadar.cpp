@@ -1316,6 +1316,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			                                 show_err_lines ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Shift Top Bar", "", RIMCAS_SHIFT_TOP_BAR_TOGGLE, false,
 			                                 shift_top_bar ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
+			GetPlugIn()->AddPopupListElement("Belux pro mode", "", RIMCAS_OPEN_LIST);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
 
@@ -1336,15 +1337,6 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			                                 filters.show_stup ? POPUP_ELEMENT_CHECKED : POPUP_ELEMENT_UNCHECKED);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, POPUP_ELEMENT_NO_CHECKBOX, false, true);
 		}
-
-		if (strcmp(sObjectId, "BeluxMenu") == 0)
-		{
-			Area.top = Area.top + 30;
-			Area.bottom = Area.bottom + 30;
-			GetPlugIn()->OpenPopupList(Area, "Belux Menu", 1);
-			GetPlugIn()->AddPopupListElement("Belux pro mode", "", RIMCAS_OPEN_LIST);
-		}
-
 
 		if (strcmp(sObjectId, "TargetMenu") == 0)
 		{
@@ -3225,15 +3217,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	                }, false, "Filter menu");
 
 	offset += dc.GetTextExtent("Filters").cx + 10;
-	dc.TextOutA(ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, "Belux");
-	AddScreenObject(RIMCAS_MENU, "BeluxMenu", {
-		                ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4,
-		                ToolBarAreaTop.left + offset + dc.GetTextExtent("Belux").cx,
-		                ToolBarAreaTop.top + 4 + +dc.GetTextExtent("Belux").cy
-	                }, false, "Belux menu");
-
-
-	offset += dc.GetTextExtent("Belux").cx + 10;
 	dc.TextOutA(ToolBarAreaTop.left + offset, ToolBarAreaTop.top + 4, "/");
 	CRect barDistanceRect = {
 		ToolBarAreaTop.left + offset - 2, ToolBarAreaTop.top + 4,

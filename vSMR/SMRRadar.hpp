@@ -154,7 +154,6 @@ public:
 	bool ReleaseInProgress = false;
 	bool AcquireInProgress = false;
 
-	bool belux_promode = true;
 	bool belux_promode_easy = false;
 
 	Filters filters = new_filters();
@@ -174,7 +173,7 @@ public:
 
 	//---GenerateTagData--------------------------------------------
 
-	map<string, string> GenerateTagData(CRadarTarget Rt, CFlightPlan fp, bool isAcCorrelated, bool isProMode, int TransitionAltitude, bool useSpeedForGates, string ActiveAirport);
+	map<string, string> GenerateTagData(CRadarTarget Rt, CFlightPlan fp, bool isAcCorrelated, int TransitionAltitude, bool useSpeedForGates, string ActiveAirport);
 
 	inline virtual bool is_manually_correlated(const char* system_id)
 	{
@@ -191,64 +190,56 @@ public:
 	inline virtual bool IsCorrelated(CFlightPlan fp, CRadarTarget rt)
 	{
 
-		if (belux_promode) {
-			if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
-			{
-				return true;
-			}
-			if (!rt.GetPosition().GetTransponderC())
-			{
-				return false;
-			}
+		if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
+		{
 			return true;
 		}
 
-		if (CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool())
+		// Note, this is OG pro mode, not the belux variety that is now on by default
+		if (!CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool())
 		{
-			if (fp.IsValid())
+			return rt.GetPosition().GetTransponderC();
+		}
+			
+		if (fp.IsValid())
+		{
+			bool isCorr = false;
+			if (strcmp(fp.GetControllerAssignedData().GetSquawk(), rt.GetPosition().GetSquawk()) == 0)
 			{
-				bool isCorr = false;
-				if (strcmp(fp.GetControllerAssignedData().GetSquawk(), rt.GetPosition().GetSquawk()) == 0)
-				{
-					isCorr = true;
-				}
+				isCorr = true;
+			}
 
-				if (CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["accept_pilot_squawk"].GetBool())
-				{
-					isCorr = true;
-				}
+			if (CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["accept_pilot_squawk"].GetBool())
+			{
+				isCorr = true;
+			}
 
-				if (isCorr)
-				{
-					const Value& sqs = CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["do_not_autocorrelate_squawks"];
-					for (SizeType i = 0; i < sqs.Size(); i++) {
-						if (strcmp(rt.GetPosition().GetSquawk(), sqs[i].GetString()) == 0)
-						{
-							isCorr = false;
-							break;
-						}
+			if (isCorr)
+			{
+				const Value& sqs = CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["do_not_autocorrelate_squawks"];
+				for (SizeType i = 0; i < sqs.Size(); i++) {
+					if (strcmp(rt.GetPosition().GetSquawk(), sqs[i].GetString()) == 0)
+					{
+						isCorr = false;
+						break;
 					}
 				}
-
-				if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
-				{
-					isCorr = true;
-				}
-
-				if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
-				{
-					isCorr = false;
-				}
-
-				return isCorr;
 			}
 
-			return false;
-		} else
-		{
-			// If the pro mode is not used, then the AC is always correlated
-			return true;
+			if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
+			{
+				isCorr = true;
+			}
+
+			if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
+			{
+				isCorr = false;
+			}
+
+			return isCorr;
 		}
+
+		return false;
 	};
 
 	//---CorrelateCursor--------------------------------------------

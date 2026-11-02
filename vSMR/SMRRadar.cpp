@@ -85,7 +85,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			GetCoordinatedNextController())
 			isAcDisplayed = false;
 
-		if (!AcisCorrelated && belux_promode && !belux_promode_easy)
+		if (!AcisCorrelated&& !belux_promode_easy)
 			isAcDisplayed = false;
 
 		if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
@@ -152,16 +152,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		}
 	}
 
-	if (!AcisCorrelated &&
-		(belux_promode && belux_promode_easy))
+	if (!AcisCorrelated && belux_promode_easy)
 	{
 		TagType = TagTypes::Uncorrelated;
 		ColorTagType = TagTypes::Uncorrelated;
 	}
 
 	map<string, string> TagReplacingMap = GenerateTagData(rt, fp, IsCorrelated(fp, rt),
-	                                                      CurrentConfig->getActiveProfile()["filters"]["pro_mode"][
-		                                                      "enable"].GetBool() || belux_promode,
 	                                                      GetPlugIn()->GetTransitionAltitude(),
 	                                                      CurrentConfig->getActiveProfile()["labels"][
 		                                                      "use_aspeed_for_gate"].GetBool(), getActiveAirport());
@@ -851,10 +848,6 @@ void CSMRRadar::OnAsrContentLoaded(bool Loaded)
 		AlwaysVector = atoi(p_value) == 1;
 	}
 
-
-	if ((p_value = GetDataFromAsr("BeluxProMode")) != NULL)
-		belux_promode = (strcmp(p_value, "on") == 0);
-
 	if ((p_value = GetDataFromAsr("BeluxProModeEasy")) != NULL)
 		belux_promode_easy = (strcmp(p_value, "on") == 0);
 
@@ -960,7 +953,6 @@ void CSMRRadar::OnAsrContentToBeSaved()
 	SaveDataToAsr("SplitSpeedVector", "vSMR Airborne speed vector in main view", split_speed_vectors ? "on" : "off");
 	SaveDataToAsr("AlwaysVector", "vSMR Always show speed vector", AlwaysVector ? "1" : "0");
 
-	SaveDataToAsr("BeluxProMode", "vSMR Belux pro mode", (belux_promode ? "on" : "off"));
 	SaveDataToAsr("BeluxProModeEasy", "vSMR Belux pro mode - easy version", (belux_promode_easy ? "on" : "off"));
 
 	SaveDataToAsr("ShiftTopBar", "Shift top menu bar downwards", shift_top_bar ? "on" : "off");
@@ -1666,11 +1658,7 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		const int id = FunctionId - APPWINDOW_BASE;
 		appWindowDisplays[id] = !appWindowDisplays[id];
 	}
-
-	if (FunctionId == BELUX_SETPROMODE)
-	{
-		belux_promode = !belux_promode;
-	}
+	
 	if (FunctionId == BELUX_SETPROMODEEASY)
 	{
 		belux_promode_easy = !belux_promode_easy;
@@ -2057,7 +2045,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 	return false;
 }
 
-map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, bool isAcCorrelated, bool isProMode,
+map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, bool isAcCorrelated,
                                                int TransitionAltitude, bool useSpeedForGates, string ActiveAirport)
 {
 	Logger::info(string(__FUNCSIG__));
@@ -2303,33 +2291,29 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	// space: A literal space
 	TagReplacingMap["space"] = " ";
 
-	// Pro mode data here
-	if (isProMode)
+	if (isAirborne && !isAcCorrelated)
 	{
-		if (isAirborne && !isAcCorrelated)
-		{
-			callsign = tssr;
-		}
-
-		if (!isAcCorrelated)
-		{
-			actype = "NoFPL";
-		}
-
-		// Is a primary target
-
-		if (isAirborne && !isAcCorrelated && IsPrimary)
-		{
-			flightlevel = "NoALT";
-			tendency = "?";
-			speed = std::to_string(rt.GetGS());
-		}
-
-		//if (isAirborne && !isAcCorrelated && IsPrimary)
-		//{
-		//	callsign = TagReplacingMap["systemid"];
-		//}
+		callsign = tssr;
 	}
+
+	if (!isAcCorrelated)
+	{
+		actype = "NoFPL";
+	}
+
+	// Is a primary target
+
+	if (isAirborne && !isAcCorrelated && IsPrimary)
+	{
+		flightlevel = "NoALT";
+		tendency = "?";
+		speed = std::to_string(rt.GetGS());
+	}
+
+	//if (isAirborne && !isAcCorrelated && IsPrimary)
+	//{
+	//	callsign = TagReplacingMap["systemid"];
+	//}
 
 	TagReplacingMap["callsign"] = callsign;
 	TagReplacingMap["actype"] = actype;
@@ -3052,7 +3036,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	if (ShowLists["Belux pro mode"])
 	{
 		GetPlugIn()->OpenPopupList(ListAreas["Belux pro mode"], "Belux pro mode", 1);
-		GetPlugIn()->AddPopupListElement("Enable", "", BELUX_SETPROMODE, false, int(belux_promode));
 		GetPlugIn()->AddPopupListElement("Easy mode", "", BELUX_SETPROMODEEASY, false, int(belux_promode_easy));
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Belux pro mode"] = false;

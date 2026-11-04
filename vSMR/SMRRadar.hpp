@@ -85,6 +85,8 @@ public:
 	CSMRRadar();
 	virtual ~CSMRRadar();
 
+	void OnAirportRunwayActivityChanged();
+
 	bool BLINK = false;
 
 	vector<string> Active_Arrivals;

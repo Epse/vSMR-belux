@@ -106,7 +106,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		return;
 	}
 
-	if (TagAngles.find(id) == TagAngles.end())
+	if (!TagAngles.contains(id))
 	{
 		TagAngles[id] = 360 - 45.0f;
 	}
@@ -690,6 +690,23 @@ CSMRRadar::~CSMRRadar()
 	// Shutting down GDI+
 	GdiplusShutdown(m_gdiplusToken);
 	delete CurrentConfig;
+}
+
+void CSMRRadar::OnAirportRunwayActivityChanged()
+{
+	for (CSectorElement rwy = GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_RUNWAY);
+	     rwy.IsValid();
+	     rwy = GetPlugIn()->SectorFileElementSelectNext(rwy, SECTOR_ELEMENT_RUNWAY))
+	{
+		if (!startsWith(getActiveAirport().c_str(), rwy.GetAirportName())) continue;
+
+		const string name = rwy.GetRunwayName(0) + string(" / ") + rwy.GetRunwayName(1);
+		const auto dep_active = rwy.IsElementActive(true, 0) || rwy.IsElementActive(true, 1) || rwy.IsElementActive(false, 0) || rwy.IsElementActive(false, 1);
+		const auto arr_active = rwy.IsElementActive(false, 0) || rwy.IsElementActive(false, 1);
+
+		RimcasInstance->setMonitoredRunwayDep(name, dep_active);
+		RimcasInstance->setMonitoredRunwayArr(name, arr_active);
+	}
 }
 
 void CSMRRadar::CorrelateCursor()

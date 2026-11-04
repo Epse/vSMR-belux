@@ -65,4 +65,6 @@ public:
 	void OnPlaneInformationUpdate(const char* sCallsign, const char* sLivery, const char* sPlaneType) override;
 
 	std::optional<std::string> type_for(const std::string& callsign) const;
+
+	void OnAirportRunwayActivityChanged() override;
 };

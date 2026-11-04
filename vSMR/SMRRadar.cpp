@@ -140,7 +140,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		}
 	}
 
-	if (reportedGs > 50)
+	if (is_airborne(&rt))
 	{
 		TagType = TagTypes::Airborne;
 
@@ -2595,6 +2595,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	const unsigned char size = static_cast<unsigned char>(
 		sqrtf(powf(test_end_pixels.x - center_screen.x, 2) + powf(test_end_pixels.y - center_screen.y, 2))
 	);
+	const auto untracked_brush = SolidBrush(
+		ColorManager->get_corrected_color("symbol", Color::Gray)
+	);
 	const unsigned char half_size = size / 2;
 	// Then go be clever
 	EuroScopePlugIn::CRadarTarget rt;
@@ -2607,6 +2610,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		int reportedGs = rt.GetPosition().GetReportedGS();
 		bool isAcDisplayed = isVisible(rt);
+		const bool correlated = IsCorrelated(rt.GetCorrelatedFlightPlan(), rt);
 
 		if (!isAcDisplayed)
 			continue;
@@ -2620,7 +2624,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		draw_after_glow(rt, graphics);
 
 
-		if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
+		if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool() && !is_airborne(&rt))
 		{
 			SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
 			                                                     CConfig::getConfigColor(
@@ -2645,8 +2649,28 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 			graphics.FillPolygon(&H_Brush, lpPoints, shape.size());
 		}
+
 		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
+		if (is_airborne(&rt) && correlated)
+		{
+			const auto colour = SolidBrush(AirborneTargetColour(&rt));
+			const auto letter = AirborneTargetLetter(&rt);
+			const auto base_font = customFonts[currentFontSize + 10];
+			FontFamily base_family;
+			base_font->GetFamily(&base_family);
+			const auto target_font = Gdiplus::Font(&base_family, base_font->GetSize(), FontStyleBold, base_font->GetUnit());
+
+			RectF measure;
+			graphics.MeasureString(&letter, 1, &target_font, PointF(0, 0), &measure);
+
+			graphics.DrawString(&letter, 1, &target_font, PointF(acPosPix.x - measure.Width / 2, acPosPix.y - measure.Height / 2), &colour);
+		}
+
+		if (is_airborne(&rt) && !correlated)
+		{
+			graphics.FillRectangle(&untracked_brush, acPosPix.x - 4, acPosPix.y - 4, 8, 8);
+		}
 
 		constexpr float symbol_line_thickness = 2.0;
 		// Draw target symbols
@@ -2715,8 +2739,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			const auto gs = rt.GetPosition().GetReportedGS();
 			const double angle = track < 0 || gs < 1 ? head : track;
 			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
+			CPosition StartWorld = BetterHarversine(rt.GetPosition().GetPosition(), angle, symbol_size_meters);
 
-			const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+			const POINT start = ConvertCoordFromPositionToPixel(StartWorld);
 			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
 			graphics.DrawLine(
 				&symbol_pen, 
@@ -3379,20 +3404,21 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 {
 	const auto ground_speed = rt.GetGS();
 
-	constexpr size_t afterglow_count = 3;
+	const size_t afterglow_count = is_airborne(&rt) ? Trail_App : Trail_Gnd;
 
 	if (ground_speed <= 5) return;
 
 	const CRadarTargetPositionData current_position = rt.GetPosition();
 
+	const SolidBrush trail_brush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White));
 
 	// First, fill with historic positions
-	CRadarTargetPositionData historic_positions[afterglow_count];
+	std::vector<CRadarTargetPositionData> historic_positions;
 	CRadarTargetPositionData previous_position = current_position;
-	for (auto i = 0; i < afterglow_count; i++)
+	for (size_t i = 0; i < afterglow_count; ++i)
 	{
 		previous_position = rt.GetPreviousPosition(previous_position);
-		historic_positions[i] = previous_position;
+		historic_positions.emplace_back(previous_position);
 	}
 
 	// Reusable buffer
@@ -3400,6 +3426,16 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 	// Render oldest afterglow first (requires signed math)
 	for (int i = afterglow_count - 1; i >= 0; --i)
 	{
+		const auto pos = historic_positions[i];
+
+		if (is_airborne(&pos)) 
+		{
+			const POINT pCoord = ConvertCoordFromPositionToPixel(pos.GetPosition());
+
+			graphics.FillRectangle(&trail_brush, pCoord.x - 1, pCoord.y - 1, 2, 2);
+			continue;
+		}
+
 		std::string color_name;
 		switch (i)
 		{
@@ -3418,7 +3454,6 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 			CConfig::getConfigColor(CurrentConfig->getActiveProfile()["targets"][color_name.c_str()])
 		));
 
-		const auto pos = historic_positions[i];
 		const auto fp = rt.GetCorrelatedFlightPlan();
 
 		const auto id = UIHelper::id(rt);
@@ -3439,18 +3474,6 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 			};
 		}
 		graphics.FillPolygon(&brush, pixel_points, shape.size());
-	}
-
-	const int TrailNumber = ground_speed > 50 ? Trail_App : Trail_Gnd;
-	CRadarTargetPositionData previousPos = rt.GetPreviousPosition(rt.GetPosition());
-	const SolidBrush trail_brush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White));
-	for (int j = 1; j <= TrailNumber; j++)
-	{
-		const POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
-
-		graphics.FillRectangle(&trail_brush, pCoord.x - 1, pCoord.y - 1, 2, 2);
-
-		previousPos = rt.GetPreviousPosition(previousPos);
 	}
 }
 

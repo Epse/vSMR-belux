@@ -176,7 +176,7 @@ public:
 
 	//---GenerateTagData--------------------------------------------
 
-	map<string, string> GenerateTagData(CRadarTarget Rt, CFlightPlan fp, bool isAcCorrelated, int TransitionAltitude, bool useSpeedForGates, string ActiveAirport);
+	map<string, string> GenerateTagData(CRadarTarget rt, CFlightPlan fp, bool isAcCorrelated, int TransitionAltitude, string ActiveAirport, bool callsign_unreliable);
 
 	inline virtual bool is_manually_correlated(const char* system_id)
 	{

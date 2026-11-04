@@ -68,13 +68,15 @@ std::vector < CPosition > PlaneShapeBuilder::build(const EuroScopePlugIn::CRadar
 	 * Sample this at a few angles around the centre.
 	 * Done??
 	 */
-	std::normal_distribution distance_dist{ type.tail_height * 0.8f, type.tail_height / 5 };
+	const auto mean = sigmoid(type.tail_height * 0.5f + type.length * 0.25f, 7.0f, 25.0f);
+	std::normal_distribution distance_dist{ mean, type.tail_height / 5 };
 
 	const auto heading = position.GetReportedHeadingTrueNorth();
 	const CPosition centre = position.GetPosition();
 
 	// For the reason of squeezing the middle a little... [0, 1[
-	const float squeeze = 0.15f;
+	// Larger is more squeeze
+	const float squeeze = 0.24f;
 
 	for (size_t i = 0; i < shape_size; ++i)
 	{

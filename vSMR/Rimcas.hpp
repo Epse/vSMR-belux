@@ -158,12 +158,12 @@ public:
 	 
 	void setMonitoredRunwayArr(const string& runway, const bool monitored)
 	{
-		MonitoredRunwayArr[runway] = false;
+		MonitoredRunwayArr[runway] = monitored;
 	}
 	 
 	void setMonitoredRunwayDep(const string& runway, const bool monitored)
 	{
-		MonitoredRunwayDep[runway] = false;
+		MonitoredRunwayDep[runway] = monitored;
 	}
 
 	map<string, bool> ClosedRunway;

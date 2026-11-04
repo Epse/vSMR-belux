@@ -702,7 +702,7 @@ void CSMRRadar::OnAirportRunwayActivityChanged()
 		if (!startsWith(getActiveAirport().c_str(), rwy.GetAirportName())) continue;
 
 		const string name = rwy.GetRunwayName(0) + string(" / ") + rwy.GetRunwayName(1);
-		const auto dep_active = rwy.IsElementActive(true, 0) || rwy.IsElementActive(true, 1) || rwy.IsElementActive(false, 0) || rwy.IsElementActive(false, 1);
+		const auto dep_active = rwy.IsElementActive(true, 0) || rwy.IsElementActive(true, 1);
 		const auto arr_active = rwy.IsElementActive(false, 0) || rwy.IsElementActive(false, 1);
 
 		RimcasInstance->setMonitoredRunwayDep(name, dep_active);

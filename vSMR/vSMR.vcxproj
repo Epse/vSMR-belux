@@ -182,6 +182,7 @@
     <ClInclude Include="TagTypes.hpp" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UIHelpers.hpp" />
+    <ClInclude Include="util.hpp" />
     <ClInclude Include="vSMR.hpp" />
   </ItemGroup>
   <ItemGroup>

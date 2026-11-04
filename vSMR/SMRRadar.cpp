@@ -5,6 +5,7 @@
 #include <boost/geometry.hpp>
 #include "PlaneShapeBuilder.h"
 #include "SMRPlugin.hpp"
+#include "util.hpp"
 using namespace std::string_literals;
 
 ULONG_PTR m_gdiplusToken;
@@ -2084,7 +2085,7 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	// space: A literal space
 	// ----
 
-	bool IsPrimary = !rt.GetPosition().GetTransponderC();
+	bool IsPrimary = !is_mlat(&rt);
 	bool isAirborne = rt.GetPosition().GetReportedGS() > 50;
 
 	// ----- Callsign -------
@@ -2720,7 +2721,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		if (RtPos.GetTransponderC())
+		// In theory MLAT without primary is possible and would get a diamond, but not simulated atm
+		if (is_mlat(&rt))
 		{
 			graphics.DrawEllipse(&symbol_pen, acPosPix.x - (size / 2), acPosPix.y - (size / 2), size, size);
 		}
@@ -2733,9 +2735,15 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		{
 			const Color asel_color = ColorManager->get_corrected_color("target", Gdiplus::Color::Yellow);
 			const Pen asel_pen(asel_color, symbol_line_thickness);
-			const int asel_size = size + 2 * symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
-			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size,
-			                     asel_size);
+			const int asel_size = size + 2 * symbol_line_thickness; // Effectively an outline on the main symbol
+			if (is_mlat(&rt))
+			{
+				graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
+			}
+			else
+			{
+				graphics.DrawRectangle(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
+			}
 		}
 	}
 

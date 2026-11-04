@@ -26,6 +26,7 @@
 #include "TagDrawingContext.hpp"
 #include "Filters.h"
 #include "PlaneShapeBuilder.h"
+#include "util.hpp"
 
 using namespace std;
 using namespace Gdiplus;
@@ -200,7 +201,7 @@ public:
 		// Note, this is OG pro mode, not the belux variety that is now on by default
 		if (!CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool())
 		{
-			return rt.GetPosition().GetTransponderC();
+			return is_mlat(&rt);
 		}
 			
 		if (fp.IsValid())

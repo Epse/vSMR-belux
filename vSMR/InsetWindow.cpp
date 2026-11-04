@@ -393,7 +393,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		// Drawing the tags, what a mess
 
 		// ----- Generating the replacing map -----
-		map<string, string> TagReplacingMap = radar->GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt), radar_screen->GetPlugIn()->GetTransitionAltitude(), radar_screen->CurrentConfig->getActiveProfile()["labels"]["use_aspeed_for_gate"].GetBool(), icao);
+		const bool is_manually_correlated = radar_screen->is_manually_correlated(rt.GetSystemID());
+		map<string, string> TagReplacingMap = radar->GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt), radar_screen->GetPlugIn()->GetTransitionAltitude(), icao, is_manually_correlated);
 
 		// ----- Generating the clickable map -----
 		map<string, int> TagClickableMap;

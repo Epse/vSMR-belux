@@ -6,7 +6,6 @@
 #include "PlaneShapeBuilder.h"
 #include "SMRPlugin.hpp"
 #include "util.hpp"
-using namespace std::string_literals;
 
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
@@ -73,9 +72,10 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	bool isAcDisplayed = isVisible(rt);
 
 	// Alt mode makes me pretend its correlated
-	bool AcisCorrelated = alt_mode || IsCorrelated(fp, rt);
+	const bool AcisCorrelated = alt_mode || IsCorrelated(fp, rt);
+	const bool is_manually_correlated = std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end();
 
-	if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) == ManuallyCorrelated.end())
+	if (!is_manually_correlated)
 	{
 		// Target not manually acquired, set filters
 
@@ -159,10 +159,13 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		ColorTagType = TagTypes::Uncorrelated;
 	}
 
-	map<string, string> TagReplacingMap = GenerateTagData(rt, fp, IsCorrelated(fp, rt),
-	                                                      GetPlugIn()->GetTransitionAltitude(),
-	                                                      CurrentConfig->getActiveProfile()["labels"][
-		                                                      "use_aspeed_for_gate"].GetBool(), getActiveAirport());
+	map<string, string> TagReplacingMap = GenerateTagData(
+		rt, 
+		fp, 
+		AcisCorrelated,
+	    GetPlugIn()->GetTransitionAltitude(),
+	    getActiveAirport(),
+	    is_manually_correlated);
 
 	// ----- Generating the clickable map -----
 	map<string, int> TagClickableMap;
@@ -2056,7 +2059,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 }
 
 map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, bool isAcCorrelated,
-                                               int TransitionAltitude, bool useSpeedForGates, string ActiveAirport)
+                                               int TransitionAltitude, string ActiveAirport, bool callsign_unreliable)
 {
 	Logger::info(string(__FUNCSIG__));
 	// ----
@@ -2090,6 +2093,11 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 
 	// ----- Callsign -------
 	string callsign = rt.GetCallsign();
+	if (callsign_unreliable)
+	{
+		callsign = "(" + callsign + ")";
+	}
+
 	if (fp.IsValid())
 	{
 		if (fp.GetControllerAssignedData().GetCommunicationType() == 't' ||

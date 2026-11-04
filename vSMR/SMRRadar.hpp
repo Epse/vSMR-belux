@@ -369,4 +369,7 @@ public:
 		//delete CurrentConfig;
 		delete this;
 	};
+
+	wchar_t AirborneTargetLetter(CRadarTarget* rt) const;
+	Color AirborneTargetColour(CRadarTarget* rt) const;
 };

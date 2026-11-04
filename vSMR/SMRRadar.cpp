@@ -2754,6 +2754,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
+		if (is_airborne)
+		{
+			continue;
+		}
+
 		// In theory MLAT without primary is possible and would get a diamond, but not simulated atm
 		if (is_mlat(&rt))
 		{

@@ -155,6 +155,16 @@ public:
 		else
 			MonitoredRunwayArr[runway] = !MonitoredRunwayArr[runway];
 	}
+	 
+	void setMonitoredRunwayArr(const string& runway, const bool monitored)
+	{
+		MonitoredRunwayArr[runway] = false;
+	}
+	 
+	void setMonitoredRunwayDep(const string& runway, const bool monitored)
+	{
+		MonitoredRunwayDep[runway] = false;
+	}
 
 	map<string, bool> ClosedRunway;
 	vector<string> RunwayTaxiway;

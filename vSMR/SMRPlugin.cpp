@@ -784,6 +784,14 @@ std::optional<std::string> CSMRPlugin::type_for(const std::string& callsign) con
 	return {};
 }
 
+void CSMRPlugin::OnAirportRunwayActivityChanged()
+{
+	for (auto radar_screen_opened : RadarScreensOpened)
+	{
+		radar_screen_opened->OnAirportRunwayActivityChanged();
+	}
+}
+
 //---EuroScopePlugInExit-----------------------------------------------
 
 void __declspec (dllexport) EuroScopePlugInExit(void)

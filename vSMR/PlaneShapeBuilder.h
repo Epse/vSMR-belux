@@ -36,3 +36,10 @@ private:
 	static std::optional<std::string> find_type(const EuroScopePlugIn::CFlightPlan& fp, const std::optional<std::string>& known_type);
 };
 
+inline float sigmoid(float x, float lower, float upper, float slope = 0.15f)
+{
+	const float pivot = (upper - lower) / 2;
+	const float centre = lower + pivot;
+
+	return pivot * tanh(slope * (x - centre)) + pivot + lower;
+}

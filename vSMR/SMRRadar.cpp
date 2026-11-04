@@ -2734,21 +2734,25 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
 			if (AlwaysVector || alt_mode)
 				meters = max(meters, symbol_size_meters);
-			const auto track = rt.GetTrackHeading();
-			const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
-			const auto gs = rt.GetPosition().GetReportedGS();
-			const double angle = track < 0 || gs < 1 ? head : track;
-			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
-			CPosition StartWorld = BetterHarversine(rt.GetPosition().GetPosition(), angle, symbol_size_meters);
 
-			const POINT start = ConvertCoordFromPositionToPixel(StartWorld);
-			const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-			graphics.DrawLine(
-				&symbol_pen, 
-				static_cast<int>(start.x), 
-				static_cast<int>(start.y), 
-				static_cast<int>(end.x), 
-				static_cast<int>(end.y));
+			if (meters > 0)
+			{
+				const auto track = rt.GetTrackHeading();
+				const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
+				const auto gs = rt.GetPosition().GetReportedGS();
+				const double angle = track < 0 || gs < 1 ? head : track;
+				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
+				CPosition StartWorld = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters > 2 * symbol_size_meters ? symbol_size_meters : 0);
+
+				const POINT start = ConvertCoordFromPositionToPixel(StartWorld);
+				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
+				graphics.DrawLine(
+					&symbol_pen, 
+					static_cast<int>(start.x), 
+					static_cast<int>(start.y), 
+					static_cast<int>(end.x), 
+					static_cast<int>(end.y));
+			}
 		}
 
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)

@@ -2735,9 +2735,15 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		{
 			const Color asel_color = ColorManager->get_corrected_color("target", Gdiplus::Color::Yellow);
 			const Pen asel_pen(asel_color, symbol_line_thickness);
-			const int asel_size = size + 2 * symbol_line_thickness + 2; // 2px spacing, plus compensation for thickness
-			graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size,
-			                     asel_size);
+			const int asel_size = size + 2 * symbol_line_thickness; // Effectively an outline on the main symbol
+			if (is_mlat(&rt))
+			{
+				graphics.DrawEllipse(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
+			}
+			else
+			{
+				graphics.DrawRectangle(&asel_pen, acPosPix.x - (asel_size / 2), acPosPix.y - (asel_size / 2), asel_size, asel_size);
+			}
 		}
 	}
 

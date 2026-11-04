@@ -3299,6 +3299,45 @@ void CSMRRadar::EuroScopePlugInExitCustom()
 	}
 }
 
+wchar_t CSMRRadar::AirborneTargetLetter(CRadarTarget* rt) const
+{
+	const std::string controller = rt->GetCorrelatedFlightPlan().GetTrackingControllerCallsign();
+	const std::string position = rt->GetCorrelatedFlightPlan().GetTrackingControllerId();
+	if (controller.length() < 6) return 'U';
+
+	const auto suffix = controller.substr(controller.length() - 3);
+
+	// These gubbins are fairly belux-specific but oh well
+	if (position == "BF") return 'F';
+
+	if (suffix == "APP") return 'A';
+	if (suffix == "DEP") return 'D';
+	if (suffix == "TWR") return 'T';
+
+	if (controller.starts_with("EBBU_W")) return 'W';
+	if (controller.starts_with("EBBU_E")) return 'E';
+
+	if (position == "BHLD" || position == "BHLW") return 'H';
+	
+	return 'U';
+}
+
+Color CSMRRadar::AirborneTargetColour(CRadarTarget* rt) const
+{
+	const auto fp = rt->GetCorrelatedFlightPlan().GetFlightPlanData();
+
+	if (fp.GetOrigin() == ActiveAirport)
+	{
+		return ColorManager->get_corrected_color("symbol", Color(64, 160, 255));
+	}
+
+	if (fp.GetDestination() == ActiveAirport)
+	{
+		return ColorManager->get_corrected_color("symbol", Color(211, 211, 0));
+	}
+	return ColorManager->get_corrected_color("symbol", Color::White);
+}
+
 void CSMRRadar::manually_correlate(const char* system_id)
 {
 	AcquireInProgress = NeedCorrelateCursor = false;

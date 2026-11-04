@@ -277,6 +277,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	CPen WhitePen(PS_SOLID, 1, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
 
 	const auto string_format = Gdiplus::StringFormat();
+	const auto untracked_brush = SolidBrush(
+		radar_screen->ColorManager->get_corrected_color("symbol", Color::Gray)
+	);
 
 	CRadarTarget rt;
 	for (rt = radar_screen->GetPlugIn()->RadarTargetSelectFirst();
@@ -304,6 +307,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		RtPoint = projectPoint(RtPos2);
 
 		CRadarTargetPositionData hPos = rt.GetPreviousPosition(rt.GetPosition());
+		RectF mesureRect;
 		for (int i = 1; i < radar_screen->Trail_App; i++) {
 			if (!hPos.IsValid())
 				continue;
@@ -320,22 +324,19 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (Is_Inside(RtPoint, appAreaVect)) {
 			dc.SelectObject(&WhitePen);
 
-			if (RtPos.GetTransponderC()) {
-				dc.MoveTo({ RtPoint.x, RtPoint.y - 4 });
-				dc.LineTo({ RtPoint.x - 4, RtPoint.y });
-				dc.LineTo({ RtPoint.x, RtPoint.y + 4 });
-				dc.LineTo({ RtPoint.x + 4, RtPoint.y });
-				dc.LineTo({ RtPoint.x, RtPoint.y - 4 });
+			if (is_mlat(&rt)) {
+				const auto letter = radar_screen->AirborneTargetLetter(&rt);
+				const auto colour = SolidBrush(radar_screen->AirborneTargetColour(&rt));
+
+				gdi->MeasureString(&letter, 1,
+					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
+
+				gdi->DrawString(&letter, 1, radar_screen->customFonts[radar_screen->currentFontSize],
+					PointF(RtPoint.x - mesureRect.Width / 2, RtPoint.y - mesureRect.Height / 2),
+					&string_format, &colour);
 			}
 			else {
-				dc.MoveTo(RtPoint.x, RtPoint.y);
-				dc.LineTo(RtPoint.x - 4, RtPoint.y - 4);
-				dc.MoveTo(RtPoint.x, RtPoint.y);
-				dc.LineTo(RtPoint.x + 4, RtPoint.y - 4);
-				dc.MoveTo(RtPoint.x, RtPoint.y);
-				dc.LineTo(RtPoint.x - 4, RtPoint.y + 4);
-				dc.MoveTo(RtPoint.x, RtPoint.y);
-				dc.LineTo(RtPoint.x + 4, RtPoint.y + 4);
+				gdi->FillRectangle(&untracked_brush, RtPoint.x - 4, RtPoint.y - 4, 8, 8);
 			}
 
 			CRect TargetArea(RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4);
@@ -453,7 +454,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		// First we need to figure out the tag size
 
 		int TagWidth = 0, TagHeight = 0;
-		RectF mesureRect;
 
 		mesureRect = RectF(0, 0, 0, 0);
 		gdi->MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN"),

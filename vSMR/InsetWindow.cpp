@@ -6,9 +6,22 @@ CInsetWindow::CInsetWindow(int Id, CSMRRadar* radar)
 {
 	m_Id = Id;
 	this->radar = radar;
+
+	// Make the button font!
+	LOGFONT lf;
+	memset(&lf, 0, sizeof(LOGFONT));
+	lf.lfHeight = topbar_height - 2 - 2; // 2 px padding around buttons
+	VERIFY(button_font.CreateFontIndirectA(&lf));
+
+	lf.lfHeight = topbar_height;
+	lf.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
+	VERIFY(title_font.CreateFontIndirectA(&lf));
 }
 
-CInsetWindow::~CInsetWindow() = default;
+CInsetWindow::~CInsetWindow()
+{
+	button_font.DeleteObject();
+}
 
 void CInsetWindow::setAirport(const string icao)
 {
@@ -160,7 +173,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			CBrush ButtonBrush(RGB(60, 60, 60));
 			dc->FillRect(Rect, &ButtonBrush);
 			dc->SetTextColor(RGB(0, 0, 0));
-			dc->TextOutA(Rect.left + 2, Rect.top, letter.c_str());
+			dc->DrawTextA(letter.c_str(), Rect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
 
 			if (mouseWithin(mouseLocation, Rect))
 				dc->Draw3dRect(Rect, RGB(45, 45, 45), RGB(75, 75, 75));
@@ -717,26 +730,29 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	dc.Draw3dRect(ResizeArea, RGB(0, 0, 0), RGB(0, 0, 0));
 
 	// Sides
-	//CBrush FrameBrush(RGB(35, 35, 35));
-	CBrush FrameBrush(RGB(127, 122, 122));
-	COLORREF TopBarTextColor(RGB(35, 35, 35));
+	CBrush FrameBrush(RGB(33, 39, 204));
+	COLORREF TopBarTextColor(RGB(255,255,255));
 	dc.FrameRect(windowAreaCRect, &FrameBrush);
 
 	// Topbar
 	TopLeft = windowAreaCRect.TopLeft();
-	TopLeft.y = TopLeft.y - 15;
+	TopLeft.y = TopLeft.y - topbar_height;
 	BottomRight = { windowAreaCRect.right, windowAreaCRect.top };
 	CRect TopBar(TopLeft, BottomRight);
 	TopBar.NormalizeRect();
 	dc.FillRect(TopBar, &FrameBrush);
-	POINT TopLeftText = { TopBar.left + 5, TopBar.bottom - dc.GetTextExtent("SRW 1").cy };
 	COLORREF oldTextColorC = dc.SetTextColor(TopBarTextColor);
 
 	radar_screen->AddScreenObject(m_Id, "topbar", TopBar, true, "");
 
-	string Toptext = "SRW " + std::to_string(m_Id - APPWINDOW_BASE);
-	dc.TextOutA(TopLeftText.x + (TopBar.right - TopBar.left) / 2 - dc.GetTextExtent("SRW 1").cx, TopLeftText.y, Toptext.c_str());
+	const auto old_font = dc.SelectObject(&title_font);
+	const string Toptext = "INSET " + std::to_string(m_Id - APPWINDOW_BASE);
+	CRect titleRect(TopBar);
+	titleRect.OffsetRect(2, 0);
+	dc.DrawText(Toptext.c_str(), titleRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 
+	// Select non-clipping font
+	dc.SelectObject(&button_font);
 	// Range button
 	CRect RangeRect = Utils::drawToolbarButton(&dc, "Z", TopBar, 29, mouseLocation);
 	radar_screen->AddScreenObject(m_Id, "range", RangeRect, false, "");
@@ -764,6 +780,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	dc.LineTo(CloseRect.BottomRight());
 	dc.MoveTo({ CloseRect.right - 1, CloseRect.top });
 	dc.LineTo({ CloseRect.left - 1, CloseRect.bottom });
+
+	// Reset font
+	dc.SelectObject(old_font);
 
 	if (mouseWithin(mouseLocation, CloseRect))
 		dc.Draw3dRect(CloseRect, RGB(45, 45, 45), RGB(75, 75, 75));

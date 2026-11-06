@@ -12,6 +12,10 @@ CInsetWindow::CInsetWindow(int Id, CSMRRadar* radar)
 	memset(&lf, 0, sizeof(LOGFONT));
 	lf.lfHeight = topbar_height - 2 - 2; // 2 px padding around buttons
 	VERIFY(button_font.CreateFontIndirectA(&lf));
+
+	lf.lfHeight = topbar_height;
+	lf.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
+	VERIFY(title_font.CreateFontIndirectA(&lf));
 }
 
 CInsetWindow::~CInsetWindow()
@@ -741,13 +745,14 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	radar_screen->AddScreenObject(m_Id, "topbar", TopBar, true, "");
 
+	const auto old_font = dc.SelectObject(&title_font);
 	const string Toptext = "INSET " + std::to_string(m_Id - APPWINDOW_BASE);
 	CRect titleRect(TopBar);
-	titleRect.OffsetRect(5, 0);
+	titleRect.OffsetRect(2, 0);
 	dc.DrawText(Toptext.c_str(), titleRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 
 	// Select non-clipping font
-	const auto old_font = dc.SelectObject(&button_font);
+	dc.SelectObject(&button_font);
 	// Range button
 	CRect RangeRect = Utils::drawToolbarButton(&dc, "Z", TopBar, 29, mouseLocation);
 	radar_screen->AddScreenObject(m_Id, "range", RangeRect, false, "");

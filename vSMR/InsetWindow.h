@@ -37,5 +37,6 @@ private:
 	CSMRRadar* radar;
 
 	CFont button_font;
+	CFont title_font;
 };
 

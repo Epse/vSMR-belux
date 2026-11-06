@@ -30,9 +30,12 @@ public:
 	virtual bool OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Area, bool released);
 	
 private:
+	static constexpr unsigned int topbar_height = 15;
 	string icao;
 	map<string, CPosition> AptPositions;
 
 	CSMRRadar* radar;
+
+	CFont button_font;
 };
 

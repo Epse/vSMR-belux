@@ -2,6 +2,8 @@
 #include "Config.hpp"
 #include <algorithm>
 
+#include "profiles.hpp"
+
 CConfig::CConfig(const string& configPath)
 {
 	config_path = configPath;
@@ -17,6 +19,15 @@ void CConfig::loadConfig() {
 	ifs.open(config_path.c_str(), std::ios::binary);
 	ss << ifs.rdbuf();
 	ifs.close();
+
+	std::vector<Profile> prfs;
+	const auto err = ProfileParser::parse(ss.str(), prfs);
+
+	if (err.has_value())
+	{
+		const std::string msg = "Config read error: " + err.value();
+		AfxMessageBox(msg.c_str(), MB_OK);
+	}
 
 	if (document.Parse<0>(ss.str().c_str()).HasParseError()) {
 		AfxMessageBox("An error parsing vSMR configuration occurred.\nOnce fixed, reload the config by typing '.smr reload'", MB_OK);

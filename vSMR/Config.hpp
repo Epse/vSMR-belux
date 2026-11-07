@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX // windows.h defines min/max as macros, which conflicts... lol
 #include <string>
 #include <fstream>
 #include <sstream>

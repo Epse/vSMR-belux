@@ -356,7 +356,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (Is_Inside(RtPoint, appAreaVect)) {
 			dc.SelectObject(&WhitePen);
 
-			const auto* brush = fp.GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush;
+
+			const auto* brush = radar_screen->is_problem(&rt) ? &problem_brush : (rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush);
 
 			if (is_mlat(&rt)) {
 				// Some bozo specced this as 13px irl...

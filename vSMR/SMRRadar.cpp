@@ -2640,7 +2640,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			base_font->GetFamily(&base_family);
 			const auto target_font = Gdiplus::Font(&base_family, base_font->GetSize(), FontStyleBold, base_font->GetUnit());
 
-			const auto* brush = rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush;
+			const auto* brush = is_problem(&rt) ? &problem_brush : (rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush);
 
 			if (is_mlat(&rt)) {
 				graphics.FillRectangle(brush, acPosPix.x - 6, acPosPix.y - 6, 12, 12);
@@ -2650,8 +2650,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			}
 		}
 
+		// Using the larger px size
 		if (mouseWithin(
-			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
+			{acPosPix.x - 8, acPosPix.y - 8, acPosPix.x + 8, acPosPix.y + 8}))
 		{
 			const auto acPosX = static_cast<int>(acPosPix.x);
 			const auto acPosY = static_cast<int>(acPosPix.y);
@@ -3438,4 +3439,16 @@ void CSMRRadar::cleanup_old_aircraft()
 string CSMRRadar::setActiveAirport(const string& value) {
 	airport_elevation = UIHelper::get_airport_elevation(value, DllPath).value_or(0);
 	return ActiveAirport = value;
+}
+
+bool CSMRRadar::is_problem(CRadarTarget* rt) const
+{
+	const auto fp = rt->GetCorrelatedFlightPlan();
+	if (strcmp(rt->GetPosition().GetSquawk(), fp.GetControllerAssignedData().GetSquawk()) != 0) return true;
+	
+	const auto assigned_alt = fp.GetControllerAssignedData().GetClearedAltitude();
+	const auto delta = abs(rt->GetPosition().GetPressureAltitude() - assigned_alt);
+	if (assigned_alt > 2 && delta >= 1000) return true; // Alt adherence
+
+	return false;
 }

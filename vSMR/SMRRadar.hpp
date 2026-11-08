@@ -369,4 +369,6 @@ public:
 		//delete CurrentConfig;
 		delete this;
 	};
+
+	bool is_problem(CRadarTarget* rt) const;
 };

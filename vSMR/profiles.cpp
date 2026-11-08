@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "profiles.hpp"
+#include <gdipluscolor.h>
 
 std::optional<std::string> ProfileParser::parse(const std::string& input, std::vector<Profile>& out)
 {
@@ -25,8 +26,8 @@ std::optional<std::string> ProfileParser::parse(const std::string& input, std::v
 Profile ProfileParser::parse_profile(const rapidjson::Value& value)
 {
 	const std::string name = !value.HasMember("name")
-								 ? throw std::runtime_error("Profile contains no name")
-								 : value["name"].GetString();
+		                         ? throw std::runtime_error("Profile contains no name")
+		                         : value["name"].GetString();
 
 	return {
 		name,
@@ -75,11 +76,13 @@ Gdiplus::Color ProfileParser::parse_color(const rapidjson::Value& value)
 
 	if (!value.HasMember("a"))
 	{
-		return clamp_byte(value["r"].GetInt()), clamp_byte(value["g"].GetInt()), clamp_byte(value["b"].GetInt());
+		return {clamp_byte(value["r"].GetInt()), clamp_byte(value["g"].GetInt()), clamp_byte(value["b"].GetInt())};
 	}
 	if (!value["a"].IsInt()) throw std::exception("Color a channel not numeric");
-	return clamp_byte(value["r"].GetInt()), clamp_byte(value["g"].GetInt()), clamp_byte(value["b"].GetInt()),
-		clamp_byte(value["a"].GetInt());
+	return {
+		clamp_byte(value["a"].GetInt()), clamp_byte(value["r"].GetInt()), clamp_byte(value["g"].GetInt()),
+		clamp_byte(value["b"].GetInt())
+	};
 }
 
 TagConfig ProfileParser::parse_tag_config(const rapidjson::Value& value)
@@ -138,20 +141,20 @@ FilterConfig ProfileParser::parse_filter(const rapidjson::Value& value)
 	const ProModeConfig pm{
 		.enable = get_bool_or_except(pro_obj, "enable", "pro mode missing enable"),
 		.accept_pilot_squawk = get_bool_or_except(pro_obj, "accept_pilot_squawk",
-												  "pro_mode missing accept_pilot_squawk"),
+		                                          "pro_mode missing accept_pilot_squawk"),
 		.do_not_autocorrelate_squawks = parse_strings(get_array_or_except(
 			pro_obj, "do_not_autocorrelate_squawks", "Expected string array do_not_autocorrelate_squawks in filters"))
 	};
 
 	return {
 		.hide_above_alt = get_int_or_except(value, "hide_above_alt",
-											"Filters missing hide_above_alt or not numeric"),
+		                                    "Filters missing hide_above_alt or not numeric"),
 		.hide_above_speed = get_int_or_except(value, "hide_above_spd",
-											  "Filters hide_above_spd missing or not numeric"),
+		                                      "Filters hide_above_spd missing or not numeric"),
 		.radar_range_nm = get_uint_or_except(value, "radar_range_nm",
-											 "Filters radar_range_nm missing or not numeric"),
+		                                     "Filters radar_range_nm missing or not numeric"),
 		.night_alpha_setting = get_byte_or_except(value, "night_alpha_setting",
-												  "Filters night_alpha_setting missing or not numeric"),
+		                                          "Filters night_alpha_setting missing or not numeric"),
 		.pro_mode = pm,
 	};
 }
@@ -160,15 +163,12 @@ LabelConfig ProfileParser::parse_labels(const rapidjson::Value& value)
 {
 	if (!value.IsObject()) throw std::runtime_error("Expected labels config to be object");
 
-	std::map<std::string, Gdiplus::Color> groundstatus_colors;
-
-	for (auto& kv : get_object_or_except(value, "groundstatus_colors", "expected groundstatus_colors"))
-	{
-		groundstatus_colors[kv.name.GetString()] = kv.value.IsObject()
-													   ? parse_color(kv.value.GetObj())
-													   : throw std::runtime_error(
-														   "Expect colors in groundstatus_colors");
-	}
+	const auto& gstatus_obj = get_object_or_except(value, "groundstatus_colors", "Expected groundstatus_colors");
+	GroundStatusColors groundstatus_colors{
+		.push = parse_color(get_object_or_except(gstatus_obj, "push", "Groundstatus_colors requires push")),
+		.taxi = parse_color(get_object_or_except(gstatus_obj, "taxi", "Groundstatus_colors requires taxi")),
+		.depa = parse_color(get_object_or_except(gstatus_obj, "depa", "Groundstatus_colors requires depa")),
+	};
 
 	const auto dep_obj = get_object_or_except(value, "departure", "labels requires departure field");
 	const auto air_obj = get_object_or_except(value, "airborne", "labels requires airborne field");
@@ -177,12 +177,12 @@ LabelConfig ProfileParser::parse_labels(const rapidjson::Value& value)
 
 	return {
 		.auto_deconfliction = get_bool_or_except(value, "auto_deconfliction",
-												 "Expected bool auto_deconfliction in labels"),
+		                                         "Expected bool auto_deconfliction in labels"),
 		.use_aspeed_for_gate = get_bool_or_except(value, "use_aspeed_for_gate",
-												  "Expected bool use_aspeed_for_gate in labels"),
+		                                          "Expected bool use_aspeed_for_gate in labels"),
 		.squawk_error_color = parse_color(
 			get_object_or_except(value, "squawk_error_color",
-								 "Expected color object squawk_error_color in labels")),
+			                     "Expected color object squawk_error_color in labels")),
 		.groundstatus_colors = groundstatus_colors,
 		.departure = {
 			departure,
@@ -193,7 +193,7 @@ LabelConfig ProfileParser::parse_labels(const rapidjson::Value& value)
 		.airborne = {
 			airborne,
 			get_bool_or_except(air_obj, "use_departure_arrival_coloring",
-							   "airborne label requires use_departure_arrival_coloring")
+			                   "airborne label requires use_departure_arrival_coloring")
 		},
 		.uncorrelated = parse_tag_config(
 			get_object_or_except(value, "uncorrelated", "labels requires uncorrelated field")),
@@ -209,13 +209,13 @@ RimcasConfig ProfileParser::parse_rimcas(const rapidjson::Value& value)
 		.timer = parse_uints(get_array_or_except(value, "timer", "Expected rimcas timer list")),
 		.timer_lvp = parse_uints(get_array_or_except(value, "timer_lvp", "Expected rimcas timer_lvp list")),
 		.stage_two_speed_threshold = get_uint_or_except(value, "rimcas_stage_two_speed_threshold",
-														"Expected rimcas_stage_two_speed_threshold"),
+		                                                "Expected rimcas_stage_two_speed_threshold"),
 		.background_color_stage_one = parse_color(
 			get_object_or_except(value, "background_color_stage_one",
-								 "Rimcas expected background_color_stage_one")),
+			                     "Rimcas expected background_color_stage_one")),
 		.background_color_stage_two = parse_color(
 			get_object_or_except(value, "background_color_stage_two",
-								 "Rimcas expected background_color_stage_two")),
+			                     "Rimcas expected background_color_stage_two")),
 		.alert_text_color = parse_color(
 			get_object_or_except(value, "alert_text_color", "Rimcas expected alert_text_color"))
 	};
@@ -228,9 +228,12 @@ TargetConfig ProfileParser::parse_targets(const rapidjson::Value& value)
 	return {
 		.show_primary_target = get_bool_or_except(value, "show_primary_target", "Targets expected show_primary_target"),
 		.target_color = parse_color(get_object_or_except(value, "target_color", "Targets expected target_color")),
-		.history_one_color = parse_color(get_object_or_except(value, "history_one_color", "Targets expected history_one_color")),
-		.history_two_color = parse_color(get_object_or_except(value, "history_two_color", "Targets expected history_two_color")),
-		.history_three_color = parse_color(get_object_or_except(value, "history_three_color", "Targets expected history_three_color")),
+		.history_one_color = parse_color(
+			get_object_or_except(value, "history_one_color", "Targets expected history_one_color")),
+		.history_two_color = parse_color(
+			get_object_or_except(value, "history_two_color", "Targets expected history_two_color")),
+		.history_three_color = parse_color(
+			get_object_or_except(value, "history_three_color", "Targets expected history_three_color")),
 	};
 }
 
@@ -239,11 +242,16 @@ ApproachInsetsConfig ProfileParser::parse_insets(const rapidjson::Value& value)
 	if (!value.IsObject()) throw std::runtime_error("Expected insets config to be object");
 
 	return {
-		.extended_lines_length = get_uint_or_except(value, "extended_lines_length", "Approach insets expected extended_lines_length"),
-		.extended_lines_tick_spacing = get_uint_or_except(value, "extended_lines_ticks_spacing", "Approach insets expected extended_lines_ticks_spacing"),
-		.extended_lines_color = parse_color(get_object_or_except(value, "extended_lines_color", "Approach insets expected extended_lines_color")),
-		.runway_color = parse_color(get_object_or_except(value, "runway_color", "Approach insets expected runway_color")),
-		.background_color = parse_color(get_object_or_except(value, "background_color", "Approach insets expected background_color")),
+		.extended_lines_length = get_uint_or_except(value, "extended_lines_length",
+		                                            "Approach insets expected extended_lines_length"),
+		.extended_lines_tick_spacing = get_uint_or_except(value, "extended_lines_ticks_spacing",
+		                                                  "Approach insets expected extended_lines_ticks_spacing"),
+		.extended_lines_color = parse_color(
+			get_object_or_except(value, "extended_lines_color", "Approach insets expected extended_lines_color")),
+		.runway_color = parse_color(
+			get_object_or_except(value, "runway_color", "Approach insets expected runway_color")),
+		.background_color = parse_color(
+			get_object_or_except(value, "background_color", "Approach insets expected background_color")),
 	};
 }
 
@@ -268,7 +276,8 @@ std::vector<CPosition> ProfileParser::parse_path(const rapidjson::Value& value)
 		const auto coords = point.GetArray();
 		if (coords.Size() != 2) throw std::runtime_error("Path entry must be 2 entry coordinate array");
 		CPosition x;
-		x.LoadFromStrings(coords[0].GetString(), coords[1].GetString());
+		const auto success = x.LoadFromStrings(coords[1].GetString(), coords[0].GetString());
+		if (!success) throw std::runtime_error("Could not parse path point, did you flip latitude and longitude?");
 		path.emplace_back(x);
 	}
 

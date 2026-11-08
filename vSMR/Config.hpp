@@ -1,18 +1,11 @@
 #pragma once
 #define NOMINMAX // windows.h defines min/max as macros, which conflicts... lol
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <map>
 #include <vector>
 #include <Gdiplus.h>
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "Constant.hpp"
+#include "profiles.hpp"
 
 using namespace std;
-using namespace rapidjson;
 
 class CConfig
 {
@@ -20,47 +13,39 @@ public:
 	CConfig(const string& configPath);
 	virtual ~CConfig();
 
-	const Value& getActiveProfile();
-	bool isSidColorAvail(const string& sid, const string& airport);
-	Gdiplus::Color getSidColor(const string& sid, const string& airport);
-	const Value& getAirportMapIfAny(const string& airport);
-	bool isAirportMapAvail(const string& airport);
-	bool isCustomRunwayAvail(const string& airport, const string& name1, const string& name2);
-	bool isCustomCursorUsed();
+	const Profile& getActiveProfile() const
+	{
+		return *active_profile;
+	}
+	const std::string& getActiveProfileName() const
+	{
+		return active_profile->name;
+	}
+	std::optional<Gdiplus::Color> sid_color(const string& sid, const string& airport) const;
+	std::optional<MapConfig> get_airport_map_if_any(const string& airport) const;
+	bool is_airport_map_avail(const string& airport) const;
+	std::optional<Runway> custom_runway(const string& airport, const string& name1, const string& name2) const;
+	bool is_custom_cursor_used();
 
-	static Gdiplus::Color getConfigColor(const Value& config_path);
-	COLORREF getConfigColorRef(const Value& config_path);
+	vector<string> all_profile_names() const;
 
-	vector<string> getAllProfiles();
-
-	inline int isItActiveProfile(const string& toTest) {
-		if (active_profile == profiles[toTest])
-			return 1;
-		return 0;
-	};
-
-	inline void setActiveProfile(const string& newProfile) {
-		active_profile = profiles[newProfile];
-	};
-
-	inline string getActiveProfileName() {
-		string name;
-		for (auto it = profiles.begin(); it != profiles.end(); ++it)
+	inline void set_active_profile(const string& newProfile)
+	{
+		for (auto& profile : profiles)
 		{
-			if (it->second == active_profile) {
-				name = it->first;
-				break;
-			}
+			if (profile.name == newProfile) active_profile = &profile;
 		}
-		return name;
-	};
+	}
 
-	Document document;
+	const Profile& operator*() const
+	{
+		return *active_profile;
+	}
 
 protected:
 	string config_path;
-	rapidjson::SizeType active_profile;
-	map<string, rapidjson::SizeType> profiles;
+	Profile* active_profile;
+	vector<Profile> profiles;
 
 	void loadConfig();
 };

@@ -35,8 +35,8 @@ public:
 
 	map<string, RunwayAreaType> RunwayAreas;
 	multimap<string, string> AcOnRunway;
-	vector<int> CountdownDefinition;
-	vector<int> CountdownDefinitionLVP;
+	vector<unsigned int> CountdownDefinition;
+	vector<unsigned int> CountdownDefinitionLVP;
 	multimap<string, string> ApproachingAircrafts;
 	map<string, map<int, string>> TimeTable;
 	map<string, bool> MonitoredRunwayDep;
@@ -119,7 +119,7 @@ public:
 
 	RimcasAlertTypes getAlert(const string& callsign);
 
-	void setCountdownDefinition(const vector<int>& data, const vector<int>& dataLVP)
+	void setCountdownDefinition(const vector<unsigned int>& data, const vector<unsigned int>& dataLVP)
 	{
 		CountdownDefinition = data;
 		std::sort(CountdownDefinition.begin(), CountdownDefinition.end(), std::greater<int>());

@@ -187,7 +187,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	icao = radar_screen->ActiveAirport;
 	AptPositions = radar_screen->AirportPositions;
 
-	COLORREF qBackgroundColor = radar_screen->CurrentConfig->getConfigColorRef(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["background_color"]);
+	COLORREF qBackgroundColor = radar_screen->CurrentConfig->getActiveProfile().approach_insets.background_color.ToCOLORREF();
 	CRect windowAreaCRect(m_Area);
 	windowAreaCRect.NormalizeRect();
 
@@ -209,8 +209,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (startsWith(icao.c_str(), rwy.GetAirportName()))
 		{
 
-			CPen RunwayPen(PS_SOLID, 1, radar_screen->CurrentConfig->getConfigColorRef(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["runway_color"]));
-			CPen ExtendedCentreLinePen(PS_SOLID, 1, radar_screen->CurrentConfig->getConfigColorRef(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["extended_lines_color"]));
+			CPen RunwayPen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color.ToCOLORREF());
+			const auto centreline_color = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF();
+			CPen ExtendedCentreLinePen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF());
 			CPen* oldPen = dc.SelectObject(&RunwayPen);
 
 			CPosition EndOne, EndTwo;
@@ -244,7 +245,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 
 				double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
-				double lenght = double(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["extended_lines_length"].GetDouble()) * 1852.0;
+				double lenght = static_cast<double>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
 
 				// Drawing the extended centreline
 				CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
@@ -259,9 +260,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				}
 
 				// Drawing the ticks
-				int increment = radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["extended_lines_ticks_spacing"].GetInt() * 1852;
+				int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
 
-				for (int j = increment; j <= int(radar_screen->CurrentConfig->getActiveProfile()["approach_insets"]["extended_lines_length"].GetInt() * 1852); j += increment) {
+				for (int j = increment; j <= static_cast<int>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length * 1852); j += increment) {
 
 					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, j);
 					CPosition tickBottom = BetterHarversine(tickPosition, fmod(reverseHeading - 90, 360), 500);
@@ -299,7 +300,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		rt.IsValid();
 		rt = radar_screen->GetPlugIn()->RadarTargetSelectNext(rt))
 	{
-		int radarRange = radar_screen->CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
+		int radarRange = radar_screen->CurrentConfig->getActiveProfile().filters.radar_range_nm;
 
 		if (rt.GetGS() < 60 ||
 			rt.GetPosition().GetPressureAltitude() > m_Filter ||
@@ -451,7 +452,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			TagType = TagTypes::Airborne;
 
 			// Is "use_departure_arrival_coloring" enabled? if not, then use the airborne colors
-			bool useDepArrColors = radar_screen->CurrentConfig->getActiveProfile()["labels"]["airborne"]["use_departure_arrival_coloring"].GetBool();
+			bool useDepArrColors = radar_screen->CurrentConfig->getActiveProfile().labels.airborne.use_departure_arrival_coloring;
 			if (!useDepArrColors) {
 				ColorTagType = TagTypes::Airborne;
 			}
@@ -473,17 +474,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
 		int oneLineHeight = (int)mesureRect.GetBottom();
 
-		const Value& LabelsSettings = radar_screen->CurrentConfig->getActiveProfile()["labels"];
-		const Value& LabelLines = LabelsSettings[Utils::getEnumString(TagType).c_str()]["definition"];
+		const LabelConfig& LabelsSettings = radar_screen->CurrentConfig->getActiveProfile().labels;
+		const auto LabelLines = LabelsSettings.lines(TagType);
 		vector<vector<string>> ReplacedLabelLines;
 
-		if (!LabelLines.IsArray())
-			return;
-
-		for (unsigned int i = 0; i < LabelLines.Size(); i++)
+		for (const auto& line : LabelLines)
 		{
 
-			const Value& line = LabelLines[i];
 			vector<string> lineStringArray;
 
 			// Adds one line height
@@ -491,14 +488,11 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			int TempTagWidth = 0;
 
-			for (unsigned int j = 0; j < line.Size(); j++)
+			for (const auto& original : line)
 			{
 				mesureRect = RectF(0, 0, 0, 0);
-				string element = line[j].GetString();
 
-				for (auto& kv : TagReplacingMap)
-					replaceAll(element, kv.first, kv.second);
-
+				std::string element = TagReplacingMap.contains(original) ? TagReplacingMap[original] : original;
 				lineStringArray.push_back(element);
 
 				wstring wstr = wstring(element.begin(), element.end());
@@ -517,32 +511,38 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		// Pfiou, done with that, now we can draw the actual rectangle.
 
 		// We need to figure out if the tag color changes according to RIMCAS alerts, or not
-		bool rimcasLabelOnly = radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["rimcas_label_only"].GetBool();
+		bool rimcasLabelOnly = radar_screen->CurrentConfig->getActiveProfile().rimcas.rimcas_label_only;
 
-		Color definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color"]);
+		Color definedBackgroundColor = LabelsSettings.background_color(ColorTagType);
 		if (TagType == TagTypes::Departure) {
-			if (!TagReplacingMap["sid"].empty() && radar_screen->CurrentConfig->isSidColorAvail(TagReplacingMap["sid"], radar_screen->getActiveAirport())) {
-				definedBackgroundColor = radar_screen->CurrentConfig->getSidColor(TagReplacingMap["sid"], radar_screen->getActiveAirport());
+			if (!TagReplacingMap["sid"].empty())
+			{
+				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor);
+			}
+			if (!TagReplacingMap["sid"].empty()) {
+				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor	);
 			}
 
-			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nosid_color")) {
-				definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nosid_color"]);
+			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && ColorTagType == TagTypes::Departure)
+			{
+				definedBackgroundColor = LabelsSettings.departure.nosid_color;
 			}
 		}
-		if (TagReplacingMap["actype"] == "NoFPL" && LabelsSettings[Utils::getEnumString(ColorTagType).c_str()].HasMember("nofpl_color")) {
-			definedBackgroundColor = radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
+
+		if (TagReplacingMap["actype"] == "NoFPL" && ColorTagType == TagTypes::Departure) {
+			definedBackgroundColor = LabelsSettings.departure.nofpl_color;
 		}
 
 		Color TagBackgroundColor = radar_screen->RimcasInstance->GetAircraftColor(rt.GetCallsign(),
 			definedBackgroundColor,
-			radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]),
-			radar_screen->CurrentConfig->getConfigColor(radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_one"]),
-			radar_screen->CurrentConfig->getConfigColor(radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_two"]));
+			LabelsSettings.background_color_on_runway(ColorTagType),
+			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
+			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_two);
 
 		if (rimcasLabelOnly)
 			TagBackgroundColor = radar_screen->RimcasInstance->GetAircraftColor(rt.GetCallsign(),
 				definedBackgroundColor,
-				radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["background_color_on_runway"]));
+				LabelsSettings.background_color_on_runway(ColorTagType));
 
 		CRect TagBackgroundRect(TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2), TagCenter.x + (TagWidth / 2), TagCenter.y + (TagHeight / 2));
 
@@ -554,10 +554,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			gdi->FillRectangle(&TagBackgroundBrush, CopyRect(TagBackgroundRect));
 
 			SolidBrush FontColor(radar_screen->ColorManager->get_corrected_color("label",
-				radar_screen->CurrentConfig->getConfigColor(LabelsSettings[Utils::getEnumString(ColorTagType).c_str()]["text_color"])));
+				LabelsSettings.text_color(ColorTagType)));
 			SolidBrush SquawkErrorColor(radar_screen->ColorManager->get_corrected_color("label",
-				radar_screen->CurrentConfig->getConfigColor(LabelsSettings["squawk_error_color"])));
-			SolidBrush RimcasTextColor(radar_screen->CurrentConfig->getConfigColor(radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["alert_text_color"]));
+				LabelsSettings.squawk_error_color));
+			SolidBrush RimcasTextColor(radar_screen->CurrentConfig->getActiveProfile().rimcas.alert_text_color);
 
 			int heightOffset = 0;
 			for (auto&& line : ReplacedLabelLines)
@@ -609,8 +609,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			if (rimcasLabelOnly) {
 				Color RimcasLabelColor = radar_screen->RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
-					radar_screen->CurrentConfig->getConfigColor(radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_one"]),
-					radar_screen->CurrentConfig->getConfigColor(radar_screen->CurrentConfig->getActiveProfile()["rimcas"]["background_color_stage_two"]));
+			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
+			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_two);
 
 				if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF()) {
 					int rimcas_height = 0;
@@ -655,7 +655,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		CRadarTarget one = radar_screen->GetPlugIn()->RadarTargetSelect(kv.first.c_str());
 		CRadarTarget two = radar_screen->GetPlugIn()->RadarTargetSelect(kv.second.c_str());
 
-		int radarRange = radar_screen->CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
+		int radarRange = radar_screen->CurrentConfig->getActiveProfile().filters.radar_range_nm;
 
 		if (one.GetGS() < 60 ||
 			one.GetPosition().GetPressureAltitude() > m_Filter ||
@@ -759,7 +759,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	// Filter button
 	CRect FilterRect = Utils::drawToolbarButton(&dc, "F", TopBar, 42, mouseLocation);
-	radar_screen->AddScreenObject(m_Id, "filter", FilterRect, false, "");
+	radar_screen->AddScreenObject(m_Id, "filters", FilterRect, false, "");
 
 	// Rotate button
 	CRect RotateRect = Utils::drawToolbarButton(&dc, "R", TopBar, 55, mouseLocation);

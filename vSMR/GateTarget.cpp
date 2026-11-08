@@ -39,7 +39,7 @@ void GateTarget::loadGates()
 		return;
 	}
 
-	Document doc;
+	rapidjson::Document doc;
 	doc.Parse<0>(maybe_json->c_str());
 
 	if (doc.HasParseError())
@@ -48,9 +48,9 @@ void GateTarget::loadGates()
 		return;
 	}
 
-	for (SizeType i = 0; i < doc.Size(); i++)
+	for (rapidjson::SizeType i = 0; i < doc.Size(); i++)
 	{
-		const Value& val = doc[i];
+		const rapidjson::Value& val = doc[i];
 		const std::string airport = val["airport"].GetString();
 		const std::string gate_name = val["gate"].GetString();
 

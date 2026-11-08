@@ -7,6 +7,8 @@
 #include <vector>
 #include <rapidjson/document.h>
 
+#include "TagTypes.hpp"
+
 #define ensure_has_int(_v, __f, msg) if (!(_v).HasMember(__f) || !(_v)[__f].IsInt()) throw std::runtime_error(msg)
 #define ensure_has_string(_v, __f, msg) if (!(_v).HasMember(__f) || !(_v)[__f].IsString()) throw std::runtime_error(msg)
 #define ensure_has_array(_v, __f, msg) if (!(_v).HasMember(__f) || !(_v)[__f].IsArray()) throw std::runtime_error(msg);
@@ -66,17 +68,84 @@ struct AirborneConfig : public TagConfig
 	bool use_departure_arrival_coloring;
 };
 
+struct GroundStatusColors
+{
+	Gdiplus::Color push;
+	Gdiplus::Color taxi;
+	Gdiplus::Color depa;
+};
+
 struct LabelConfig
 {
 	bool auto_deconfliction;
 	bool use_aspeed_for_gate;
 	Gdiplus::Color squawk_error_color;
-	std::map<std::string, Gdiplus::Color> groundstatus_colors;
+	GroundStatusColors groundstatus_colors;
 
 	DepartureConfig departure;
 	TagConfig arrival;
 	AirborneConfig airborne;
 	TagConfig uncorrelated;
+
+	const std::vector<std::vector<std::string>>& lines(const TagTypes& type) const
+	{
+		switch (type)
+		{
+		case TagTypes::Airborne:
+			return airborne.definition;
+		case TagTypes::Arrival:
+			return arrival.definition;
+		case TagTypes::Departure:
+			return departure.definition;
+		case TagTypes::Uncorrelated:
+			return uncorrelated.definition;
+		}
+	}
+
+	Gdiplus::Color background_color(const TagTypes& type) const
+	{
+		switch (type)
+		{
+		case TagTypes::Airborne:
+			return airborne.background_color;
+		case TagTypes::Arrival:
+			return arrival.background_color;
+		case TagTypes::Departure:
+			return departure.background_color;
+		case TagTypes::Uncorrelated:
+			return uncorrelated.background_color;
+		}
+	}
+
+	Gdiplus::Color background_color_on_runway(const TagTypes& type) const
+	{
+		switch (type)
+		{
+		case TagTypes::Airborne:
+			return airborne.background_color_on_runway;
+		case TagTypes::Arrival:
+			return arrival.background_color_on_runway;
+		case TagTypes::Departure:
+			return departure.background_color_on_runway;
+		case TagTypes::Uncorrelated:
+			return uncorrelated.background_color_on_runway;
+		}
+	}
+
+	Gdiplus::Color text_color(const TagTypes& type) const
+	{
+		switch (type)
+		{
+		case TagTypes::Airborne:
+			return airborne.text_color;
+		case TagTypes::Arrival:
+			return arrival.text_color;
+		case TagTypes::Departure:
+			return departure.text_color;
+		case TagTypes::Uncorrelated:
+			return uncorrelated.text_color;
+		}
+	}
 };
 
 struct RimcasConfig
@@ -131,7 +200,7 @@ struct Profile
 {
 	std::string name;
 	FontConfig font;
-	FilterConfig filter;
+	FilterConfig filters;
 	LabelConfig labels;
 	RimcasConfig rimcas;
 	TargetConfig targets;

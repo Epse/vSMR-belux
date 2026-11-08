@@ -137,7 +137,7 @@ string CRimcas::GetAcInRunwayAreaSoon(CRadarTarget Ac, CRadarScreen* instance, b
 			{
 				// The aircraft is going to be on the runway, we need to decide where it needs to be shown on the AIW
 				bool first = true;
-				vector<int> Definiton = CountdownDefinition;
+				vector<unsigned int> Definiton = CountdownDefinition;
 				if (IsLVP)
 					Definiton = CountdownDefinitionLVP;
 				for (size_t k = 0; k < Definiton.size(); k++)

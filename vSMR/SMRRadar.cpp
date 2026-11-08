@@ -2261,7 +2261,7 @@ map<string, string> CSMRRadar::GenerateTagData(CRadarTarget rt, CFlightPlan fp, 
 	TagReplacingMap["systemid"].append(tpss.substr(1, 6));
 
 	// aalt: Assigned altitude
-	TagReplacingMap["aalt"] = UIHelper::altitude(fp.GetClearedAltitude(), GetPlugIn()->GetTransitionAltitude());
+	TagReplacingMap["aalt"] = UIHelper::altitude(fp.GetControllerAssignedData().GetClearedAltitude(), GetPlugIn()->GetTransitionAltitude());
 
 	// space: A literal space
 	TagReplacingMap["space"] = " ";

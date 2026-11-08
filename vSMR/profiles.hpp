@@ -159,9 +159,17 @@ struct RimcasConfig
 	Gdiplus::Color alert_text_color;
 };
 
+struct AirborneTargetConfig
+{
+	Gdiplus::Color problem;
+	Gdiplus::Color assumed;
+	Gdiplus::Color unassumed;
+};
+
 struct TargetConfig
 {
 	bool show_primary_target;
+	AirborneTargetConfig airborne;
 	Gdiplus::Color target_color;
 	Gdiplus::Color history_one_color;
 	Gdiplus::Color history_two_color;
@@ -250,6 +258,8 @@ private:
 	static LabelConfig parse_labels(const rapidjson::Value& value);
 
 	static RimcasConfig parse_rimcas(const rapidjson::Value& value);
+
+	static AirborneTargetConfig parse_airborne_targets(const rapidjson::Value& value);
 
 	static TargetConfig parse_targets(const rapidjson::Value& value);
 

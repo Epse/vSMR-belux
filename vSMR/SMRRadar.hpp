@@ -370,6 +370,5 @@ public:
 		delete this;
 	};
 
-	wchar_t AirborneTargetLetter(CRadarTarget* rt) const;
-	Color AirborneTargetColour(CRadarTarget* rt) const;
+	bool is_problem(CRadarTarget* rt) const;
 };

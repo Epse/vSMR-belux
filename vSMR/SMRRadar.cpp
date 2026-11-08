@@ -2546,6 +2546,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		ColorManager->get_corrected_color("symbol", Color::Gray)
 	);
 	const unsigned char half_size = size / 2;
+
+	const SolidBrush assumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.assumed));
+	const SolidBrush unassumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.unassumed));
+	const SolidBrush problem_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.problem));
+
 	// Then go be clever
 	EuroScopePlugIn::CRadarTarget rt;
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
@@ -2570,6 +2575,38 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		draw_after_glow(rt, graphics);
 
+
+		constexpr float symbol_line_thickness = 2.0;
+		// Draw target symbols
+		const Color symbol_color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+		const Pen symbol_pen(symbol_color, symbol_line_thickness);
+
+		// Predicted Track Line
+		const auto line_length = is_airborne(&rt) ? AirborneSpeedVector : PredictedLength;
+		if (line_length > 0 || AlwaysVector || alt_mode)
+		{
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
+			if (AlwaysVector || alt_mode)
+				meters = max(meters, symbol_size_meters);
+
+			if (meters > 0)
+			{
+				const auto track = rt.GetTrackHeading();
+				const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
+				const auto gs = rt.GetPosition().GetReportedGS();
+				const double angle = track < 0 || gs < 1 ? head : track;
+				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
+
+				const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
+				graphics.DrawLine(
+					&symbol_pen, 
+					static_cast<int>(start.x), 
+					static_cast<int>(start.y), 
+					static_cast<int>(end.x), 
+					static_cast<int>(end.y));
+			}
+		}
 
 		if (CurrentConfig->getActiveProfile().targets.show_primary_target && !is_airborne(&rt))
 		{
@@ -2596,32 +2633,26 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
-		if (is_airborne(&rt) && correlated)
+		if (is_airborne(&rt))
 		{
-			const auto colour = SolidBrush(AirborneTargetColour(&rt));
-			const auto letter = AirborneTargetLetter(&rt);
 			const auto base_font = customFonts[currentFontSize + 10];
 			FontFamily base_family;
 			base_font->GetFamily(&base_family);
 			const auto target_font = Gdiplus::Font(&base_family, base_font->GetSize(), FontStyleBold, base_font->GetUnit());
 
-			RectF measure;
-			graphics.MeasureString(&letter, 1, &target_font, PointF(0, 0), &measure);
+			const auto* brush = is_problem(&rt) ? &problem_brush : (rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush);
 
-			graphics.DrawString(&letter, 1, &target_font, PointF(acPosPix.x - measure.Width / 2, acPosPix.y - measure.Height / 2), &colour);
+			if (is_mlat(&rt)) {
+				graphics.FillRectangle(brush, acPosPix.x - 6, acPosPix.y - 6, 12, 12);
+			}
+			else {
+				graphics.FillEllipse(brush, acPosPix.x - 8, acPosPix.y - 8, 16, 16);
+			}
 		}
 
-		if (is_airborne(&rt) && !correlated)
-		{
-			graphics.FillRectangle(&untracked_brush, acPosPix.x - 4, acPosPix.y - 4, 8, 8);
-		}
-
-		constexpr float symbol_line_thickness = 2.0;
-		// Draw target symbols
-		const Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-		const Pen symbol_pen(color, symbol_line_thickness);
+		// Using the larger px size
 		if (mouseWithin(
-			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
+			{acPosPix.x - 8, acPosPix.y - 8, acPosPix.x + 8, acPosPix.y + 8}))
 		{
 			const auto acPosX = static_cast<int>(acPosPix.x);
 			const auto acPosY = static_cast<int>(acPosPix.y);
@@ -2670,39 +2701,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                }, false,
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
-		// Predicted Track Line
-		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + AIRBORNE_MARGIN_FT);
-		const auto line_length = is_airborne ? AirborneSpeedVector : PredictedLength;
-		if (line_length > 0 || AlwaysVector || alt_mode)
-		{
-			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
-			if (AlwaysVector || alt_mode)
-				meters = max(meters, symbol_size_meters);
-
-			if (meters > 0)
-			{
-				const auto track = rt.GetTrackHeading();
-				const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
-				const auto gs = rt.GetPosition().GetReportedGS();
-				const double angle = track < 0 || gs < 1 ? head : track;
-				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
-				CPosition StartWorld = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters > 2 * symbol_size_meters ? symbol_size_meters : 0);
-
-				const POINT start = ConvertCoordFromPositionToPixel(StartWorld);
-				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-				graphics.DrawLine(
-					&symbol_pen, 
-					static_cast<int>(start.x), 
-					static_cast<int>(start.y), 
-					static_cast<int>(end.x), 
-					static_cast<int>(end.y));
-			}
-		}
-
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		if (is_airborne)
+		if (is_airborne(&rt))
 		{
 			continue;
 		}
@@ -3269,45 +3271,6 @@ void CSMRRadar::EuroScopePlugInExitCustom()
 	}
 }
 
-wchar_t CSMRRadar::AirborneTargetLetter(CRadarTarget* rt) const
-{
-	const std::string controller = rt->GetCorrelatedFlightPlan().GetTrackingControllerCallsign();
-	const std::string position = rt->GetCorrelatedFlightPlan().GetTrackingControllerId();
-	if (controller.length() < 6) return 'U';
-
-	const auto suffix = controller.substr(controller.length() - 3);
-
-	// These gubbins are fairly belux-specific but oh well
-	if (position == "BF") return 'F';
-
-	if (suffix == "APP") return 'A';
-	if (suffix == "DEP") return 'D';
-	if (suffix == "TWR") return 'T';
-
-	if (controller.starts_with("EBBU_W")) return 'W';
-	if (controller.starts_with("EBBU_E")) return 'E';
-
-	if (position == "BHLD" || position == "BHLW") return 'H';
-	
-	return 'U';
-}
-
-Color CSMRRadar::AirborneTargetColour(CRadarTarget* rt) const
-{
-	const auto fp = rt->GetCorrelatedFlightPlan().GetFlightPlanData();
-
-	if (fp.GetOrigin() == ActiveAirport)
-	{
-		return ColorManager->get_corrected_color("symbol", Color(64, 160, 255));
-	}
-
-	if (fp.GetDestination() == ActiveAirport)
-	{
-		return ColorManager->get_corrected_color("symbol", Color(211, 211, 0));
-	}
-	return ColorManager->get_corrected_color("symbol", Color::White);
-}
-
 void CSMRRadar::manually_correlate(const char* system_id)
 {
 	AcquireInProgress = NeedCorrelateCursor = false;
@@ -3476,4 +3439,16 @@ void CSMRRadar::cleanup_old_aircraft()
 string CSMRRadar::setActiveAirport(const string& value) {
 	airport_elevation = UIHelper::get_airport_elevation(value, DllPath).value_or(0);
 	return ActiveAirport = value;
+}
+
+bool CSMRRadar::is_problem(CRadarTarget* rt) const
+{
+	const auto fp = rt->GetCorrelatedFlightPlan();
+	if (strcmp(rt->GetPosition().GetSquawk(), fp.GetControllerAssignedData().GetSquawk()) != 0) return true;
+	
+	const auto assigned_alt = fp.GetControllerAssignedData().GetClearedAltitude();
+	const auto delta = abs(rt->GetPosition().GetPressureAltitude() - assigned_alt);
+	if (assigned_alt > 2 && delta >= 1000) return true; // Alt adherence
+
+	return false;
 }

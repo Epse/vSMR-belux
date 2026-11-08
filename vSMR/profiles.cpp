@@ -221,12 +221,24 @@ RimcasConfig ProfileParser::parse_rimcas(const rapidjson::Value& value)
 	};
 }
 
+AirborneTargetConfig ProfileParser::parse_airborne_targets(const rapidjson::Value& value)
+{
+	if (!value.IsObject()) throw std::runtime_error("Expected airborne targets to be object");
+
+	return {
+		.problem = parse_color(get_object_or_except(value, "problem", "Expected problem color in targets.airborne")),
+		.assumed = parse_color(get_object_or_except(value, "assumed", "Expected assumed color in targets.airborne")),
+		.unassumed = parse_color(get_object_or_except(value, "unassumed", "Expected unassumed color in targets.airborne")),
+	};
+}
+
 TargetConfig ProfileParser::parse_targets(const rapidjson::Value& value)
 {
 	if (!value.IsObject()) throw std::runtime_error("Expected targets config to be object");
 
 	return {
 		.show_primary_target = get_bool_or_except(value, "show_primary_target", "Targets expected show_primary_target"),
+		.airborne = parse_airborne_targets(get_object_or_except(value, "airborne", "Targets expected airborne key")),
 		.target_color = parse_color(get_object_or_except(value, "target_color", "Targets expected target_color")),
 		.history_one_color = parse_color(
 			get_object_or_except(value, "history_one_color", "Targets expected history_one_color")),

@@ -2686,9 +2686,8 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				const auto gs = rt.GetPosition().GetReportedGS();
 				const double angle = track < 0 || gs < 1 ? head : track;
 				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
-				CPosition StartWorld = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters > 2 * symbol_size_meters ? symbol_size_meters : 0);
 
-				const POINT start = ConvertCoordFromPositionToPixel(StartWorld);
+				const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
 				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
 				graphics.DrawLine(
 					&symbol_pen, 

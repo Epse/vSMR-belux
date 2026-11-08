@@ -2576,6 +2576,38 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		draw_after_glow(rt, graphics);
 
 
+		constexpr float symbol_line_thickness = 2.0;
+		// Draw target symbols
+		const Color symbol_color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
+		const Pen symbol_pen(symbol_color, symbol_line_thickness);
+
+		// Predicted Track Line
+		const auto line_length = is_airborne(&rt) ? AirborneSpeedVector : PredictedLength;
+		if (line_length > 0 || AlwaysVector || alt_mode)
+		{
+			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
+			if (AlwaysVector || alt_mode)
+				meters = max(meters, symbol_size_meters);
+
+			if (meters > 0)
+			{
+				const auto track = rt.GetTrackHeading();
+				const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
+				const auto gs = rt.GetPosition().GetReportedGS();
+				const double angle = track < 0 || gs < 1 ? head : track;
+				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
+
+				const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
+				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
+				graphics.DrawLine(
+					&symbol_pen, 
+					static_cast<int>(start.x), 
+					static_cast<int>(start.y), 
+					static_cast<int>(end.x), 
+					static_cast<int>(end.y));
+			}
+		}
+
 		if (CurrentConfig->getActiveProfile().targets.show_primary_target && !is_airborne(&rt))
 		{
 			SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow", CurrentConfig->getActiveProfile().targets.target_color));
@@ -2618,10 +2650,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			}
 		}
 
-		constexpr float symbol_line_thickness = 2.0;
-		// Draw target symbols
-		const Color color = ColorManager->get_corrected_color("target", Gdiplus::Color::White);
-		const Pen symbol_pen(color, symbol_line_thickness);
 		if (mouseWithin(
 			{acPosPix.x - half_size, acPosPix.y - half_size, acPosPix.x + half_size, acPosPix.y + half_size}))
 		{
@@ -2672,38 +2700,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		                }, false,
 		                AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
 
-		// Predicted Track Line
-		const bool is_airborne = rt.GetPosition().GetPressureAltitude() > (airport_elevation + AIRBORNE_MARGIN_FT);
-		const auto line_length = is_airborne ? AirborneSpeedVector : PredictedLength;
-		if (line_length > 0 || AlwaysVector || alt_mode)
-		{
-			double meters = rt.GetPosition().GetReportedGS() * MPS_PER_KNOT * (line_length);
-			if (AlwaysVector || alt_mode)
-				meters = max(meters, symbol_size_meters);
-
-			if (meters > 0)
-			{
-				const auto track = rt.GetTrackHeading();
-				const auto head = rt.GetPosition().GetReportedHeadingTrueNorth();
-				const auto gs = rt.GetPosition().GetReportedGS();
-				const double angle = track < 0 || gs < 1 ? head : track;
-				CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), angle, meters);
-
-				const POINT start = ConvertCoordFromPositionToPixel(rt.GetPosition().GetPosition());
-				const POINT end = ConvertCoordFromPositionToPixel(PredictedEnd);
-				graphics.DrawLine(
-					&symbol_pen, 
-					static_cast<int>(start.x), 
-					static_cast<int>(start.y), 
-					static_cast<int>(end.x), 
-					static_cast<int>(end.y));
-			}
-		}
-
 		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
 			continue;
 
-		if (is_airborne)
+		if (is_airborne(&rt))
 		{
 			continue;
 		}

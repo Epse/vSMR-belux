@@ -338,6 +338,21 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			hPos = rt.GetPreviousPosition(hPos);
 		}
 
+		// Predicted Track Line
+		if (radar_screen->AirborneSpeedVector > 0) {
+			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->AirborneSpeedVector);
+			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), distance);
+
+			POINT liangOne, liangTwo;
+
+			if (LiangBarsky(m_Area, projectPoint(rt.GetPosition().GetPosition()), projectPoint(PredictedEnd), liangOne, liangTwo))
+			{
+				dc.SelectObject(&WhitePen);
+				dc.MoveTo(liangOne);
+				dc.LineTo(liangTwo);
+			}
+		}
+
 		if (Is_Inside(RtPoint, appAreaVect)) {
 			dc.SelectObject(&WhitePen);
 
@@ -355,21 +370,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			CRect TargetArea(RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4);
 			TargetArea.NormalizeRect();
 			radar_screen->AddScreenObject(DRAWING_AC_SYMBOL_APPWINDOW_BASE + (m_Id - APPWINDOW_BASE), rt.GetCallsign(), TargetArea, false, radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
-		}
-
-		// Predicted Track Line
-		if (radar_screen->AirborneSpeedVector > 0) {
-			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->AirborneSpeedVector);
-			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), distance);
-
-			POINT liangOne, liangTwo;
-
-			if (LiangBarsky(m_Area, projectPoint(rt.GetPosition().GetPosition()), projectPoint(PredictedEnd), liangOne, liangTwo))
-			{
-				dc.SelectObject(&WhitePen);
-				dc.MoveTo(liangOne);
-				dc.LineTo(liangTwo);
-			}
 		}
 
 		if (mouseWithin(mouseLocation, { RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4 })) {

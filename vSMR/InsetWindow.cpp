@@ -287,13 +287,16 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	// Aircrafts
 
+	// TODO use the problem colour for more things
+
 	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
 	CPen WhitePen(PS_SOLID, 1, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
 
 	const auto string_format = Gdiplus::StringFormat();
-	const auto untracked_brush = SolidBrush(
-		radar_screen->ColorManager->get_corrected_color("symbol", Color::Gray)
-	);
+
+	const SolidBrush assumed_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.assumed));
+	const SolidBrush unassumed_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.unassumed));
+	const SolidBrush problem_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.problem));
 
 	CRadarTarget rt;
 	for (rt = radar_screen->GetPlugIn()->RadarTargetSelectFirst();
@@ -338,19 +341,15 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (Is_Inside(RtPoint, appAreaVect)) {
 			dc.SelectObject(&WhitePen);
 
+			const auto* brush = fp.GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush;
+
 			if (is_mlat(&rt)) {
-				const auto letter = radar_screen->AirborneTargetLetter(&rt);
-				const auto colour = SolidBrush(radar_screen->AirborneTargetColour(&rt));
-
-				gdi->MeasureString(&letter, 1,
-					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
-
-				gdi->DrawString(&letter, 1, radar_screen->customFonts[radar_screen->currentFontSize],
-					PointF(RtPoint.x - mesureRect.Width / 2, RtPoint.y - mesureRect.Height / 2),
-					&string_format, &colour);
+				// Some bozo specced this as 13px irl...
+				gdi->FillRectangle(brush, RtPoint.x - 6, RtPoint.y - 6, 12, 12);
 			}
 			else {
-				gdi->FillRectangle(&untracked_brush, RtPoint.x - 4, RtPoint.y - 4, 8, 8);
+				// Supposed to be 17px diameter but that's stupid
+				gdi->FillEllipse(brush, RtPoint.x - 8, RtPoint.y - 8, 16, 16);
 			}
 
 			CRect TargetArea(RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4);

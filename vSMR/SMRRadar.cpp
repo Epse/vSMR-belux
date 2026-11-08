@@ -2546,6 +2546,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		ColorManager->get_corrected_color("symbol", Color::Gray)
 	);
 	const unsigned char half_size = size / 2;
+
+	const SolidBrush assumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.assumed));
+	const SolidBrush unassumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.unassumed));
+	const SolidBrush problem_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.problem));
+
 	// Then go be clever
 	EuroScopePlugIn::CRadarTarget rt;
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
@@ -2596,24 +2601,21 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
 
-		if (is_airborne(&rt) && correlated)
+		if (is_airborne(&rt))
 		{
-			const auto colour = SolidBrush(AirborneTargetColour(&rt));
-			const auto letter = AirborneTargetLetter(&rt);
 			const auto base_font = customFonts[currentFontSize + 10];
 			FontFamily base_family;
 			base_font->GetFamily(&base_family);
 			const auto target_font = Gdiplus::Font(&base_family, base_font->GetSize(), FontStyleBold, base_font->GetUnit());
 
-			RectF measure;
-			graphics.MeasureString(&letter, 1, &target_font, PointF(0, 0), &measure);
+			const auto* brush = rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush;
 
-			graphics.DrawString(&letter, 1, &target_font, PointF(acPosPix.x - measure.Width / 2, acPosPix.y - measure.Height / 2), &colour);
-		}
-
-		if (is_airborne(&rt) && !correlated)
-		{
-			graphics.FillRectangle(&untracked_brush, acPosPix.x - 4, acPosPix.y - 4, 8, 8);
+			if (is_mlat(&rt)) {
+				graphics.FillRectangle(brush, acPosPix.x - 6, acPosPix.y - 6, 12, 12);
+			}
+			else {
+				graphics.FillEllipse(brush, acPosPix.x - 8, acPosPix.y - 8, 16, 16);
+			}
 		}
 
 		constexpr float symbol_line_thickness = 2.0;
@@ -3266,45 +3268,6 @@ void CSMRRadar::EuroScopePlugInExitCustom()
 	{
 		SetWindowLong(pluginWindow, GWL_WNDPROC, (LONG)gSourceProc);
 	}
-}
-
-wchar_t CSMRRadar::AirborneTargetLetter(CRadarTarget* rt) const
-{
-	const std::string controller = rt->GetCorrelatedFlightPlan().GetTrackingControllerCallsign();
-	const std::string position = rt->GetCorrelatedFlightPlan().GetTrackingControllerId();
-	if (controller.length() < 6) return 'U';
-
-	const auto suffix = controller.substr(controller.length() - 3);
-
-	// These gubbins are fairly belux-specific but oh well
-	if (position == "BF") return 'F';
-
-	if (suffix == "APP") return 'A';
-	if (suffix == "DEP") return 'D';
-	if (suffix == "TWR") return 'T';
-
-	if (controller.starts_with("EBBU_W")) return 'W';
-	if (controller.starts_with("EBBU_E")) return 'E';
-
-	if (position == "BHLD" || position == "BHLW") return 'H';
-	
-	return 'U';
-}
-
-Color CSMRRadar::AirborneTargetColour(CRadarTarget* rt) const
-{
-	const auto fp = rt->GetCorrelatedFlightPlan().GetFlightPlanData();
-
-	if (fp.GetOrigin() == ActiveAirport)
-	{
-		return ColorManager->get_corrected_color("symbol", Color(64, 160, 255));
-	}
-
-	if (fp.GetDestination() == ActiveAirport)
-	{
-		return ColorManager->get_corrected_color("symbol", Color(211, 211, 0));
-	}
-	return ColorManager->get_corrected_color("symbol", Color::White);
 }
 
 void CSMRRadar::manually_correlate(const char* system_id)

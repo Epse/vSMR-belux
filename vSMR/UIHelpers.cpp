@@ -97,6 +97,8 @@ std::vector<PointF> UIHelper::grow_border(const std::vector<PointF>& border_poin
 
 std::string UIHelper::altitude(const int x, const unsigned int transition)
 {
+	if (x == 1) return "CA";
+	if (x == 2) return "VA";
 	if (x > transition)
 		return "F" + std::to_string(x / 100);
 	else

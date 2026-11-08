@@ -2,6 +2,7 @@
 //
 
 #pragma once
+#define NOMINMAX
 #include "EuroScopePlugIn.h"
 #include "SMRPlugin.hpp"
 

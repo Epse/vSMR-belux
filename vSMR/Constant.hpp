@@ -39,7 +39,7 @@ inline static bool startsWith(const char* pre, const char* str)
 	return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
 };
 
-inline static void replaceAll(string& source, const string& from, const string& to)
+inline static std::string replaceAll(const string& source, const string& from, const string& to)
 {
 	string newString;
 	newString.reserve(source.length());  // avoids a few memory allocations
@@ -56,8 +56,8 @@ inline static void replaceAll(string& source, const string& from, const string& 
 
 	// Care for the rest after last occurrence
 	newString += source.substr(lastPos);
-
-	source.swap(newString);
+	
+	return newString;
 };
 
 inline static Gdiplus::Rect CopyRect(CRect& rect)

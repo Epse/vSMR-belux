@@ -145,8 +145,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		TagType = TagTypes::Airborne;
 
 		// Is "use_departure_arrival_coloring" enabled? if not, then use the airborne colors
-		bool useDepArrColors = CurrentConfig->getActiveProfile()["labels"]["airborne"]["use_departure_arrival_coloring"]
-			.GetBool();
+		bool useDepArrColors = CurrentConfig->getActiveProfile().labels.airborne.use_departure_arrival_coloring;
 		if (!useDepArrColors)
 		{
 			ColorTagType = TagTypes::Airborne;
@@ -202,44 +201,29 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 	int TagWidth = 0, TagHeight = 0;
 
 
-	//const Value& LabelLines = (*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"];
-	const optional<vector<vector<string>>> parsed_label_lines = UIHelper::parse_label_lines(
-		(*tdc.labels_settings)[UIHelper::getEnumString(TagType).c_str()]["definition"]);
-	vector<vector<string>> LabelLines = parsed_label_lines.value_or(vector<vector<string>>());
+	std::vector<std::vector<std::string>> LabelLines(tdc.labels_settings.lines(TagType));
 
-	Color definedBackgroundColor = CurrentConfig->getConfigColor(
-		(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["background_color"]);
-
+	Color definedBackgroundColor = tdc.labels_settings.background_color(ColorTagType);
 	if (ColorTagType == TagTypes::Departure)
 	{
-		if (!TagReplacingMap["asid"].empty() && CurrentConfig->isSidColorAvail(
-			TagReplacingMap["asid"], getActiveAirport()))
+		if (!TagReplacingMap["asid"].empty())
 		{
-			definedBackgroundColor = CurrentConfig->getSidColor(TagReplacingMap["asid"], getActiveAirport());
+			definedBackgroundColor = CurrentConfig->sid_color(TagReplacingMap["asid"], getActiveAirport()).value_or(definedBackgroundColor);
 		}
-		if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && (*tdc.labels_settings)[
-			UIHelper::getEnumString(ColorTagType).c_str()].HasMember("nosid_color"))
+		if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && ColorTagType == TagTypes::Departure)
 		{
-			definedBackgroundColor = CurrentConfig->getConfigColor(
-				(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["nosid_color"]);
+			definedBackgroundColor = tdc.labels_settings.departure.nosid_color;
 		}
 	}
-	if (TagReplacingMap["actype"] == "NoFPL" && (*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()].
-		HasMember("nofpl_color"))
-	{
-		definedBackgroundColor = CurrentConfig->getConfigColor(
-			(*tdc.labels_settings)[UIHelper::getEnumString(ColorTagType).c_str()]["nofpl_color"]);
+	if (TagReplacingMap["actype"] == "NoFPL" && ColorTagType == TagTypes::Departure) {
+		definedBackgroundColor = tdc.labels_settings.departure.nofpl_color;
 	}
 
 
 	const Color TagBackgroundColor = ColorManager->get_corrected_color("label", dimming, definedBackgroundColor);
 
 
-	SolidBrush FontColor(ColorManager
-		->get_corrected_color("label",
-		                      CurrentConfig->getConfigColor(
-			                      (*tdc.labels_settings)[UIHelper::getEnumString(
-				                      ColorTagType).c_str()]["text_color"])));
+	SolidBrush FontColor(ColorManager->get_corrected_color("label", tdc.labels_settings.text_color(ColorTagType)));
 
 	const bool is_assr_err = !TagReplacingMap["sqerror"].empty() && TagReplacingMap["actype"] != "NoFPL";
 	const bool is_rimcas_err = RimcasInstance->getAlert(callsign) != CRimcas::NoAlert;
@@ -286,12 +270,7 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 		{
 			RectF mesureRect = RectF(0, 0, 0, 0);
 			const string element_was = line[el];
-			string element = line[el];
-
-			for (auto& kv : TagReplacingMap)
-			{
-				replaceAll(element, kv.first, kv.second);
-			}
+			const string element = TagReplacingMap.contains(element_was) ? TagReplacingMap[element_was] : element_was;
 
 			lineStringArray.push_back(element);
 
@@ -347,14 +326,8 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 			const Color BackgroundColor = element == "ALERT"
 				                              ? RimcasInstance->GetAircraftColor(
 					                              rt.GetCallsign(), TagBackgroundColor, TagBackgroundColor,
-					                              CurrentConfig->getConfigColor(
-						                              CurrentConfig->getActiveProfile()["rimcas"][
-							                              "background_color_stage_one"]
-					                              ),
-					                              CurrentConfig->getConfigColor(
-						                              CurrentConfig->getActiveProfile()["rimcas"][
-							                              "background_color_stage_two"]
-					                              ))
+					                              CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
+					                              CurrentConfig->getActiveProfile().rimcas.background_color_stage_two)
 				                              : TagBackgroundColor;
 			const SolidBrush backgroundBrush(BackgroundColor);
 			graphics.FillRectangle(&backgroundBrush, static_cast<long>(draw_start), tag_start.y + TagHeight,
@@ -758,32 +731,32 @@ void CSMRRadar::LoadCustomFont()
 	// Loading the custom font if there is one in use
 	customFonts.clear();
 
-	const Value& FSizes = CurrentConfig->getActiveProfile()["font"]["sizes"];
-	string font_name = CurrentConfig->getActiveProfile()["font"]["font_name"].GetString();
+	const auto& FSizes = CurrentConfig->getActiveProfile().font.sizes;
+	const string& font_name = CurrentConfig->getActiveProfile().font.font_name;
 	const wstring buffer = wstring(font_name.begin(), font_name.end());
-	const int titleOffset = CurrentConfig->getActiveProfile()["font"]["title_offset"].GetInt();
+	const int titleOffset = CurrentConfig->getActiveProfile().font.title_offset;
 
 
-	customFonts[1] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["one"].GetInt()), Gdiplus::FontStyleRegular,
+	customFonts[1] = new Gdiplus::Font(buffer.c_str(), static_cast<Gdiplus::REAL>(FSizes[0]), Gdiplus::FontStyleRegular,
 	                                   Gdiplus::UnitPixel);
-	customFonts[2] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["two"].GetInt()), Gdiplus::FontStyleRegular,
+	customFonts[2] = new Gdiplus::Font(buffer.c_str(), static_cast<Gdiplus::REAL>(FSizes[1]), Gdiplus::FontStyleRegular,
 	                                   Gdiplus::UnitPixel);
-	customFonts[3] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["three"].GetInt()),
+	customFonts[3] = new Gdiplus::Font(buffer.c_str(), static_cast<Gdiplus::REAL>(FSizes[2]),
 	                                   Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
-	customFonts[4] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["four"].GetInt()),
+	customFonts[4] = new Gdiplus::Font(buffer.c_str(), static_cast<Gdiplus::REAL>(FSizes[3]),
 	                                   Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
-	customFonts[5] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["five"].GetInt()),
+	customFonts[5] = new Gdiplus::Font(buffer.c_str(), static_cast<Gdiplus::REAL>(FSizes[4]),
 	                                   Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
 
-	customFonts[11] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["one"].GetInt() + titleOffset),
+	customFonts[11] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes[1] + titleOffset),
 	                                    Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
-	customFonts[12] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["two"].GetInt() + titleOffset),
+	customFonts[12] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes[2] + titleOffset),
 	                                    Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
-	customFonts[13] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["three"].GetInt() + titleOffset),
+	customFonts[13] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes[3] + titleOffset),
 	                                    Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
-	customFonts[14] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["four"].GetInt() + titleOffset),
+	customFonts[14] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes[4] + titleOffset),
 	                                    Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
-	customFonts[15] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes["five"].GetInt() + titleOffset),
+	customFonts[15] = new Gdiplus::Font(buffer.c_str(), Gdiplus::REAL(FSizes[5] + titleOffset),
 	                                    Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
 }
 
@@ -791,27 +764,11 @@ void CSMRRadar::LoadProfile(string profileName)
 {
 	Logger::info(string(__FUNCSIG__));
 	// Loading the new profile
-	CurrentConfig->setActiveProfile(profileName);
+	CurrentConfig->set_active_profile(profileName);
 
-	// Loading all the new data
-	const Value& RimcasTimer = CurrentConfig->getActiveProfile()["rimcas"]["timer"];
-	const Value& RimcasTimerLVP = CurrentConfig->getActiveProfile()["rimcas"]["timer_lvp"];
+	RimcasInstance->setCountdownDefinition(CurrentConfig->getActiveProfile().rimcas.timer, CurrentConfig->getActiveProfile().rimcas.timer_lvp);
 
-	vector<int> RimcasNorm;
-	for (SizeType i = 0; i < RimcasTimer.Size(); i++)
-	{
-		RimcasNorm.push_back(RimcasTimer[i].GetInt());
-	}
-
-	vector<int> RimcasLVP;
-	for (SizeType i = 0; i < RimcasTimerLVP.Size(); i++)
-	{
-		RimcasLVP.push_back(RimcasTimerLVP[i].GetInt());
-	}
-	RimcasInstance->setCountdownDefinition(RimcasNorm, RimcasLVP);
-	LeaderLineDefaultlenght = CurrentConfig->getActiveProfile()["labels"]["leader_line_length"].GetInt();
-
-	customCursor = CurrentConfig->isCustomCursorUsed();
+	customCursor = CurrentConfig->is_custom_cursor_used();
 
 	// Reloading the fonts
 	this->LoadCustomFont();
@@ -1010,7 +967,7 @@ void CSMRRadar::OnAsrContentToBeSaved()
 		SaveDataToAsr(string(prefix + "OffsetY").c_str(), "SRW offset", temp.c_str());
 
 		temp = std::to_string(appWindows[i]->m_Filter);
-		SaveDataToAsr(string(prefix + "Filter").c_str(), "SRW filter", temp.c_str());
+		SaveDataToAsr(string(prefix + "Filter").c_str(), "SRW filters", temp.c_str());
 
 		temp = std::to_string(appWindows[i]->m_Scale);
 		SaveDataToAsr(string(prefix + "Scale").c_str(), "SRW range", temp.c_str());
@@ -1240,7 +1197,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			                                 int(appWindows[appWindowId]->m_Scale == 1));
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
-		if (strcmp(sObjectId, "filter") == 0)
+		if (strcmp(sObjectId, "filters") == 0)
 		{
 			GetPlugIn()->OpenPopupList(Area, "SRW Filter (ft)", 1);
 			GetPlugIn()->AddPopupListElement("UNL", "", RIMCAS_UPDATEFILTER + appWindowId, false,
@@ -1645,8 +1602,8 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 				std::string::npos;
 			if (cleared)
 			{
-				replaceAll(strip_seven, "K", "");
-				replaceAll(strip_seven, "R", "");
+				strip_seven = replaceAll(strip_seven, "K", "");
+				strip_seven = replaceAll(strip_seven, "R", "");
 				rt.GetCorrelatedFlightPlan().GetControllerAssignedData().SetFlightStripAnnotation(
 					7, strip_seven.c_str());
 			}
@@ -2393,24 +2350,12 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	// These could probably be persisted across redraws,
 	// but this is already much better than recalculating per target
 
-	const Value& LabelsSettings = CurrentConfig->getActiveProfile()["labels"];
-	const SolidBrush SquawkErrorColor(ColorManager->get_corrected_color("label",
-	                                                                    CurrentConfig->getConfigColor(
-		                                                                    LabelsSettings["squawk_error_color"])));
-	const SolidBrush RimcasTextColor(
-		CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["rimcas"]["alert_text_color"]));
-	const SolidBrush GroundPushColor(ColorManager->get_corrected_color("label",
-	                                                                   CurrentConfig->getConfigColor(
-		                                                                   LabelsSettings["groundstatus_colors"][
-			                                                                   "push"])));
-	const SolidBrush GroundTaxiColor(ColorManager->get_corrected_color("label",
-	                                                                   CurrentConfig->getConfigColor(
-		                                                                   LabelsSettings["groundstatus_colors"][
-			                                                                   "taxi"])));
-	const SolidBrush GroundDepaColor(ColorManager->get_corrected_color("label",
-	                                                                   CurrentConfig->getConfigColor(
-		                                                                   LabelsSettings["groundstatus_colors"][
-			                                                                   "depa"])));
+	const auto& LabelsSettings = CurrentConfig->getActiveProfile().labels;
+	const SolidBrush SquawkErrorColor(ColorManager->get_corrected_color("label", LabelsSettings.squawk_error_color));
+	const SolidBrush RimcasTextColor(CurrentConfig->getActiveProfile().rimcas.alert_text_color);
+	const SolidBrush GroundPushColor(ColorManager->get_corrected_color("label", LabelsSettings.groundstatus_colors.push));
+	const SolidBrush GroundTaxiColor(ColorManager->get_corrected_color("label", LabelsSettings.groundstatus_colors.taxi));
+	const SolidBrush GroundDepaColor(ColorManager->get_corrected_color("label", LabelsSettings.groundstatus_colors.depa));
 	const SolidBrush AselTextColor(ColorManager->get_corrected_color("label", Color::Yellow));
 
 	// Changing the mouse cursor
@@ -2449,7 +2394,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 
 			graphics.SetSmoothingMode(SmoothingModeAntiAlias);
 
-			SolidBrush AlphaBrush(Color(CurrentConfig->getActiveProfile()["filters"]["night_alpha_setting"].GetInt(), 0,
+			SolidBrush AlphaBrush(Color(CurrentConfig->getActiveProfile().filters.night_alpha_setting, 0,
 			                            0, 0));
 
 			CRect RadarArea(GetRadarArea());
@@ -2534,7 +2479,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	}
 
 	Logger::info("Runway loop");
-	const Value& CustomMap = CurrentConfig->getAirportMapIfAny(getActiveAirport());
 	CSectorElement rwy;
 	for (rwy = GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_RUNWAY);
 	     rwy.IsValid();
@@ -2553,7 +2497,10 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		string runway_name = rwy.GetRunwayName(0);
 		string runway_name2 = rwy.GetRunwayName(1);
 
-		RimcasInstance->AddRunwayArea(this, runway_name, runway_name2, RimcasInstance->GetRunwayArea(Left, Right));
+		const auto maybe_rwy = CurrentConfig->custom_runway(getActiveAirport(), runway_name, runway_name2);
+		const auto area = !maybe_rwy.has_value() ? RimcasInstance->GetRunwayArea(Left, Right) : (isLVP ? maybe_rwy->path_lvp : maybe_rwy->path);
+
+		RimcasInstance->AddRunwayArea(this, runway_name, runway_name2, area);
 
 		string RwName = runway_name + " / " + runway_name2;
 
@@ -2562,7 +2509,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			// Roughly 80% opacity
 			const Color color(200, 150, 0, 0);
 			const SolidBrush brush(color);
-			fill_runway(runway_name, runway_name2, graphics, CustomMap, Left, Right, brush);
+			fill_runway(runway_name, runway_name2, graphics, Left, Right, brush);
 		}
 
 		if (std::find(RimcasInstance->RunwayTaxiway.begin(), RimcasInstance->RunwayTaxiway.end(), RwName) != RimcasInstance->RunwayTaxiway.end())
@@ -2570,7 +2517,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			// Roughly 80% opacity
 			const Color color(200, 255, 133, 0);
 			const SolidBrush brush(color);
-			fill_runway(runway_name, runway_name2, graphics, CustomMap, Left, Right, brush);
+			fill_runway(runway_name, runway_name2, graphics, Left, Right, brush);
 		}
 	}
 
@@ -2624,12 +2571,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		draw_after_glow(rt, graphics);
 
 
-		if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool() && !is_airborne(&rt))
+		if (CurrentConfig->getActiveProfile().targets.show_primary_target && !is_airborne(&rt))
 		{
-			SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-			                                                     CConfig::getConfigColor(
-				                                                     CurrentConfig->getActiveProfile()["targets"][
-					                                                     "target_color"])));
+			SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow", CurrentConfig->getActiveProfile().targets.target_color));
 
 			const CFlightPlan fp = GetPlugIn()->FlightPlanSelect(rt.GetCallsign());
 			const auto id = UIHelper::id(rt);
@@ -2796,7 +2740,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	ColorAC.clear();
 
 	RimcasInstance->OnRefreshEnd(
-		this, CurrentConfig->getActiveProfile()["rimcas"]["rimcas_stage_two_speed_threshold"].GetInt());
+		this, CurrentConfig->getActiveProfile().rimcas.stage_two_speed_threshold);
 
 	graphics.SetSmoothingMode(SmoothingModeDefault);
 
@@ -2815,7 +2759,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	auto tdc = TagDrawingContext{
 		&graphics,
 		oneLineHeight,
-		&LabelsSettings,
+		LabelsSettings,
 		&SquawkErrorColor,
 		&RimcasTextColor,
 		&GroundPushColor,
@@ -2824,10 +2768,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		&AselTextColor
 	};
 
-
-	// Releasing the hDC after the drawing
-	// FIXME should not be necessary
-	//graphics.ReleaseHDC(hDC);
 
 	Logger::info("Tags loop");
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
@@ -2848,7 +2788,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		if (!it->second || RimcasInstance->TimeTable[it->first].empty())
 			continue;
 
-		vector<int> TimeDefinition = RimcasInstance->CountdownDefinition;
+		vector<unsigned int> TimeDefinition = RimcasInstance->CountdownDefinition;
 		if (isLVP)
 			TimeDefinition = RimcasInstance->CountdownDefinitionLVP;
 
@@ -2878,13 +2818,9 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 				CBrush RimcasBrush(RimcasInstance->GetAircraftColor(RimcasInstance->TimeTable[it->first][Time],
 				                                                    Color::Black,
 				                                                    Color::Black,
-				                                                    CurrentConfig->getConfigColor(
-					                                                    CurrentConfig->getActiveProfile()["rimcas"][
-						                                                    "background_color_stage_one"]),
-				                                                    CurrentConfig->getConfigColor(
-					                                                    CurrentConfig->getActiveProfile()["rimcas"][
-						                                                    "background_color_stage_two"])).ToCOLORREF()
-				);
+				                                                    CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
+				                                                    CurrentConfig->getActiveProfile().rimcas.background_color_stage_two
+				).ToCOLORREF());
 
 				CRect TempRect = {
 					CRectTime.left, CRectTime.top + TopOffset, CRectTime.right, CRectTime.top + TopOffset + TextHeight
@@ -2969,11 +2905,11 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	if (ShowLists["Profiles"])
 	{
 		GetPlugIn()->OpenPopupList(ListAreas["Profiles"], "Profiles", 1);
-		vector<string> allProfiles = CurrentConfig->getAllProfiles();
+		vector<string> allProfiles = CurrentConfig->all_profile_names();
 		for (std::vector<string>::iterator it = allProfiles.begin(); it != allProfiles.end(); ++it)
 		{
 			GetPlugIn()->AddPopupListElement(it->c_str(), "", RIMCAS_UPDATE_PROFILE, false,
-			                                 int(CurrentConfig->isItActiveProfile(it->c_str())));
+			                                 int(CurrentConfig->getActiveProfileName() == *it));
 		}
 		GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		ShowLists["Profiles"] = false;
@@ -3415,6 +3351,8 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 
 	const size_t afterglow_count = is_airborne(&rt) ? Trail_App : Trail_Gnd;
 
+	const auto callsign = rt.GetCallsign();
+
 	if (ground_speed <= 5) return;
 
 	const CRadarTargetPositionData current_position = rt.GetPosition();
@@ -3445,23 +3383,20 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 			continue;
 		}
 
-		std::string color_name;
+		Color color;
 		switch (i)
 		{
 		case 0:
-			color_name = "history_one_color";
+			color = CurrentConfig->getActiveProfile().targets.history_one_color;
 			break;
 		case 1:
-			color_name = "history_two_color";
+			color = CurrentConfig->getActiveProfile().targets.history_two_color;
 			break;
 		default:
-			color_name = "history_three_color";
+			color = CurrentConfig->getActiveProfile().targets.history_three_color;
 			break;
 		}
-		const SolidBrush brush(ColorManager->get_corrected_color(
-			"afterglow",
-			CConfig::getConfigColor(CurrentConfig->getActiveProfile()["targets"][color_name.c_str()])
-		));
+		const SolidBrush brush(ColorManager->get_corrected_color( "afterglow", color ));
 
 		const auto fp = rt.GetCorrelatedFlightPlan();
 
@@ -3486,49 +3421,20 @@ void CSMRRadar::draw_after_glow(CRadarTarget rt, Graphics& graphics)
 	}
 }
 
-void CSMRRadar::fill_runway(const std::string runway_name, const std::string runway_name2, Graphics &graphics, const Value& CustomMap, CPosition& Left, CPosition& Right, const Brush& brush)
+void CSMRRadar::fill_runway(const string& runway_name, const string& runway_name2, Graphics& graphics, const CPosition& Left, const CPosition& Right, const Brush& brush)
 {
-	if (CurrentConfig->isCustomRunwayAvail(getActiveAirport(), runway_name, runway_name2))
+	if (const auto rwy = CurrentConfig->custom_runway(getActiveAirport(), runway_name, runway_name2); rwy.has_value())
 	{
-		const Value& Runways = CustomMap["runways"];
+		const std::vector<CPosition>& path = isLVP ? rwy->path_lvp : rwy->path;
 
-		if (Runways.IsArray())
+		std::vector<PointF> poly;
+
+		for (const auto& pos : path)
 		{
-			for (SizeType i = 0; i < Runways.Size(); i++)
-			{
-				if (!startsWith(runway_name.c_str(), Runways[i]["runway_name"].GetString()) && !startsWith(
-					runway_name2.c_str(), Runways[i]["runway_name"].GetString()))
-					continue;
-
-				string path_name = "path";
-
-				if (isLVP)
-					path_name = "path_lvp";
-
-				const Value& Path = Runways[i][path_name.c_str()];
-
-				PointF lpPoints[5000];
-
-				int k = 1;
-				int l = 0;
-				for (SizeType w = 0; w < Path.Size(); w++)
-				{
-					CPosition position;
-					position.LoadFromStrings(Path[w][static_cast<SizeType>(1)].GetString(),
-						Path[w][static_cast<SizeType>(0)].GetString());
-
-					POINT cv = ConvertCoordFromPositionToPixel(position);
-					lpPoints[l] = { REAL(cv.x), REAL(cv.y) };
-
-					k++;
-					l++;
-				}
-
-				graphics.FillPolygon(&brush, lpPoints, k - 1);
-
-				break;
-			}
+			const auto point = ConvertCoordFromPositionToPixel(pos);
+			poly.emplace_back(PointF{static_cast<REAL>(point.x), static_cast<REAL>(point.y)});
 		}
+		graphics.FillPolygon(&brush, &poly[0], poly.size());
 	}
 	else
 	{

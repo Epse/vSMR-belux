@@ -27,6 +27,7 @@
 #include "Filters.h"
 #include "PlaneShapeBuilder.h"
 #include "util.hpp"
+#include "profiles.hpp"
 
 using namespace std;
 using namespace Gdiplus;
@@ -78,8 +79,7 @@ private:
 
 	void draw_after_glow(CRadarTarget rt, Graphics& graphics);
 
-	void fill_runway(const std::string runway_name, const std::string runway_name2, Graphics& graphics, const Value& CustomMap, CPosition&
-	                 Left, CPosition& Right, const Brush& brush);
+	void fill_runway(const string& runway_name, const string& runway_name2, Graphics& graphics, const CPosition& Left, const CPosition& Right, const Brush& brush);
 
 	void cleanup_old_aircraft();
 public:
@@ -199,7 +199,7 @@ public:
 		}
 
 		// Note, this is OG pro mode, not the belux variety that is now on by default
-		if (!CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["enable"].GetBool())
+		if (!CurrentConfig->getActiveProfile().filters.pro_mode.enable)
 		{
 			return is_mlat(&rt);
 		}
@@ -212,16 +212,16 @@ public:
 				isCorr = true;
 			}
 
-			if (CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["accept_pilot_squawk"].GetBool())
+			if (CurrentConfig->getActiveProfile().filters.pro_mode.accept_pilot_squawk)
 			{
 				isCorr = true;
 			}
 
 			if (isCorr)
 			{
-				const Value& sqs = CurrentConfig->getActiveProfile()["filters"]["pro_mode"]["do_not_autocorrelate_squawks"];
-				for (SizeType i = 0; i < sqs.Size(); i++) {
-					if (strcmp(rt.GetPosition().GetSquawk(), sqs[i].GetString()) == 0)
+				for (const auto& sq : CurrentConfig->getActiveProfile().filters.pro_mode.do_not_autocorrelate_squawks)
+				{
+					if (rt.GetPosition().GetSquawk() == sq)
 					{
 						isCorr = false;
 						break;
@@ -229,12 +229,12 @@ public:
 				}
 			}
 
-			if (std::find(ManuallyCorrelated.begin(), ManuallyCorrelated.end(), rt.GetSystemID()) != ManuallyCorrelated.end())
+			if (ranges::find(ManuallyCorrelated, rt.GetSystemID()) != ManuallyCorrelated.end())
 			{
 				isCorr = true;
 			}
 
-			if (std::find(ReleasedTracks.begin(), ReleasedTracks.end(), rt.GetSystemID()) != ReleasedTracks.end())
+			if (ranges::find(ReleasedTracks, rt.GetSystemID()) != ReleasedTracks.end())
 			{
 				isCorr = false;
 			}
@@ -300,9 +300,9 @@ public:
 	virtual bool isVisible(CRadarTarget rt)
 	{
 		const CRadarTargetPositionData RtPos = rt.GetPosition();
-		const int radarRange = CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
-		const int altitudeFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_alt"].GetInt();
-		const int speedFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_spd"].GetInt();
+		const int radarRange = CurrentConfig->getActiveProfile().filters.radar_range_nm;
+		const int altitudeFilter = CurrentConfig->getActiveProfile().filters.hide_above_alt;
+		const int speedFilter = CurrentConfig->getActiveProfile().filters.hide_above_speed;
 		bool isAcDisplayed = true;
 
 		if (AirportPositions[getActiveAirport()].DistanceTo(RtPos.GetPosition()) > radarRange)

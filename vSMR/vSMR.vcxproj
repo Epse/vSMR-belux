@@ -143,6 +143,7 @@
     <ClCompile Include="HttpHelper.cpp" />
     <ClCompile Include="InsetWindow.cpp" />
     <ClCompile Include="PlaneShapeBuilder.cpp" />
+    <ClCompile Include="profiles.cpp" />
     <ClCompile Include="Rimcas.cpp" />
     <ClCompile Include="SMRPlugin.cpp" />
     <ClCompile Include="SMRRadar.cpp" />
@@ -166,6 +167,7 @@
     <ClInclude Include="InsetWindow.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="PlaneShapeBuilder.h" />
+    <ClInclude Include="profiles.hpp" />
     <ClInclude Include="rapidjson\document.h" />
     <ClInclude Include="rapidjson\filestream.h" />
     <ClInclude Include="rapidjson\prettywriter.h" />
@@ -197,6 +199,7 @@
     <None Include="cursor1.cur" />
     <None Include="packages.config" />
     <None Include="POINTER1.cur" />
+    <None Include="profiles.schema.json" />
     <None Include="res\vSMR.rc2" />
     <None Include="vSMR.def" />
   </ItemGroup>
@@ -212,7 +215,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties RESOURCE_FILE="vSMR.rc" />
+      <UserProperties profiles_1schema_1json__JsonSchema="https://json-schema.org/draft-04/schema" RESOURCE_FILE="vSMR.rc" />
     </VisualStudio>
   </ProjectExtensions>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

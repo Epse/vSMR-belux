@@ -149,6 +149,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	if (this->m_Id == -1)
 		return;
 
+	const auto old_smoothing = gdi->GetSmoothingMode();
+	gdi->SetSmoothingMode(SmoothingModeAntiAlias);
+
 	struct Utils
 	{
 		static string getEnumString(TagTypes type) {
@@ -209,9 +212,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (startsWith(icao.c_str(), rwy.GetAirportName()))
 		{
 
-			CPen RunwayPen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color.ToCOLORREF());
-			CPen ExtendedCentreLinePen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF());
-			CPen* oldPen = dc.SelectObject(&RunwayPen);
+			const Pen runway_pen(radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color, 1);
+			const Pen extended_centreline_pen(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color, 1);
 
 			CPosition EndOne, EndTwo;
 			rwy.GetPosition(&EndOne, 0);
@@ -223,8 +225,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			POINT toDraw1, toDraw2;
 			if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-				dc.MoveTo(toDraw1);
-				dc.LineTo(toDraw2);
+				gdi->DrawLine(
+					&runway_pen, 
+					static_cast<float>(toDraw1.x), 
+					static_cast<float>(toDraw1.y), 
+					static_cast<float>(toDraw2.x), 
+					static_cast<float>(toDraw2.y)
+				);
 
 			}
 
@@ -255,9 +262,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				Pt2 = projectPoint(endExtended);
 
 				if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-					dc.SelectObject(&ExtendedCentreLinePen);
-					dc.MoveTo(toDraw1);
-					dc.LineTo(toDraw2);
+					gdi->DrawLine(
+						&extended_centreline_pen, 
+						static_cast<float>(toDraw1.x), 
+						static_cast<float>(toDraw1.y), 
+						static_cast<float>(toDraw2.x), 
+						static_cast<float>(toDraw2.y)
+					);
 				}
 
 				// Drawing the ticks
@@ -276,15 +287,17 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 					Pt2 = projectPoint(tickTop);
 
 					if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-						dc.SelectObject(&ExtendedCentreLinePen);
-						dc.MoveTo(toDraw1);
-						dc.LineTo(toDraw2);
+						gdi->DrawLine(
+							&extended_centreline_pen, 
+							static_cast<float>(toDraw1.x), 
+							static_cast<float>(toDraw1.y), 
+							static_cast<float>(toDraw2.x), 
+							static_cast<float>(toDraw2.y)
+						);
 					}
 
 				}
 			}
-
-			dc.SelectObject(&oldPen);
 		}
 	}
 
@@ -791,6 +804,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		dc.Draw3dRect(CloseRect, RGB(75, 75, 75), RGB(45, 45, 45));
 
 	radar_screen->AddScreenObject(m_Id, "close", CloseRect, false, "");
+
+	gdi->SetSmoothingMode(old_smoothing);
 
 	dc.Detach();
 }

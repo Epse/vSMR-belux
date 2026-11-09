@@ -497,8 +497,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			vector<string> lineStringArray;
 
-			// Adds one line height
-			TagHeight += oneLineHeight;
+			bool empty_line = true;
 
 			int TempTagWidth = 0;
 
@@ -507,6 +506,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				mesureRect = RectF(0, 0, 0, 0);
 
 				std::string element = TagReplacingMap.contains(original) ? TagReplacingMap[original] : original;
+				if (element.empty()) continue;
+
+				empty_line = false;
 				lineStringArray.push_back(element);
 
 				wstring wstr = wstring(element.begin(), element.end());
@@ -514,6 +516,11 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
 
 				TempTagWidth += (int)mesureRect.GetRight();
+			}
+
+			if (!empty_line)
+			{
+				TagHeight += oneLineHeight;
 			}
 
 			TagWidth = max(TagWidth, TempTagWidth);

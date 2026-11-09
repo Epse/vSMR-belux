@@ -210,7 +210,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		{
 
 			CPen RunwayPen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color.ToCOLORREF());
-			const auto centreline_color = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF();
 			CPen ExtendedCentreLinePen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF());
 			CPen* oldPen = dc.SelectObject(&RunwayPen);
 
@@ -246,11 +245,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 				double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
 				double lenght = static_cast<double>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
+				const int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
 
 				// Drawing the extended centreline
 				CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
+				CPosition startExtended = BetterHarversine(Threshold, reverseHeading, increment);
 
-				Pt1 = projectPoint(Threshold);
+				Pt1 = projectPoint(startExtended);
 				Pt2 = projectPoint(endExtended);
 
 				if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
@@ -260,16 +261,18 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				}
 
 				// Drawing the ticks
-				int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
+				const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
 
-				for (int j = increment; j <= static_cast<int>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length * 1852); j += increment) {
+				for (size_t i = 1; i <= count; ++i) {
+					const auto distance = increment * i;
 
-					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, j);
-					CPosition tickBottom = BetterHarversine(tickPosition, fmod(reverseHeading - 90, 360), 500);
-					CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + 90, 360), 500);
+					const auto tick_length = i % 2 == 0 ? 500 : 250;
+
+					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, distance);
+					CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + 90, 360), tick_length);
 
 
-					Pt1 = projectPoint(tickBottom);
+					Pt1 = projectPoint(tickPosition);
 					Pt2 = projectPoint(tickTop);
 
 					if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {

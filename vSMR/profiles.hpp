@@ -164,6 +164,7 @@ struct AirborneTargetConfig
 	Gdiplus::Color problem;
 	Gdiplus::Color assumed;
 	Gdiplus::Color unassumed;
+	Gdiplus::Color incoming_coordination;
 };
 
 struct TargetConfig

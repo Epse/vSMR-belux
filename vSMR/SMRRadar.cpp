@@ -2547,10 +2547,6 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	);
 	const unsigned char half_size = size / 2;
 
-	const SolidBrush assumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.assumed));
-	const SolidBrush unassumed_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.unassumed));
-	const SolidBrush problem_brush(ColorManager->get_corrected_color("symbol", CurrentConfig->getActiveProfile().targets.airborne.problem));
-
 	// Then go be clever
 	EuroScopePlugIn::CRadarTarget rt;
 	for (rt = GetPlugIn()->RadarTargetSelectFirst();
@@ -2640,13 +2636,13 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			base_font->GetFamily(&base_family);
 			const auto target_font = Gdiplus::Font(&base_family, base_font->GetSize(), FontStyleBold, base_font->GetUnit());
 
-			const auto* brush = is_problem(&rt) ? &problem_brush : (rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush);
+			const auto brush = SolidBrush(airborne_target_color(&rt));
 
 			if (is_mlat(&rt)) {
-				graphics.FillRectangle(brush, acPosPix.x - 6, acPosPix.y - 6, 12, 12);
+				graphics.FillRectangle(&brush, acPosPix.x - 6, acPosPix.y - 6, 12, 12);
 			}
 			else {
-				graphics.FillEllipse(brush, acPosPix.x - 8, acPosPix.y - 8, 16, 16);
+				graphics.FillEllipse(&brush, acPosPix.x - 8, acPosPix.y - 8, 16, 16);
 			}
 		}
 
@@ -3451,4 +3447,16 @@ bool CSMRRadar::is_problem(CRadarTarget* rt) const
 	if (assigned_alt > 2 && delta >= 1000) return true; // Alt adherence
 
 	return false;
+}
+
+Gdiplus::Color CSMRRadar::airborne_target_color(CRadarTarget* rt) const
+{
+	const auto fp = rt->GetCorrelatedFlightPlan();
+	if (fp.GetCoordinatedNextControllerState() == COORDINATION_STATE_REQUESTED_BY_OTHER) return CurrentConfig->getActiveProfile().targets.airborne.incoming_coordination;
+
+	if (is_problem(rt)) return CurrentConfig->getActiveProfile().targets.airborne.problem;
+	
+	if (fp.GetTrackingControllerIsMe()) return CurrentConfig->getActiveProfile().targets.airborne.assumed;
+
+	return CurrentConfig->getActiveProfile().targets.airborne.unassumed;
 }

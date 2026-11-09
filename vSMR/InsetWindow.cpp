@@ -294,10 +294,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	const auto string_format = Gdiplus::StringFormat();
 
-	const SolidBrush assumed_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.assumed));
-	const SolidBrush unassumed_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.unassumed));
-	const SolidBrush problem_brush(radar_screen->ColorManager->get_corrected_color("symbol", radar_screen->CurrentConfig->getActiveProfile().targets.airborne.problem));
-
 	CRadarTarget rt;
 	for (rt = radar_screen->GetPlugIn()->RadarTargetSelectFirst();
 		rt.IsValid();
@@ -357,15 +353,15 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			dc.SelectObject(&WhitePen);
 
 
-			const auto* brush = radar_screen->is_problem(&rt) ? &problem_brush : (rt.GetCorrelatedFlightPlan().GetTrackingControllerIsMe() ? &assumed_brush : &unassumed_brush);
+			const auto brush = SolidBrush(radar_screen->airborne_target_color(&rt));
 
 			if (is_mlat(&rt)) {
 				// Some bozo specced this as 13px irl...
-				gdi->FillRectangle(brush, RtPoint.x - 6, RtPoint.y - 6, 12, 12);
+				gdi->FillRectangle(&brush, RtPoint.x - 6, RtPoint.y - 6, 12, 12);
 			}
 			else {
 				// Supposed to be 17px diameter but that's stupid
-				gdi->FillEllipse(brush, RtPoint.x - 8, RtPoint.y - 8, 16, 16);
+				gdi->FillEllipse(&brush, RtPoint.x - 8, RtPoint.y - 8, 16, 16);
 			}
 
 			CRect TargetArea(RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4);

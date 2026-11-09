@@ -371,4 +371,6 @@ public:
 	};
 
 	bool is_problem(CRadarTarget* rt) const;
+
+	Gdiplus::Color airborne_target_color(CRadarTarget* rt) const;
 };

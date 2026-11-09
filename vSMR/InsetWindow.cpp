@@ -149,6 +149,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	if (this->m_Id == -1)
 		return;
 
+	const auto old_smoothing = gdi->GetSmoothingMode();
+	gdi->SetSmoothingMode(SmoothingModeAntiAlias);
+
 	struct Utils
 	{
 		static string getEnumString(TagTypes type) {
@@ -209,10 +212,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		if (startsWith(icao.c_str(), rwy.GetAirportName()))
 		{
 
-			CPen RunwayPen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color.ToCOLORREF());
-			const auto centreline_color = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF();
-			CPen ExtendedCentreLinePen(PS_SOLID, 1, radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color.ToCOLORREF());
-			CPen* oldPen = dc.SelectObject(&RunwayPen);
+			const Pen runway_pen(radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color, 1);
+			const Pen extended_centreline_pen(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color, 1);
 
 			CPosition EndOne, EndTwo;
 			rwy.GetPosition(&EndOne, 0);
@@ -224,8 +225,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			POINT toDraw1, toDraw2;
 			if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-				dc.MoveTo(toDraw1);
-				dc.LineTo(toDraw2);
+				gdi->DrawLine(
+					&runway_pen, 
+					static_cast<float>(toDraw1.x), 
+					static_cast<float>(toDraw1.y), 
+					static_cast<float>(toDraw2.x), 
+					static_cast<float>(toDraw2.y)
+				);
 
 			}
 
@@ -246,50 +252,62 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 				double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
 				double lenght = static_cast<double>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
+				const int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
 
 				// Drawing the extended centreline
 				CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
+				CPosition startExtended = BetterHarversine(Threshold, reverseHeading, increment);
 
-				Pt1 = projectPoint(Threshold);
+				Pt1 = projectPoint(startExtended);
 				Pt2 = projectPoint(endExtended);
 
 				if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-					dc.SelectObject(&ExtendedCentreLinePen);
-					dc.MoveTo(toDraw1);
-					dc.LineTo(toDraw2);
+					gdi->DrawLine(
+						&extended_centreline_pen, 
+						static_cast<float>(toDraw1.x), 
+						static_cast<float>(toDraw1.y), 
+						static_cast<float>(toDraw2.x), 
+						static_cast<float>(toDraw2.y)
+					);
 				}
 
 				// Drawing the ticks
-				int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
+				const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
 
-				for (int j = increment; j <= static_cast<int>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length * 1852); j += increment) {
+				for (size_t i = 1; i <= count; ++i) {
+					const auto distance = increment * i;
 
-					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, j);
-					CPosition tickBottom = BetterHarversine(tickPosition, fmod(reverseHeading - 90, 360), 500);
-					CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + 90, 360), 500);
+					const auto tick_length = i % 2 == 0 ? 500 : 250;
+
+					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, distance);
+					CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + 90, 360), tick_length);
 
 
-					Pt1 = projectPoint(tickBottom);
+					Pt1 = projectPoint(tickPosition);
 					Pt2 = projectPoint(tickTop);
 
 					if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-						dc.SelectObject(&ExtendedCentreLinePen);
-						dc.MoveTo(toDraw1);
-						dc.LineTo(toDraw2);
+						gdi->DrawLine(
+							&extended_centreline_pen, 
+							static_cast<float>(toDraw1.x), 
+							static_cast<float>(toDraw1.y), 
+							static_cast<float>(toDraw2.x), 
+							static_cast<float>(toDraw2.y)
+						);
 					}
 
 				}
 			}
-
-			dc.SelectObject(&oldPen);
 		}
 	}
 
+	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
+
+	// Fixes
+	draw_fixes(gdi, windowAreaCRect);
+
 	// Aircrafts
 
-	// TODO use the problem colour for more things
-
-	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
 	CPen WhitePen(PS_SOLID, 1, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
 
 	const auto string_format = Gdiplus::StringFormat();
@@ -787,5 +805,92 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	radar_screen->AddScreenObject(m_Id, "close", CloseRect, false, "");
 
+	gdi->SetSmoothingMode(old_smoothing);
+
 	dc.Detach();
+}
+
+void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
+{
+	const Gdiplus::Color color(145, 143, 134);
+	const SolidBrush brush(color);
+	const auto& fixes_visual = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_visual;
+	const auto& fixes_instrument = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_instrument;
+
+	PointF triangle[3];
+
+	if (fixes_visual.empty() && fixes_instrument.empty()) return;
+
+	Region old_clip_region;
+	gdi->GetClip(&old_clip_region);
+
+	const Rect new_clip{ area.TopLeft().x, area.TopLeft().y, area.Width(), area.Height() };
+
+	gdi->SetClip(new_clip, CombineModeReplace);
+
+	StringFormat format;
+	format.SetAlignment(StringAlignmentCenter);
+
+	const FontFamily family(L"Euroscope");
+	const Gdiplus::Font f(&family, fix_font_size, FontStyleRegular, UnitPixel);
+
+	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_FIX);
+		se.IsValid();
+		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_FIX))
+	{
+		const std::string name = se.GetName();
+		const wstring wname(name.begin(), name.end());
+		const auto found_visual = ranges::find(fixes_visual, name) != fixes_visual.end();
+		const auto found_instrument = ranges::find(fixes_instrument, name) != fixes_instrument.end();
+
+		if (!found_visual && !found_instrument) continue;
+
+		CPosition position;
+		se.GetPosition(&position, 0);
+		const auto point = projectPoint(position);
+		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
+
+		if (found_visual)
+		{
+			triangle[0] = {point_f.X, point_f.Y - triangle_size / 2 };
+			triangle[1] = {point_f.X - triangle_size / 2, point_f.Y + triangle_size / 2};
+			triangle[2] = {point_f.X + triangle_size / 2, point_f.Y + triangle_size / 2};
+
+			gdi->FillPolygon(&brush, triangle, 3);
+			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + triangle_size / 2 + 2 }, &format, &brush);
+		}
+		else if (found_instrument)
+		{
+			const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+			gdi->FillRectangle(&brush, rect);
+			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+		}
+	}
+
+	if (fixes_instrument.empty())
+	{
+		gdi->SetClip(&old_clip_region);
+		return;
+	}
+
+	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_VOR);
+		se.IsValid();
+		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_VOR))
+	{
+		const std::string name = se.GetName();
+		const wstring wname(name.begin(), name.end());
+
+		if (ranges::find(fixes_instrument, name) == fixes_instrument.end()) continue;
+
+		CPosition position;
+		se.GetPosition(&position, 0);
+		const auto point = projectPoint(position);
+		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
+
+		const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+		gdi->FillRectangle(&brush, rect);
+		gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+	}
+
+	gdi->SetClip(&old_clip_region);
 }

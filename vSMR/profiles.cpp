@@ -265,6 +265,8 @@ ApproachInsetsConfig ProfileParser::parse_insets(const rapidjson::Value& value)
 			get_object_or_except(value, "runway_color", "Approach insets expected runway_color")),
 		.background_color = parse_color(
 			get_object_or_except(value, "background_color", "Approach insets expected background_color")),
+		.fixes_visual = parse_strings(get_array_or_except(value, "fixes_visual", "Insets config requires fixes_visual")),
+		.fixes_instrument = parse_strings(get_array_or_except(value, "fixes_instrument", "Insets config requires fixes_instrument")),
 	};
 }
 

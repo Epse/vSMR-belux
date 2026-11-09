@@ -285,11 +285,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		}
 	}
 
+	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
+
+	// Fixes
+	draw_fixes(gdi, windowAreaCRect);
+
 	// Aircrafts
 
-	// TODO use the problem colour for more things
-
-	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
 	CPen WhitePen(PS_SOLID, 1, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
 
 	const auto string_format = Gdiplus::StringFormat();
@@ -788,4 +790,89 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	radar_screen->AddScreenObject(m_Id, "close", CloseRect, false, "");
 
 	dc.Detach();
+}
+
+void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
+{
+	const Gdiplus::Color color(145, 143, 134);
+	const SolidBrush brush(color);
+	const auto& fixes_visual = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_visual;
+	const auto& fixes_instrument = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_instrument;
+
+	PointF triangle[3];
+
+	if (fixes_visual.empty() && fixes_instrument.empty()) return;
+
+	Region old_clip_region;
+	gdi->GetClip(&old_clip_region);
+
+	const Rect new_clip{ area.TopLeft().x, area.TopLeft().y, area.Width(), area.Height() };
+
+	gdi->SetClip(new_clip, CombineModeReplace);
+
+	StringFormat format;
+	format.SetAlignment(StringAlignmentCenter);
+
+	const FontFamily family(L"Euroscope");
+	const Gdiplus::Font f(&family, fix_font_size, FontStyleRegular, UnitPixel);
+
+	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_FIX);
+		se.IsValid();
+		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_FIX))
+	{
+		const std::string name = se.GetName();
+		const wstring wname(name.begin(), name.end());
+		const auto found_visual = ranges::find(fixes_visual, name) != fixes_visual.end();
+		const auto found_instrument = ranges::find(fixes_instrument, name) != fixes_instrument.end();
+
+		if (!found_visual && !found_instrument) continue;
+
+		CPosition position;
+		se.GetPosition(&position, 0);
+		const auto point = projectPoint(position);
+		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
+
+		if (found_visual)
+		{
+			triangle[0] = {point_f.X, point_f.Y - triangle_size / 2 };
+			triangle[1] = {point_f.X - triangle_size / 2, point_f.Y + triangle_size / 2};
+			triangle[2] = {point_f.X + triangle_size / 2, point_f.Y + triangle_size / 2};
+
+			gdi->FillPolygon(&brush, triangle, 3);
+			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + triangle_size / 2 + 2 }, &format, &brush);
+		}
+		else if (found_instrument)
+		{
+			const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+			gdi->FillRectangle(&brush, rect);
+			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+		}
+	}
+
+	if (fixes_instrument.empty())
+	{
+		gdi->SetClip(&old_clip_region);
+		return;
+	}
+
+	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_VOR);
+		se.IsValid();
+		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_VOR))
+	{
+		const std::string name = se.GetName();
+		const wstring wname(name.begin(), name.end());
+
+		if (ranges::find(fixes_instrument, name) == fixes_instrument.end()) continue;
+
+		CPosition position;
+		se.GetPosition(&position, 0);
+		const auto point = projectPoint(position);
+		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
+
+		const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+		gdi->FillRectangle(&brush, rect);
+		gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+	}
+
+	gdi->SetClip(&old_clip_region);
 }

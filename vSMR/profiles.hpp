@@ -184,6 +184,8 @@ struct ApproachInsetsConfig
 	Gdiplus::Color extended_lines_color;
 	Gdiplus::Color runway_color;
 	Gdiplus::Color background_color;
+	std::vector<std::string> fixes_visual;
+	std::vector<std::string> fixes_instrument;
 };
 
 struct Sid

@@ -31,6 +31,10 @@ public:
 	
 private:
 	static constexpr unsigned int topbar_height = 15;
+	static constexpr auto triangle_size = 13.0f;
+	static constexpr auto fix_font_size = 11.0f;
+	static constexpr auto square_size = 9.0f;
+
 	string icao;
 	map<string, CPosition> AptPositions;
 
@@ -38,5 +42,7 @@ private:
 
 	CFont button_font;
 	CFont title_font;
+
+	void draw_fixes(Graphics* gdi, const CRect& area);
 };
 

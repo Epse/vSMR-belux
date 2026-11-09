@@ -3443,8 +3443,16 @@ bool CSMRRadar::is_problem(CRadarTarget* rt) const
 	if (strcmp(rt->GetPosition().GetSquawk(), fp.GetControllerAssignedData().GetSquawk()) != 0) return true;
 	
 	const auto assigned_alt = fp.GetControllerAssignedData().GetClearedAltitude();
-	const auto delta = abs(rt->GetPosition().GetPressureAltitude() - assigned_alt);
-	if (assigned_alt > 2 && delta >= 1000) return true; // Alt adherence
+	// Positive if low
+	const auto delta = assigned_alt - rt->GetPosition().GetPressureAltitude();
+	// Positive if climbing
+	const int delta_alt = rt->GetPosition().GetFlightLevel() - rt->GetPreviousPosition(rt->GetPosition()).GetFlightLevel();
+	const auto sign_delta = (delta > 0) - (delta < 0);
+	const auto sign_alt = (delta_alt > 0) - (delta_alt < 0);
+	const bool approaching = abs(delta_alt) >= 100 && sign_delta == sign_alt;
+
+	// The odd math basically just gets you the sign
+	if (assigned_alt > 2 && abs(delta) >= 1000 && !approaching) return true; // Alt adherence
 
 	return false;
 }
@@ -3452,6 +3460,7 @@ bool CSMRRadar::is_problem(CRadarTarget* rt) const
 Gdiplus::Color CSMRRadar::airborne_target_color(CRadarTarget* rt) const
 {
 	const auto fp = rt->GetCorrelatedFlightPlan();
+
 	if (fp.GetCoordinatedNextControllerState() == COORDINATION_STATE_REQUESTED_BY_OTHER) return CurrentConfig->getActiveProfile().targets.airborne.incoming_coordination;
 
 	if (is_problem(rt)) return CurrentConfig->getActiveProfile().targets.airborne.problem;

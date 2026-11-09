@@ -229,6 +229,7 @@ AirborneTargetConfig ProfileParser::parse_airborne_targets(const rapidjson::Valu
 		.problem = parse_color(get_object_or_except(value, "problem", "Expected problem color in targets.airborne")),
 		.assumed = parse_color(get_object_or_except(value, "assumed", "Expected assumed color in targets.airborne")),
 		.unassumed = parse_color(get_object_or_except(value, "unassumed", "Expected unassumed color in targets.airborne")),
+		.incoming_coordination = parse_color(get_object_or_except(value, "incoming_coordination", "Expected incoming_coordination color in targets.airborne")),
 	};
 }
 

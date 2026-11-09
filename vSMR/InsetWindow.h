@@ -44,5 +44,7 @@ private:
 	CFont title_font;
 
 	void draw_fixes(Graphics* gdi, const CRect& area);
+
+	void draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd, const bool flip_side = false);
 };
 

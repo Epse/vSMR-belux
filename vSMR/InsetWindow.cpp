@@ -213,7 +213,6 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		{
 
 			const Pen runway_pen(radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color, 1);
-			const Pen extended_centreline_pen(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color, 1);
 
 			CPosition EndOne, EndTwo;
 			rwy.GetPosition(&EndOne, 0);
@@ -235,69 +234,13 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			}
 
-			if (rwy.IsElementActive(false, 0) || rwy.IsElementActive(false, 1))
-			{
-				CPosition Threshold, OtherEnd;
-				if (rwy.IsElementActive(false, 0))
-				{
-					Threshold = EndOne;
-					OtherEnd = EndTwo;
-				}
-				else
-				{
-					Threshold = EndTwo;
-					OtherEnd = EndOne;
-				}
+			const std::string rwy_name1 = rwy.GetRunwayName(0);
+			const std::string rwy_name2 = rwy.GetRunwayName(1);
+			const auto flip_one = rwy_name1.find('R') != std::string::npos;
+			const auto flip_two = rwy_name2.find('R') != std::string::npos;
 
-
-				double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
-				double lenght = static_cast<double>(radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
-				const int increment = radar_screen->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
-
-				// Drawing the extended centreline
-				CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
-				CPosition startExtended = BetterHarversine(Threshold, reverseHeading, increment);
-
-				Pt1 = projectPoint(startExtended);
-				Pt2 = projectPoint(endExtended);
-
-				if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-					gdi->DrawLine(
-						&extended_centreline_pen, 
-						static_cast<float>(toDraw1.x), 
-						static_cast<float>(toDraw1.y), 
-						static_cast<float>(toDraw2.x), 
-						static_cast<float>(toDraw2.y)
-					);
-				}
-
-				// Drawing the ticks
-				const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
-
-				for (size_t i = 1; i <= count; ++i) {
-					const auto distance = increment * i;
-
-					const auto tick_length = i % 2 == 0 ? 500 : 250;
-
-					CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, distance);
-					CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + 90, 360), tick_length);
-
-
-					Pt1 = projectPoint(tickPosition);
-					Pt2 = projectPoint(tickTop);
-
-					if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-						gdi->DrawLine(
-							&extended_centreline_pen, 
-							static_cast<float>(toDraw1.x), 
-							static_cast<float>(toDraw1.y), 
-							static_cast<float>(toDraw2.x), 
-							static_cast<float>(toDraw2.y)
-						);
-					}
-
-				}
-			}
+			draw_extended_centreline(gdi, EndOne, EndTwo, flip_one);
+			draw_extended_centreline(gdi, EndTwo, EndOne, flip_two);
 		}
 	}
 
@@ -901,3 +844,59 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 
 	gdi->SetClip(&old_clip_region);
 }
+void CInsetWindow::draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd, const bool flip_side)
+{
+	const Pen extended_centreline_pen(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color, 1);
+
+	double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
+	double lenght = static_cast<double>(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
+	const int increment = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
+
+	// Drawing the extended centreline
+	CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
+	CPosition startExtended = BetterHarversine(Threshold, reverseHeading, increment);
+
+	POINT Pt1 = projectPoint(startExtended);
+	POINT Pt2 = projectPoint(endExtended);
+
+	POINT toDraw1, toDraw2;
+
+	if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
+		gdi->DrawLine(
+			&extended_centreline_pen, 
+			static_cast<float>(toDraw1.x), 
+			static_cast<float>(toDraw1.y), 
+			static_cast<float>(toDraw2.x), 
+			static_cast<float>(toDraw2.y)
+		);
+	}
+
+	// Drawing the ticks
+	const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
+
+	const auto tick_direction = flip_side ? -90 : 90;
+
+	for (size_t i = 1; i <= count; ++i) {
+		const auto distance = increment * i;
+
+		const auto tick_length = i % 2 == 0 ? 500 : 250;
+
+		CPosition tickPosition = BetterHarversine(Threshold, reverseHeading, distance);
+		CPosition tickTop = BetterHarversine(tickPosition, fmod(reverseHeading + tick_direction, 360), tick_length);
+
+
+		Pt1 = projectPoint(tickPosition);
+		Pt2 = projectPoint(tickTop);
+
+		if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
+			gdi->DrawLine(
+				&extended_centreline_pen, 
+				static_cast<float>(toDraw1.x), 
+				static_cast<float>(toDraw1.y), 
+				static_cast<float>(toDraw2.x), 
+				static_cast<float>(toDraw2.y)
+			);
+		}
+	}
+}
+

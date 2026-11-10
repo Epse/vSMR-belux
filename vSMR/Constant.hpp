@@ -91,23 +91,22 @@ inline static double TrueBearing(const CPosition& pos1, const CPosition& pos2)
 	return dir / 180 * M_PI;
 };
 
-inline static POINT rotate_point(POINT p, const double angle, const POINT c)
+inline static void rotate_point(Gdiplus::PointF& p, const double angle, const Gdiplus::PointF& c)
 {
-	double sine = sin(angle * M_PI / 180);
-	double cosi = cos(angle * M_PI / 180);
+	const double sine = sin(angle * M_PI / 180);
+	const double cosi = cos(angle * M_PI / 180);
 
 	// translate point back to origin:
-	p.x -= c.x;
-	p.y -= c.y;
+	p.X -= c.X;
+	p.Y -= c.Y;
 
 	// rotate point
-	double xnew = p.x * cosi - p.y * sine;
-	double ynew = p.x * sine + p.y * cosi;
+	const double xnew = p.X * cosi - p.Y * sine;
+	const double ynew = p.X * sine + p.Y * cosi;
 
 	// translate point back:
-	p.x = LONG(xnew + c.x);
-	p.y = LONG(ynew + c.y);
-	return p;
+	p.X = xnew + c.X;
+	p.Y = ynew + c.Y;
 }
 
 inline static bool RectIntersect(const RECT& RectA, const RECT& RectB)
@@ -178,52 +177,6 @@ inline static bool Is_Inside(const POINT& point, const std::vector<POINT>& point
 	}
 
 	return (winding_number != 0);
-};
-
-// Liang-Barsky function by Daniel White @ http://www.skytopia.com/project/articles/compsci/clipping.html
-// This function inputs 8 numbers, and outputs 4 new numbers (plus a boolean value to say whether the clipped line is drawn at all).
-//
-inline static bool LiangBarsky(const RECT& Area, const POINT fromSrc, const POINT toSrc, POINT& ClipFrom, POINT& ClipTo)         // The output values, so declare these outside.
-{
-	const double edgeLeft = Area.left;
-	const double edgeRight = Area.right;
-	const double edgeBottom = Area.top;
-	const double edgeTop = Area.bottom;
-
-	const double x0src = fromSrc.x;
-	const double y0src = fromSrc.y;
-	const double x1src = toSrc.x;
-	const double y1src = toSrc.y;
-
-	double t0 = 0.0;    double t1 = 1.0;
-	const double xdelta = x1src - x0src;
-	const double ydelta = y1src - y0src;
-	double p = 0, q = 0;
-
-	for (int edge = 0; edge < 4; edge++) {   // Traverse through left, right, bottom, top edges.
-		if (edge == 0) { p = -xdelta;    q = -(edgeLeft - x0src); }
-		if (edge == 1) { p = xdelta;     q = (edgeRight - x0src); }
-		if (edge == 2) { p = -ydelta;    q = -(edgeBottom - y0src); }
-		if (edge == 3) { p = ydelta;     q = (edgeTop - y0src); }
-		double r = q / p;
-		if (p == 0 && q < 0) return false;   // Don't draw line at all. (parallel line outside)
-
-		if (p < 0) {
-			if (r > t1) return false;         // Don't draw line at all.
-			else if (r > t0) t0 = r;            // Line is clipped!
-		}
-		else if (p > 0) {
-			if (r < t0) return false;      // Don't draw line at all.
-			else if (r < t1) t1 = r;         // Line is clipped!
-		}
-	}
-
-	ClipFrom.x = long(x0src + t0 * xdelta);
-	ClipFrom.y = long(y0src + t0 * ydelta);
-	ClipTo.x = long(x0src + t1 * xdelta);
-	ClipTo.y = long(y0src + t1 * ydelta);
-
-	return true;        // (clipped) line is drawn
 };
 
 static bool mouseWithin(const POINT mouseLocation, const CRect& rect) {

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "InsetWindow.h"
+#include <utility>
 
 
 CInsetWindow::CInsetWindow(int Id, CSMRRadar* radar)
@@ -57,7 +58,8 @@ void CInsetWindow::OnClickScreenObject(const char* sItemString, POINT Pt, int Bu
 
 bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area, bool Released)
 {
-	if (strcmp(sObjectId, "window") == 0) {
+	if (strcmp(sObjectId, "window") == 0)
+	{
 		if (!this->m_Grip)
 		{
 			m_OffsetInit = m_Offset;
@@ -65,7 +67,7 @@ bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area
 			m_Grip = true;
 		}
 
-		POINT maxoffset = { (m_Area.right - m_Area.left) / 2, (m_Area.bottom - (m_Area.top + 15)) / 2 };
+		POINT maxoffset = {(m_Area.right - m_Area.left) / 2, (m_Area.bottom - (m_Area.top + 15)) / 2};
 		m_Offset.x = max(-maxoffset.x, min(maxoffset.x, m_OffsetInit.x + (Pt.x - m_OffsetDrag.x)));
 		m_Offset.y = max(-maxoffset.y, min(maxoffset.y, m_OffsetInit.y + (Pt.y - m_OffsetDrag.y)));
 
@@ -74,19 +76,22 @@ bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area
 			m_Grip = false;
 		}
 	}
-	if (strcmp(sObjectId, "resize") == 0) {
-		const POINT TopLeft = { m_Area.left, m_Area.top };
-		const POINT BottomRight = { Area.right, Area.bottom };
+	if (strcmp(sObjectId, "resize") == 0)
+	{
+		const POINT TopLeft = {m_Area.left, m_Area.top};
+		const POINT BottomRight = {Area.right, Area.bottom};
 
 		CRect newSize(TopLeft, BottomRight);
 		newSize.NormalizeRect();
 
-		if (newSize.Height() < 100) {
+		if (newSize.Height() < 100)
+		{
 			newSize.top = m_Area.top;
 			newSize.bottom = m_Area.bottom;
 		}
 
-		if (newSize.Width() < 300) {
+		if (newSize.Width() < 300)
+		{
 			newSize.left = m_Area.left;
 			newSize.right = m_Area.right;
 		}
@@ -95,13 +100,13 @@ bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area
 
 		return Released;
 	}
-	if (strcmp(sObjectId, "topbar") == 0) {
-
+	if (strcmp(sObjectId, "topbar") == 0)
+	{
 		CRect appWindowRect(m_Area);
 		appWindowRect.NormalizeRect();
 
-		const POINT TopLeft = { Area.left, Area.bottom + 1 };
-		const POINT BottomRight = { TopLeft.x + appWindowRect.Width(), TopLeft.y + appWindowRect.Height() };
+		const POINT TopLeft = {Area.left, Area.bottom + 1};
+		const POINT BottomRight = {TopLeft.x + appWindowRect.Width(), TopLeft.y + appWindowRect.Height()};
 		CRect newPos(TopLeft, BottomRight);
 		newPos.NormalizeRect();
 
@@ -113,35 +118,32 @@ bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area
 	return true;
 }
 
-POINT CInsetWindow::projectPoint(CPosition pos)
+PointF CInsetWindow::projectPoint(const CPosition& pos)
 {
-	CRect areaRect(m_Area);
-	areaRect.NormalizeRect();
+	RectF areaRect(m_Area.left, m_Area.top, m_Area.right - m_Area.left, m_Area.bottom - m_Area.top);
 
-	POINT refPt = areaRect.CenterPoint();
-	refPt.x += m_Offset.x;
-	refPt.y += m_Offset.y;
+	PointF refPt(areaRect.X + areaRect.Width / 2, areaRect.Y + areaRect.Height / 2);
+	refPt.X += m_Offset.x;
+	refPt.Y += m_Offset.y;
 
-	POINT out;
+	PointF out;
 
 	const double dist = AptPositions[icao].DistanceTo(pos);
 	const double dir = TrueBearing(AptPositions[icao], pos);
 
 
-	out.x = refPt.x + int(m_Scale * dist * sin(dir) + 0.5);
-	out.y = refPt.y - int(m_Scale * dist * cos(dir) + 0.5);
+	out.X = refPt.X + (m_Scale * dist * sin(dir) + 0.5);
+	out.Y = refPt.Y - (m_Scale * dist * cos(dir) + 0.5);
 
 	if (m_Rotation != 0)
 	{
-		return rotate_point(out, m_Rotation, refPt);
+		rotate_point(out, m_Rotation, refPt);
 	}
-	else
-	{
-		return out;
-	}
+	return out;
 }
 
-void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools)
+void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT mouseLocation,
+                          multimap<string, string> distance_tools)
 {
 	CDC dc;
 	dc.Attach(hDC);
@@ -154,7 +156,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	struct Utils
 	{
-		static string getEnumString(TagTypes type) {
+		static string getEnumString(TagTypes type)
+		{
 			if (type == TagTypes::Departure)
 				return "departure";
 			if (type == TagTypes::Arrival)
@@ -163,14 +166,19 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				return "uncorrelated";
 			return "airborne";
 		}
-		static RECT GetAreaFromText(const CDC* dc, const string& text, const POINT Pos) {
-			return { Pos.x, Pos.y, Pos.x + dc->GetTextExtent(text.c_str()).cx, Pos.y + dc->GetTextExtent(text.c_str()).cy };
+
+		static RECT GetAreaFromText(const CDC* dc, const string& text, const POINT Pos)
+		{
+			return {
+				Pos.x, Pos.y, Pos.x + dc->GetTextExtent(text.c_str()).cx, Pos.y + dc->GetTextExtent(text.c_str()).cy
+			};
 		}
 
-		static RECT drawToolbarButton(CDC* dc, const string& letter, const CRect& TopBar, const int left, const POINT mouseLocation)
+		static RECT drawToolbarButton(CDC* dc, const string& letter, const CRect& TopBar, const int left,
+		                              const POINT mouseLocation)
 		{
-			const POINT TopLeft = { TopBar.right - left, TopBar.top + 2 };
-			const POINT BottomRight = { TopBar.right - (left - 11), TopBar.bottom - 2 };
+			const POINT TopLeft = {TopBar.right - left, TopBar.top + 2};
+			const POINT BottomRight = {TopBar.right - (left - 11), TopBar.bottom - 2};
 			CRect Rect(TopLeft, BottomRight);
 			Rect.NormalizeRect();
 			CBrush ButtonBrush(RGB(60, 60, 60));
@@ -190,12 +198,17 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	icao = radar_screen->ActiveAirport;
 	AptPositions = radar_screen->AirportPositions;
 
-	COLORREF qBackgroundColor = radar_screen->CurrentConfig->getActiveProfile().approach_insets.background_color.ToCOLORREF();
+	const SolidBrush background_brush(radar_screen->CurrentConfig->getActiveProfile().approach_insets.background_color);
 	CRect windowAreaCRect(m_Area);
 	windowAreaCRect.NormalizeRect();
+	const RectF window_area(m_Area.left, m_Area.top, m_Area.right - m_Area.left, m_Area.bottom - m_Area.top);
+
+	Region old_clip;
+	gdi->GetClip(&old_clip);
+	gdi->SetClip(window_area);
 
 	// We create the radar
-	dc.FillSolidRect(windowAreaCRect, qBackgroundColor);
+	gdi->FillRectangle(&background_brush, window_area);
 	radar_screen->AddScreenObject(m_Id, "window", m_Area, true, "");
 
 	POINT refPt = windowAreaCRect.CenterPoint();
@@ -205,34 +218,24 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	// Here we draw all runways for the airport
 	CSectorElement rwy;
 	for (rwy = radar_screen->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_RUNWAY);
-		rwy.IsValid();
-		rwy = radar_screen->GetPlugIn()->SectorFileElementSelectNext(rwy, SECTOR_ELEMENT_RUNWAY))
+	     rwy.IsValid();
+	     rwy = radar_screen->GetPlugIn()->SectorFileElementSelectNext(rwy, SECTOR_ELEMENT_RUNWAY))
 	{
-
 		if (startsWith(icao.c_str(), rwy.GetAirportName()))
 		{
-
 			const Pen runway_pen(radar_screen->CurrentConfig->getActiveProfile().approach_insets.runway_color, 1);
 
 			CPosition EndOne, EndTwo;
 			rwy.GetPosition(&EndOne, 0);
 			rwy.GetPosition(&EndTwo, 1);
 
-			POINT Pt1, Pt2;
-			Pt1 = projectPoint(EndOne);
-			Pt2 = projectPoint(EndTwo);
+			const PointF Pt1 = projectPoint(EndOne);
+			const PointF Pt2 = projectPoint(EndTwo);
 
-			POINT toDraw1, toDraw2;
-			if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-				gdi->DrawLine(
-					&runway_pen, 
-					static_cast<float>(toDraw1.x), 
-					static_cast<float>(toDraw1.y), 
-					static_cast<float>(toDraw2.x), 
-					static_cast<float>(toDraw2.y)
-				);
-
-			}
+			gdi->DrawLine(
+				&runway_pen,
+				Pt1, Pt2
+			);
 
 			const std::string rwy_name1 = rwy.GetRunwayName(0);
 			const std::string rwy_name2 = rwy.GetRunwayName(1);
@@ -244,21 +247,26 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		}
 	}
 
-	vector<POINT> appAreaVect = { windowAreaCRect.TopLeft(),{ windowAreaCRect.right, windowAreaCRect.top }, windowAreaCRect.BottomRight(),{ windowAreaCRect.left, windowAreaCRect.bottom } };
+	vector<POINT> appAreaVect = {
+		windowAreaCRect.TopLeft(), {windowAreaCRect.right, windowAreaCRect.top}, windowAreaCRect.BottomRight(),
+		{windowAreaCRect.left, windowAreaCRect.bottom}
+	};
 
 	// Fixes
 	draw_fixes(gdi, windowAreaCRect);
 
 	// Aircrafts
 
-	CPen WhitePen(PS_SOLID, 1, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
+	const Color symbol_white = radar->ColorManager->get_corrected_color("symbol", Color::White);
+	const SolidBrush white_brush(symbol_white);
+	const Pen symbol_white_pen(symbol_white);
 
 	const auto string_format = Gdiplus::StringFormat();
 
 	CRadarTarget rt;
 	for (rt = radar_screen->GetPlugIn()->RadarTargetSelectFirst();
-		rt.IsValid();
-		rt = radar_screen->GetPlugIn()->RadarTargetSelectNext(rt))
+	     rt.IsValid();
+	     rt = radar_screen->GetPlugIn()->RadarTargetSelectNext(rt))
 	{
 		int radarRange = radar_screen->CurrentConfig->getActiveProfile().filters.radar_range_nm;
 
@@ -276,97 +284,89 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 		// Filtering the targets
 
-		POINT RtPoint, hPoint;
+		PointF RtPoint, hPoint;
 
 		RtPoint = projectPoint(RtPos2);
 
 		CRadarTargetPositionData hPos = rt.GetPreviousPosition(rt.GetPosition());
 		RectF mesureRect;
-		for (int i = 1; i < radar_screen->Trail_App; i++) {
+		for (int i = 1; i < radar->Trail_App; i++)
+		{
 			if (!hPos.IsValid())
 				continue;
 
 			hPoint = projectPoint(hPos.GetPosition());
 
-			if (Is_Inside(hPoint, appAreaVect)) {
-				dc.SetPixel(hPoint, radar_screen->ColorManager->get_corrected_color("symbol", Color::White).ToCOLORREF());
-			}
+			gdi->FillRectangle(&white_brush, hPoint.X, hPoint.Y, 1.0f, 1.0f);
 
 			hPos = rt.GetPreviousPosition(hPos);
 		}
 
 		// Predicted Track Line
-		if (radar_screen->AirborneSpeedVector > 0) {
-			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->AirborneSpeedVector);
+		if (radar_screen->AirborneSpeedVector > 0)
+		{
+			const double distance = double(rt.GetPosition().GetReportedGS() * MPS_PER_KNOT) * (radar_screen->
+				AirborneSpeedVector);
 			CPosition PredictedEnd = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), distance);
 
-			POINT liangOne, liangTwo;
-
-			if (LiangBarsky(m_Area, projectPoint(rt.GetPosition().GetPosition()), projectPoint(PredictedEnd), liangOne, liangTwo))
-			{
-				dc.SelectObject(&WhitePen);
-				dc.MoveTo(liangOne);
-				dc.LineTo(liangTwo);
-			}
+			gdi->DrawLine(&symbol_white_pen, projectPoint(rt.GetPosition().GetPosition()), projectPoint(PredictedEnd));
 		}
 
-		if (Is_Inside(RtPoint, appAreaVect)) {
-			dc.SelectObject(&WhitePen);
-
-
+		{
 			const auto brush = SolidBrush(radar_screen->airborne_target_color(&rt));
 
-			if (is_mlat(&rt)) {
+			if (is_mlat(&rt))
+			{
 				// Some bozo specced this as 13px irl...
-				gdi->FillRectangle(&brush, RtPoint.x - 6, RtPoint.y - 6, 12, 12);
+				gdi->FillRectangle(&brush, RtPoint.X - 6.0f, RtPoint.Y - 6.0f, 12.0f, 12.0f);
 			}
-			else {
+			else
+			{
 				// Supposed to be 17px diameter but that's stupid
-				gdi->FillEllipse(&brush, RtPoint.x - 8, RtPoint.y - 8, 16, 16);
+				gdi->FillEllipse(&brush, RtPoint.X - 8.0f, RtPoint.Y - 8.0f, 16.0f, 16.0f);
 			}
 
-			CRect TargetArea(RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4);
+			CRect TargetArea(RtPoint.X - 4.0f, RtPoint.Y - 4.0f, RtPoint.X + 4.0f, RtPoint.Y + 4.0f);
 			TargetArea.NormalizeRect();
-			radar_screen->AddScreenObject(DRAWING_AC_SYMBOL_APPWINDOW_BASE + (m_Id - APPWINDOW_BASE), rt.GetCallsign(), TargetArea, false, radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
+			radar_screen->AddScreenObject(DRAWING_AC_SYMBOL_APPWINDOW_BASE + (m_Id - APPWINDOW_BASE), rt.GetCallsign(),
+			                              TargetArea, false, radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
 		}
 
-		if (mouseWithin(mouseLocation, { RtPoint.x - 4, RtPoint.y - 4, RtPoint.x + 4, RtPoint.y + 4 })) {
-			dc.MoveTo(RtPoint.x, RtPoint.y - 6);
-			dc.LineTo(RtPoint.x - 4, RtPoint.y - 10);
-			dc.MoveTo(RtPoint.x, RtPoint.y - 6);
-			dc.LineTo(RtPoint.x + 4, RtPoint.y - 10);
+		if (mouseWithin(mouseLocation, {
+			                static_cast<LONG>(RtPoint.X) - 4, static_cast<LONG>(RtPoint.Y) - 4,
+			                static_cast<LONG>(RtPoint.X) + 4, static_cast<LONG>(RtPoint.Y) + 4
+		                }))
+		{
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X, RtPoint.Y - 6.0f, RtPoint.X - 4.0f, RtPoint.Y - 10.0f);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X, RtPoint.Y - 6.0f, RtPoint.X + 4.0f, RtPoint.Y - 10.0f);
 
-			dc.MoveTo(RtPoint.x, RtPoint.y + 6);
-			dc.LineTo(RtPoint.x - 4, RtPoint.y + 10);
-			dc.MoveTo(RtPoint.x, RtPoint.y + 6);
-			dc.LineTo(RtPoint.x + 4, RtPoint.y + 10);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X, RtPoint.Y + 6.0f, RtPoint.X - 4.0f, RtPoint.Y + 10.0f);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X, RtPoint.Y + 6.0f, RtPoint.X + 4.0f, RtPoint.Y + 10.0f);
 
-			dc.MoveTo(RtPoint.x - 6, RtPoint.y);
-			dc.LineTo(RtPoint.x - 10, RtPoint.y - 4);
-			dc.MoveTo(RtPoint.x - 6, RtPoint.y);
-			dc.LineTo(RtPoint.x - 10, RtPoint.y + 4);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X - 6.0f, RtPoint.Y, RtPoint.X - 10.0f, RtPoint.Y - 4.0f);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X - 6.0f, RtPoint.Y, RtPoint.X - 10.0f, RtPoint.Y + 4.0f);
 
-			dc.MoveTo(RtPoint.x + 6, RtPoint.y);
-			dc.LineTo(RtPoint.x + 10, RtPoint.y - 4);
-			dc.MoveTo(RtPoint.x + 6, RtPoint.y);
-			dc.LineTo(RtPoint.x + 10, RtPoint.y + 4);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X + 6.0f, RtPoint.Y, RtPoint.X + 10.0f, RtPoint.Y - 4.0f);
+			gdi->DrawLine(&symbol_white_pen, RtPoint.X + 6.0f, RtPoint.Y, RtPoint.X + 10.0f, RtPoint.Y + 4.0f);
 		}
 
-		int lenght = 50;
+		constexpr int length = 50;
 
-		POINT TagCenter;
-		if (m_TagAngles.find(rt.GetCallsign()) == m_TagAngles.end())
+		PointF TagCenter;
+		if (!m_TagAngles.contains(rt.GetCallsign()))
 		{
 			m_TagAngles[rt.GetCallsign()] = 45.0; // TODO: Not the best, ah well
 		}
 
-		TagCenter.x = long(RtPoint.x + float(lenght * cos(DegToRad(m_TagAngles[rt.GetCallsign()]))));
-		TagCenter.y = long(RtPoint.y + float(lenght * sin(DegToRad(m_TagAngles[rt.GetCallsign()]))));
+		TagCenter.X = RtPoint.X + static_cast<float>(length * cos(DegToRad(m_TagAngles[rt.GetCallsign()])));
+		TagCenter.Y = RtPoint.Y + static_cast<float>(length * sin(DegToRad(m_TagAngles[rt.GetCallsign()])));
 		// Drawing the tags, what a mess
 
 		// ----- Generating the replacing map -----
 		const bool is_manually_correlated = radar_screen->is_manually_correlated(rt.GetSystemID());
-		map<string, string> TagReplacingMap = radar->GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt), radar_screen->GetPlugIn()->GetTransitionAltitude(), icao, is_manually_correlated);
+		map<string, string> TagReplacingMap = radar->GenerateTagData(rt, fp, radar_screen->IsCorrelated(fp, rt),
+		                                                             radar_screen->GetPlugIn()->GetTransitionAltitude(),
+		                                                             icao, is_manually_correlated);
 
 		// ----- Generating the clickable map -----
 		map<string, int> TagClickableMap;
@@ -400,22 +400,28 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		TagTypes TagType = TagTypes::Departure;
 		TagTypes ColorTagType = TagTypes::Departure;
 
-		if (fp.IsValid() && strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) == 0) {
+		if (fp.IsValid() && strcmp(fp.GetFlightPlanData().GetDestination(), radar_screen->getActiveAirport().c_str()) ==
+			0)
+		{
 			TagType = TagTypes::Arrival;
 			ColorTagType = TagTypes::Arrival;
 		}
 
-		if (reportedGs > 50) {
+		if (reportedGs > 50)
+		{
 			TagType = TagTypes::Airborne;
 
 			// Is "use_departure_arrival_coloring" enabled? if not, then use the airborne colors
-			bool useDepArrColors = radar_screen->CurrentConfig->getActiveProfile().labels.airborne.use_departure_arrival_coloring;
-			if (!useDepArrColors) {
+			bool useDepArrColors = radar_screen->CurrentConfig->getActiveProfile().labels.airborne.
+			                                     use_departure_arrival_coloring;
+			if (!useDepArrColors)
+			{
 				ColorTagType = TagTypes::Airborne;
 			}
 		}
 
-		bool AcisCorrelated = radar_screen->IsCorrelated(radar_screen->GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
+		bool AcisCorrelated = radar_screen->IsCorrelated(radar_screen->GetPlugIn()->FlightPlanSelect(rt.GetCallsign()),
+		                                                 rt);
 		if (!AcisCorrelated && reportedGs >= 3)
 		{
 			TagType = TagTypes::Uncorrelated;
@@ -424,25 +430,25 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 		// First we need to figure out the tag size
 
-		int TagWidth = 0, TagHeight = 0;
+		float TagWidth = 0, TagHeight = 0;
 
 		mesureRect = RectF(0, 0, 0, 0);
 		gdi->MeasureString(L"AZERTYUIOPQSDFGHJKLMWXCVBN", wcslen(L"AZERTYUIOPQSDFGHJKLMWXCVBN"),
-			radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
-		int oneLineHeight = (int)mesureRect.GetBottom();
+		                   radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format,
+		                   &mesureRect);
+		const float oneLineHeight = mesureRect.GetBottom();
 
 		const LabelConfig& LabelsSettings = radar_screen->CurrentConfig->getActiveProfile().labels;
-		const auto LabelLines = LabelsSettings.lines(TagType);
+		const auto& LabelLines = LabelsSettings.lines(TagType);
 		vector<vector<string>> ReplacedLabelLines;
 
 		for (const auto& line : LabelLines)
 		{
-
 			vector<string> lineStringArray;
 
 			bool empty_line = true;
 
-			int TempTagWidth = 0;
+			float TempTagWidth = 0;
 
 			for (const auto& original : line)
 			{
@@ -456,9 +462,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 				wstring wstr = wstring(element.begin(), element.end());
 				gdi->MeasureString(wstr.c_str(), wcslen(wstr.c_str()),
-					radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mesureRect);
+				                   radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0),
+				                   &string_format, &mesureRect);
 
-				TempTagWidth += (int)mesureRect.GetRight();
+				TempTagWidth += mesureRect.GetRight();
 			}
 
 			if (!empty_line)
@@ -470,7 +477,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 			ReplacedLabelLines.push_back(lineStringArray);
 		}
-		TagHeight = TagHeight - 2;
+		TagHeight = TagHeight - 2.0f;
 
 		// Pfiou, done with that, now we can draw the actual rectangle.
 
@@ -478,22 +485,28 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		bool rimcasLabelOnly = radar_screen->CurrentConfig->getActiveProfile().rimcas.rimcas_label_only;
 
 		Color definedBackgroundColor = LabelsSettings.background_color(ColorTagType);
-		if (TagType == TagTypes::Departure) {
+		if (TagType == TagTypes::Departure)
+		{
 			if (!TagReplacingMap["sid"].empty())
 			{
-				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor);
+				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(
+					TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor);
 			}
-			if (!TagReplacingMap["sid"].empty()) {
-				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor	);
+			if (!TagReplacingMap["sid"].empty())
+			{
+				definedBackgroundColor = radar_screen->CurrentConfig->sid_color(
+					TagReplacingMap["sid"], radar_screen->getActiveAirport()).value_or(definedBackgroundColor);
 			}
 
-			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && ColorTagType == TagTypes::Departure)
+			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && ColorTagType ==
+				TagTypes::Departure)
 			{
 				definedBackgroundColor = LabelsSettings.departure.nosid_color;
 			}
 		}
 
-		if (TagReplacingMap["actype"] == "NoFPL" && ColorTagType == TagTypes::Departure) {
+		if (TagReplacingMap["actype"] == "NoFPL" && ColorTagType == TagTypes::Departure)
+		{
 			definedBackgroundColor = LabelsSettings.departure.nofpl_color;
 		}
 
@@ -508,14 +521,12 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				definedBackgroundColor,
 				LabelsSettings.background_color_on_runway(ColorTagType));
 
-		CRect TagBackgroundRect(TagCenter.x - (TagWidth / 2), TagCenter.y - (TagHeight / 2), TagCenter.x + (TagWidth / 2), TagCenter.y + (TagHeight / 2));
+		RectF TagBackgroundRect(TagCenter.X - (TagWidth / 2), TagCenter.Y - (TagHeight / 2),
+		                        TagWidth, TagHeight);
 
-		if (Is_Inside(TagBackgroundRect.TopLeft(), appAreaVect) &&
-			Is_Inside(RtPoint, appAreaVect) &&
-			Is_Inside(TagBackgroundRect.BottomRight(), appAreaVect)) {
-
+		{
 			SolidBrush TagBackgroundBrush(TagBackgroundColor);
-			gdi->FillRectangle(&TagBackgroundBrush, CopyRect(TagBackgroundRect));
+			gdi->FillRectangle(&TagBackgroundBrush, TagBackgroundRect);
 
 			SolidBrush FontColor(radar_screen->ColorManager->get_corrected_color("label",
 				LabelsSettings.text_color(ColorTagType)));
@@ -523,14 +534,15 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 				LabelsSettings.squawk_error_color));
 			SolidBrush RimcasTextColor(radar_screen->CurrentConfig->getActiveProfile().rimcas.alert_text_color);
 
-			int heightOffset = 0;
+			float heightOffset = 0;
 			for (auto&& line : ReplacedLabelLines)
 			{
-				int widthOffset = 0;
+				float widthOffset = 0;
 				for (auto&& element : line)
 				{
 					SolidBrush* color = &FontColor;
-					if (!TagReplacingMap["sqerror"].empty() && strcmp(element.c_str(), TagReplacingMap["sqerror"].c_str()) == 0)
+					if (!TagReplacingMap["sqerror"].empty() && strcmp(element.c_str(),
+					                                                  TagReplacingMap["sqerror"].c_str()) == 0)
 						color = &SquawkErrorColor;
 
 					if (radar_screen->RimcasInstance->getAlert(rt.GetCallsign()) != CRimcas::NoAlert)
@@ -540,66 +552,77 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 					wstring welement = wstring(element.begin(), element.end());
 
-					gdi->DrawString(welement.c_str(), wcslen(welement.c_str()), radar_screen->customFonts[radar_screen->currentFontSize],
-						PointF(Gdiplus::REAL(TagBackgroundRect.left + widthOffset), Gdiplus::REAL(TagBackgroundRect.top + heightOffset)),
-						&string_format, color);
+					gdi->DrawString(welement.c_str(), wcslen(welement.c_str()),
+					                radar_screen->customFonts[radar_screen->currentFontSize],
+					                PointF(TagBackgroundRect.X + widthOffset, TagBackgroundRect.Y + heightOffset),
+					                &string_format, color);
 
 
 					gdi->MeasureString(welement.c_str(), wcslen(welement.c_str()),
-						radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &mRect);
+					                   radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0),
+					                   &string_format, &mRect);
 
-					CRect ItemRect(TagBackgroundRect.left + widthOffset, TagBackgroundRect.top + heightOffset,
-						TagBackgroundRect.left + widthOffset + (int)mRect.GetRight(), TagBackgroundRect.top + heightOffset + (int)mRect.GetBottom());
+					const CRect item_rect(
+						static_cast<LONG>(TagBackgroundRect.X + widthOffset),
+						static_cast<LONG>(TagBackgroundRect.Y + heightOffset),
+						static_cast<LONG>(TagBackgroundRect.X + widthOffset + mRect.GetRight()),
+						static_cast<LONG>(TagBackgroundRect.Y + heightOffset + mRect.GetBottom())
+					);
 
-					radar_screen->AddScreenObject(TagClickableMap[element], rt.GetCallsign(), ItemRect, false, radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
+					radar->AddScreenObject(TagClickableMap[element], rt.GetCallsign(), item_rect, false,
+					                              radar_screen->GetBottomLine(rt.GetCallsign()).c_str());
 
-					widthOffset += (int)mRect.GetRight();
+					widthOffset += mRect.GetRight();
 				}
 
 				heightOffset += oneLineHeight;
 			}
 
 			// Drawing the leader line
-			RECT TagBackRectData = TagBackgroundRect;
-			POINT toDraw1, toDraw2;
-			if (LiangBarsky(TagBackRectData, RtPoint, TagBackgroundRect.CenterPoint(), toDraw1, toDraw2))
-			{
-				const auto pen = Pen(radar_screen->ColorManager->get_corrected_color("symbol", Color::White));
-				gdi->DrawLine(&pen, PointF(Gdiplus::REAL(RtPoint.x), Gdiplus::REAL(RtPoint.y)), PointF(Gdiplus::REAL(toDraw1.x), Gdiplus::REAL(toDraw1.y)));
-			}
+			const auto pen = Pen(radar_screen->ColorManager->get_corrected_color("symbol", Color::White));
+			gdi->DrawLine(&pen, RtPoint,
+						  PointF(TagBackgroundRect.X + TagBackgroundRect.Width / 2, TagBackgroundRect.Y + TagBackgroundRect.Height / 2));
 
 			// If we use a RIMCAS label only, we display it, and adapt the rectangle
-			CRect oldCrectSave = TagBackgroundRect;
+			RectF oldCrectSave = TagBackgroundRect;
 
-			if (rimcasLabelOnly) {
-				Color RimcasLabelColor = radar_screen->RimcasInstance->GetAircraftColor(rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
-			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
-			radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_two);
+			if (rimcasLabelOnly)
+			{
+				Color RimcasLabelColor = radar_screen->RimcasInstance->GetAircraftColor(
+					rt.GetCallsign(), Color::AliceBlue, Color::AliceBlue,
+					radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
+					radar_screen->CurrentConfig->getActiveProfile().rimcas.background_color_stage_two);
 
-				if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF()) {
+				if (RimcasLabelColor.ToCOLORREF() != Color(Color::AliceBlue).ToCOLORREF())
+				{
 					int rimcas_height = 0;
 
 					wstring wrimcas_height = wstring(L"ALERT");
 
 					RectF RectRimcas_height;
 
-					gdi->MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()), radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0), &string_format, &RectRimcas_height);
+					gdi->MeasureString(wrimcas_height.c_str(), wcslen(wrimcas_height.c_str()),
+					                   radar_screen->customFonts[radar_screen->currentFontSize], PointF(0, 0),
+					                   &string_format, &RectRimcas_height);
 					rimcas_height = int(RectRimcas_height.GetBottom());
 
 					// Drawing the rectangle
 
-					CRect RimcasLabelRect(TagBackgroundRect.left, TagBackgroundRect.top - rimcas_height, TagBackgroundRect.right, TagBackgroundRect.top);
+					const RectF RimcasLabelRect(TagBackgroundRect.X, TagBackgroundRect.Y - rimcas_height,
+					                      TagBackgroundRect.Width, TagBackgroundRect.Height);
 					const auto brush = SolidBrush(RimcasLabelColor);
-					gdi->FillRectangle(&brush, CopyRect(RimcasLabelRect));
-					TagBackgroundRect.top -= rimcas_height;
+					gdi->FillRectangle(&brush, RimcasLabelRect);
+					TagBackgroundRect.Y -= rimcas_height;
 
 					// Drawing the text
 
-					wstring rimcasw = wstring(L"ALERT");
+					const wstring rimcasw = wstring(L"ALERT");
 					StringFormat stformat = new StringFormat();
 					stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
-					gdi->DrawString(rimcasw.c_str(), wcslen(rimcasw.c_str()), radar_screen->customFonts[radar_screen->currentFontSize], PointF((static_cast<REAL>(TagBackgroundRect.left) + static_cast<REAL>(TagBackgroundRect.right)) / 2, static_cast<Gdiplus::REAL>(TagBackgroundRect.top)), &stformat, &RimcasTextColor);
-
+					gdi->DrawString(rimcasw.c_str(), rimcasw.length(),
+					                radar_screen->customFonts[radar_screen->currentFontSize],
+					                PointF( TagBackgroundRect.X + TagBackgroundRect.Width / 2.0f, TagBackgroundRect.Y), 
+						&stformat, &RimcasTextColor);
 				}
 			}
 
@@ -616,10 +639,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	// Distance tools here
 	for (auto&& kv : distance_tools)
 	{
-		CRadarTarget one = radar_screen->GetPlugIn()->RadarTargetSelect(kv.first.c_str());
-		CRadarTarget two = radar_screen->GetPlugIn()->RadarTargetSelect(kv.second.c_str());
+		CRadarTarget one = radar->GetPlugIn()->RadarTargetSelect(kv.first.c_str());
+		CRadarTarget two = radar->GetPlugIn()->RadarTargetSelect(kv.second.c_str());
 
-		int radarRange = radar_screen->CurrentConfig->getActiveProfile().filters.radar_range_nm;
+		const int radarRange = radar->CurrentConfig->getActiveProfile().filters.radar_range_nm;
 
 		if (one.GetGS() < 60 ||
 			one.GetPosition().GetPressureAltitude() > m_Filter ||
@@ -635,19 +658,14 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 			two.GetPosition().GetPosition().DistanceTo(AptPositions[icao]) > radarRange)
 			continue;
 
-		CPen Pen(PS_SOLID, 1, RGB(255, 255, 255));
-		CPen* oldPen = dc.SelectObject(&Pen);
+		const auto onePoint = projectPoint(one.GetPosition().GetPosition());
+		const auto twoPoint = projectPoint(two.GetPosition().GetPosition());
 
-		POINT onePoint = projectPoint(one.GetPosition().GetPosition());
-		POINT twoPoint = projectPoint(two.GetPosition().GetPosition());
+		const Pen white_pen(Color::White);
 
-		POINT toDraw1, toDraw2;
-		if (LiangBarsky(m_Area, onePoint, twoPoint, toDraw1, toDraw2)) {
-			dc.MoveTo(toDraw1);
-			dc.LineTo(toDraw2);
-		}
+		gdi->DrawLine(&white_pen, onePoint, twoPoint);
 
-		POINT TextPos = { twoPoint.x + 20, twoPoint.y };
+		const PointF TextPos = twoPoint + PointF{20.0f, 0.0f};
 
 		double Distance = one.GetPosition().GetPosition().DistanceTo(two.GetPosition().GetPosition());
 		double Bearing = one.GetPosition().GetPosition().DirectionTo(two.GetPosition().GetPosition());
@@ -660,48 +678,54 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		decimal_pos = bearings.find('.');
 		bearings = bearings.substr(0, decimal_pos + 2);
 
-		string text = bearings;
-		text += "° / ";
-		text += distances;
-		text += "nm";
-		COLORREF old_color = dc.SetTextColor(RGB(0, 0, 0));
+		wstring text = wstring(bearings.begin(), bearings.end());
+		text += L"° / ";
+		text += wstring(distances.begin(), distances.end());
+		text += L"nm";
 
-		CRect ClickableRect = { TextPos.x - 2, TextPos.y, TextPos.x + dc.GetTextExtent(text.c_str()).cx + 2, TextPos.y + dc.GetTextExtent(text.c_str()).cy };
-		if (Is_Inside(ClickableRect.TopLeft(), appAreaVect) && Is_Inside(ClickableRect.BottomRight(), appAreaVect))
+		RectF measure_rect;
+		gdi->MeasureString(text.c_str(), -1, radar->customFonts[radar->currentFontSize], TextPos, &measure_rect);
+
+		CRect ClickableRect = {
+			static_cast<LONG>(TextPos.X) - 2, 
+			static_cast<LONG>(TextPos.Y), 
+			static_cast<LONG>(TextPos.X + measure_rect.Width) + 2,
+			static_cast<LONG>(TextPos.Y + measure_rect.Height)
+		};
+
 		{
 			const auto brush = SolidBrush(Color(127, 122, 122));
+			const SolidBrush text_brush(Color::Black);
 			gdi->FillRectangle(&brush, CopyRect(ClickableRect));
 			dc.Draw3dRect(ClickableRect, RGB(75, 75, 75), RGB(45, 45, 45));
-			dc.TextOutA(TextPos.x, TextPos.y, text.c_str());
+			gdi->DrawString(text.c_str(), -1, radar->customFonts[radar->currentFontSize], TextPos, &text_brush);
 
-			radar_screen->AddScreenObject(RIMCAS_DISTANCE_TOOL, string(kv.first + "," + kv.second).c_str(), ClickableRect, false, "");
+			radar_screen->AddScreenObject(RIMCAS_DISTANCE_TOOL, string(kv.first + "," + kv.second).c_str(),
+			                              ClickableRect, false, "");
 		}
-
-		dc.SetTextColor(old_color);
-
-		dc.SelectObject(oldPen);
 	}
 
+	gdi->SetClip(&old_clip);
+
 	// Resize square
-	qBackgroundColor = RGB(60, 60, 60);
-	POINT BottomRight = { m_Area.right, m_Area.bottom };
-	POINT TopLeft = { BottomRight.x - 10, BottomRight.y - 10 };
-	CRect ResizeArea = { TopLeft, BottomRight };
+	POINT BottomRight = {m_Area.right, m_Area.bottom};
+	POINT TopLeft = {BottomRight.x - 10, BottomRight.y - 10};
+	CRect ResizeArea = {TopLeft, BottomRight};
 	ResizeArea.NormalizeRect();
-	dc.FillSolidRect(ResizeArea, qBackgroundColor);
+	dc.FillSolidRect(ResizeArea, RGB(60, 60, 60));
 	radar_screen->AddScreenObject(m_Id, "resize", ResizeArea, true, "");
 
 	dc.Draw3dRect(ResizeArea, RGB(0, 0, 0), RGB(0, 0, 0));
 
 	// Sides
 	CBrush FrameBrush(RGB(33, 39, 204));
-	COLORREF TopBarTextColor(RGB(255,255,255));
+	COLORREF TopBarTextColor(RGB(255, 255, 255));
 	dc.FrameRect(windowAreaCRect, &FrameBrush);
 
 	// Topbar
 	TopLeft = windowAreaCRect.TopLeft();
 	TopLeft.y = TopLeft.y - topbar_height;
-	BottomRight = { windowAreaCRect.right, windowAreaCRect.top };
+	BottomRight = {windowAreaCRect.right, windowAreaCRect.top};
 	CRect TopBar(TopLeft, BottomRight);
 	TopBar.NormalizeRect();
 	dc.FillRect(TopBar, &FrameBrush);
@@ -732,8 +756,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	dc.SetTextColor(oldTextColorC);
 
 	// Close
-	POINT TopLeftClose = { TopBar.right - 16, TopBar.top + 2 };
-	POINT BottomRightClose = { TopBar.right - 5, TopBar.bottom - 2 };
+	POINT TopLeftClose = {TopBar.right - 16, TopBar.top + 2};
+	POINT BottomRightClose = {TopBar.right - 5, TopBar.bottom - 2};
 	CRect CloseRect(TopLeftClose, BottomRightClose);
 	CloseRect.NormalizeRect();
 	CBrush CloseBrush(RGB(60, 60, 60));
@@ -742,8 +766,8 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	dc.SelectObject(BlackPen);
 	dc.MoveTo(CloseRect.TopLeft());
 	dc.LineTo(CloseRect.BottomRight());
-	dc.MoveTo({ CloseRect.right - 1, CloseRect.top });
-	dc.LineTo({ CloseRect.left - 1, CloseRect.bottom });
+	dc.MoveTo({CloseRect.right - 1, CloseRect.top});
+	dc.LineTo({CloseRect.left - 1, CloseRect.bottom});
 
 	// Reset font
 	dc.SelectObject(old_font);
@@ -760,6 +784,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	dc.Detach();
 }
 
+// Requires a clip to be set
 void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 {
 	const Gdiplus::Color color(145, 143, 134);
@@ -771,13 +796,6 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 
 	if (fixes_visual.empty() && fixes_instrument.empty()) return;
 
-	Region old_clip_region;
-	gdi->GetClip(&old_clip_region);
-
-	const Rect new_clip{ area.TopLeft().x, area.TopLeft().y, area.Width(), area.Height() };
-
-	gdi->SetClip(new_clip, CombineModeReplace);
-
 	StringFormat format;
 	format.SetAlignment(StringAlignmentCenter);
 
@@ -785,8 +803,8 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 	const Gdiplus::Font f(&family, fix_font_size, FontStyleRegular, UnitPixel);
 
 	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_FIX);
-		se.IsValid();
-		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_FIX))
+	     se.IsValid();
+	     se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_FIX))
 	{
 		const std::string name = se.GetName();
 		const wstring wname(name.begin(), name.end());
@@ -798,34 +816,32 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 		CPosition position;
 		se.GetPosition(&position, 0);
 		const auto point = projectPoint(position);
-		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
 
 		if (found_visual)
 		{
-			triangle[0] = {point_f.X, point_f.Y - triangle_size / 2 };
-			triangle[1] = {point_f.X - triangle_size / 2, point_f.Y + triangle_size / 2};
-			triangle[2] = {point_f.X + triangle_size / 2, point_f.Y + triangle_size / 2};
+			triangle[0] = {point.X, point.Y - triangle_size / 2};
+			triangle[1] = {point.X - triangle_size / 2, point.Y + triangle_size / 2};
+			triangle[2] = {point.X + triangle_size / 2, point.Y + triangle_size / 2};
 
 			gdi->FillPolygon(&brush, triangle, 3);
-			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + triangle_size / 2 + 2 }, &format, &brush);
+			gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + triangle_size / 2 + 2}, &format, &brush);
 		}
 		else if (found_instrument)
 		{
-			const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+			const RectF rect{point.X - square_size / 2, point.Y - square_size / 2, square_size, square_size};
 			gdi->FillRectangle(&brush, rect);
-			gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+			gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + square_size / 2 + 2}, &format, &brush);
 		}
 	}
 
 	if (fixes_instrument.empty())
 	{
-		gdi->SetClip(&old_clip_region);
 		return;
 	}
 
 	for (CSectorElement se = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_VOR);
-		se.IsValid();
-		se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_VOR))
+	     se.IsValid();
+	     se = radar->GetPlugIn()->SectorFileElementSelectNext(se, SECTOR_ELEMENT_VOR))
 	{
 		const std::string name = se.GetName();
 		const wstring wname(name.begin(), name.end());
@@ -835,48 +851,42 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 		CPosition position;
 		se.GetPosition(&position, 0);
 		const auto point = projectPoint(position);
-		const PointF point_f = {static_cast<float>(point.x), static_cast<float>(point.y)};
 
-		const RectF rect{ point_f.X - square_size / 2, point_f.Y - square_size / 2, square_size, square_size };
+		const RectF rect{point.X - square_size / 2, point.Y - square_size / 2, square_size, square_size};
 		gdi->FillRectangle(&brush, rect);
-		gdi->DrawString(wname.c_str(), -1, &f, { point_f.X, point_f.Y + square_size / 2 + 2 }, &format, &brush);
+		gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + square_size / 2 + 2}, &format, &brush);
 	}
-
-	gdi->SetClip(&old_clip_region);
 }
-void CInsetWindow::draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd, const bool flip_side)
+
+// Requires a clip to be set for proper functioning
+void CInsetWindow::draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd,
+                                            const bool flip_side)
 {
 	const Pen extended_centreline_pen(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_color, 1);
 
 	double reverseHeading = RadToDeg(TrueBearing(OtherEnd, Threshold));
-	double lenght = static_cast<double>(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length) * 1852.0;
+	double lenght = static_cast<double>(radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length)
+		* 1852.0;
 	const int increment = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing * 1852;
 
 	// Drawing the extended centreline
 	CPosition endExtended = BetterHarversine(Threshold, reverseHeading, lenght);
 	CPosition startExtended = BetterHarversine(Threshold, reverseHeading, increment);
 
-	POINT Pt1 = projectPoint(startExtended);
-	POINT Pt2 = projectPoint(endExtended);
+	PointF Pt1 = projectPoint(startExtended);
+	PointF Pt2 = projectPoint(endExtended);
 
-	POINT toDraw1, toDraw2;
 
-	if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-		gdi->DrawLine(
-			&extended_centreline_pen, 
-			static_cast<float>(toDraw1.x), 
-			static_cast<float>(toDraw1.y), 
-			static_cast<float>(toDraw2.x), 
-			static_cast<float>(toDraw2.y)
-		);
-	}
+	gdi->DrawLine(&extended_centreline_pen, Pt1, Pt2);
 
 	// Drawing the ticks
-	const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
+	const size_t count = radar->CurrentConfig->getActiveProfile().approach_insets.extended_lines_length / radar->
+		CurrentConfig->getActiveProfile().approach_insets.extended_lines_tick_spacing;
 
 	const auto tick_direction = flip_side ? -90 : 90;
 
-	for (size_t i = 1; i <= count; ++i) {
+	for (size_t i = 1; i <= count; ++i)
+	{
 		const auto distance = increment * i;
 
 		const auto tick_length = i % 2 == 0 ? 500 : 250;
@@ -888,15 +898,6 @@ void CInsetWindow::draw_extended_centreline(Graphics* gdi, const CPosition& Thre
 		Pt1 = projectPoint(tickPosition);
 		Pt2 = projectPoint(tickTop);
 
-		if (LiangBarsky(m_Area, Pt1, Pt2, toDraw1, toDraw2)) {
-			gdi->DrawLine(
-				&extended_centreline_pen, 
-				static_cast<float>(toDraw1.x), 
-				static_cast<float>(toDraw1.y), 
-				static_cast<float>(toDraw2.x), 
-				static_cast<float>(toDraw2.y)
-			);
-		}
+		gdi->DrawLine(&extended_centreline_pen, Pt1, Pt2);
 	}
 }
-

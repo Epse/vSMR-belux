@@ -25,7 +25,7 @@ public:
 
 	virtual void render(HDC Hdc, CSMRRadar * radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools);
 	virtual void setAirport(string icao);
-	virtual POINT projectPoint(CPosition pos);
+	virtual PointF projectPoint(const CPosition& pos);
 	virtual void OnClickScreenObject(const char * sItemString, POINT Pt, int Button);
 	virtual bool OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Area, bool released);
 	

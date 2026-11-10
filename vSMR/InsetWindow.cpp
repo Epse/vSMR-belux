@@ -753,6 +753,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	CRect RotateRect = Utils::drawToolbarButton(&dc, "R", TopBar, 55, mouseLocation);
 	radar_screen->AddScreenObject(m_Id, "rotate", RotateRect, false, "");
 
+	// Layer button
+	CRect LayerRect = Utils::drawToolbarButton(&dc, "L", TopBar, 68, mouseLocation);
+	radar->AddScreenObject(m_Id, "layer", LayerRect, false, "");
+
 	dc.SetTextColor(oldTextColorC);
 
 	// Close
@@ -808,8 +812,8 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 	{
 		const std::string name = se.GetName();
 		const wstring wname(name.begin(), name.end());
-		const auto found_visual = ranges::find(fixes_visual, name) != fixes_visual.end();
-		const auto found_instrument = ranges::find(fixes_instrument, name) != fixes_instrument.end();
+		const auto found_visual = layers.vfr_fixes && ranges::find(fixes_visual, name) != fixes_visual.end();
+		const auto found_instrument = layers.ifr_fixes && ranges::find(fixes_instrument, name) != fixes_instrument.end();
 
 		if (!found_visual && !found_instrument) continue;
 
@@ -834,7 +838,7 @@ void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
 		}
 	}
 
-	if (fixes_instrument.empty())
+	if (fixes_instrument.empty() || !layers.ifr_fixes)
 	{
 		return;
 	}

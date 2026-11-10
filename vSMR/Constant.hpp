@@ -252,7 +252,7 @@ inline float randomizeHeading(float originHead) {
 }
 
 
-enum EsConst: std::uint16_t
+enum EsConst : std::uint16_t
 {
 	TAG_ITEM_DATALINK_STS = 444,
 	TAG_FUNC_DATALINK_MENU = 544,
@@ -269,7 +269,7 @@ enum EsConst: std::uint16_t
 	DRAWING_AC_SYMBOL_APPWINDOW_BASE = 1251,
 	DRAWING_AC_SYMBOL_APPWINDOW1 = 1252,
 	DRAWING_AC_SYMBOL_APPWINDOW2 = 1253,
-	
+
 	TAG_CITEM_NO = 1910,
 	TAG_CITEM_CALLSIGN = 1911,
 	TAG_CITEM_FPBOX = 1912,
@@ -279,7 +279,7 @@ enum EsConst: std::uint16_t
 	TAG_CITEM_SID = 1916,
 	TAG_CITEM_GROUNDSTATUS = 1917,
 	TAG_CITEM_UKSTAND = 1990,
-	
+
 	FUNC_MANUAL_CALLSIGN = 2000,
 
 	// Context menu
@@ -312,11 +312,11 @@ enum EsConst: std::uint16_t
 	RIMCAS_UPDATE_PTL = 8033, // Update predicted track line
 	RIMCAS_UPDATE_RELEASE = 8034,
 	RIMCAS_UPDATE_ACQUIRE = 8035,
-	
+
 	UPDATE_AIRBORNE_SV, // Inset speed vector
-	
+
 	RIMCAS_IAW = 7000,
-	
+
 	RIMCAS_UPDATERANGE = 6005,
 	RIMCAS_UPDATEFILTER = 6015,
 	RIMCAS_UPDATERANGE1 = 6006,
@@ -347,4 +347,6 @@ enum EsConst: std::uint16_t
 	RIMCAS_BRIGHTNESS_AFTERGLOW = 303,
 	
 	RIMCAS_DISTANCE_TOOL = 201,
+
+	INSET_UPDATE_LAYER = 9001,
 };

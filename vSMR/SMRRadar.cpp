@@ -1170,7 +1170,7 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			appWindowDisplays[appWindowId] = false;
 		if (strcmp(sObjectId, "range") == 0)
 		{
-			GetPlugIn()->OpenPopupList(Area, "SRW Zoom", 1);
+			GetPlugIn()->OpenPopupList(Area, "Inset Zoom", 1);
 			GetPlugIn()->AddPopupListElement("55", "", RIMCAS_UPDATERANGE + appWindowId, false,
 			                                 int(appWindows[appWindowId]->m_Scale == 55));
 			GetPlugIn()->AddPopupListElement("50", "", RIMCAS_UPDATERANGE + appWindowId, false,
@@ -1197,9 +1197,9 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			                                 int(appWindows[appWindowId]->m_Scale == 1));
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
-		if (strcmp(sObjectId, "filters") == 0)
+		else if (strcmp(sObjectId, "filters") == 0)
 		{
-			GetPlugIn()->OpenPopupList(Area, "SRW Filter (ft)", 1);
+			GetPlugIn()->OpenPopupList(Area, "Inset Filter (ft)", 1);
 			GetPlugIn()->AddPopupListElement("UNL", "", RIMCAS_UPDATEFILTER + appWindowId, false,
 			                                 int(appWindows[appWindowId]->m_Filter == 66000));
 			GetPlugIn()->AddPopupListElement("9500", "", RIMCAS_UPDATEFILTER + appWindowId, false,
@@ -1226,9 +1226,9 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->AddPopupListElement(tmp.c_str(), "", RIMCAS_UPDATEFILTER + appWindowId, false, 2, false, true);
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
-		if (strcmp(sObjectId, "rotate") == 0)
+		else if (strcmp(sObjectId, "rotate") == 0)
 		{
-			GetPlugIn()->OpenPopupList(Area, "SRW Rotate (deg)", 1);
+			GetPlugIn()->OpenPopupList(Area, "Inset Rotate (deg)", 1);
 			for (int k = 0; k <= 360; k++)
 			{
 				string tmp = std::to_string(k);
@@ -1237,6 +1237,13 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			}
 			GetPlugIn()->AddPopupListElement("Close", "", RIMCAS_CLOSE, false, 2, false, true);
 		}
+		else if (strcmp(sObjectId, "layer") == 0)
+		{
+			GetPlugIn()->OpenPopupList(Area, "Inset Layers", 1);
+			GetPlugIn()->AddPopupListElement("VFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.vfr_fixes);
+			GetPlugIn()->AddPopupListElement("IFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.ifr_fixes);
+		}
+		return;
 	}
 
 	if (ObjectType == RIMCAS_ACTIVE_AIRPORT)
@@ -1626,7 +1633,19 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 	if (FunctionId == APPWINDOW_ONE || FunctionId == APPWINDOW_TWO)
 	{
 		const int id = FunctionId - APPWINDOW_BASE;
-		appWindowDisplays[id] = !appWindowDisplays[id];
+		if (strcmp(sItemString, "VFR Fixes") == 0)
+		{
+			appWindows[id]->layers.vfr_fixes = !appWindows[id]->layers.vfr_fixes;
+		}
+		else if (strcmp(sItemString, "IFR Fixes") == 0)
+		{
+			appWindows[id]->layers.ifr_fixes = !appWindows[id]->layers.ifr_fixes;
+		}
+		else
+		{
+			appWindowDisplays[id] = !appWindowDisplays[id];
+		}
+		return;
 	}
 	
 	if (FunctionId == BELUX_SETPROMODEEASY)

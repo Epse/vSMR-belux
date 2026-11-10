@@ -12,10 +12,14 @@ struct Layers
 {
 	bool vfr_fixes : 1;
 	bool ifr_fixes : 1;
+	bool ctr : 1;
+	bool tma : 1;
+	bool ranges_1 : 1;
+	bool ranges_2 : 1;
 
 	constexpr static Layers init()
 	{
-		return { true, true };
+		return {.vfr_fixes = true, .ifr_fixes = true, .ctr = true , .tma = true, .ranges_1 = true, .ranges_2 = true};
 	}
 };
 
@@ -55,9 +59,12 @@ private:
 
 	CFont button_font;
 	CFont title_font;
+	const Gdiplus::Color geo_color = Gdiplus::Color(145, 143, 134);
 
-	void draw_fixes(Graphics* gdi, const CRect& area);
+	void draw_fixes(Graphics* gdi);
 
 	void draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd, const bool flip_side = false);
+
+	void draw_geo(Graphics* gdi);
 };
 

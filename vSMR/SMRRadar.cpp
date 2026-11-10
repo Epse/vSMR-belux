@@ -1242,6 +1242,10 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->OpenPopupList(Area, "Inset Layers", 1);
 			GetPlugIn()->AddPopupListElement("VFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.vfr_fixes);
 			GetPlugIn()->AddPopupListElement("IFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.ifr_fixes);
+			GetPlugIn()->AddPopupListElement("CTR", "", ObjectType, false, appWindows[appWindowId]->layers.ctr);
+			GetPlugIn()->AddPopupListElement("TMA", "", ObjectType, false, appWindows[appWindowId]->layers.tma);
+			GetPlugIn()->AddPopupListElement("Range Rings 1", "", ObjectType, false, appWindows[appWindowId]->layers.ranges_1);
+			GetPlugIn()->AddPopupListElement("Range Rings 2", "", ObjectType, false, appWindows[appWindowId]->layers.ranges_2);
 		}
 		return;
 	}
@@ -1640,6 +1644,22 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		else if (strcmp(sItemString, "IFR Fixes") == 0)
 		{
 			appWindows[id]->layers.ifr_fixes = !appWindows[id]->layers.ifr_fixes;
+		}
+		else if (strcmp(sItemString, "CTR") == 0)
+		{
+			appWindows[id]->layers.ctr = !appWindows[id]->layers.ctr;
+		}
+		else if (strcmp(sItemString, "TMA") == 0)
+		{
+			appWindows[id]->layers.tma = !appWindows[id]->layers.tma;
+		}
+		else if (strcmp(sItemString, "Range Rings 1") == 0)
+		{
+			appWindows[id]->layers.ranges_1 = !appWindows[id]->layers.ranges_1;
+		}
+		else if (strcmp(sItemString, "Range Rings 2") == 0)
+		{
+			appWindows[id]->layers.ranges_2 = !appWindows[id]->layers.ranges_2;
 		}
 		else
 		{

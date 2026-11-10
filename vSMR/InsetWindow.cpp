@@ -247,13 +247,10 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 		}
 	}
 
-	vector<POINT> appAreaVect = {
-		windowAreaCRect.TopLeft(), {windowAreaCRect.right, windowAreaCRect.top}, windowAreaCRect.BottomRight(),
-		{windowAreaCRect.left, windowAreaCRect.bottom}
-	};
+	draw_geo(gdi);
 
 	// Fixes
-	draw_fixes(gdi, windowAreaCRect);
+	draw_fixes(gdi);
 
 	// Aircrafts
 
@@ -755,7 +752,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 
 	// Layer button
 	CRect LayerRect = Utils::drawToolbarButton(&dc, "L", TopBar, 68, mouseLocation);
-	radar->AddScreenObject(m_Id, "layer", LayerRect, false, "");
+	radar_screen->AddScreenObject(m_Id, "layer", LayerRect, false, "");
 
 	dc.SetTextColor(oldTextColorC);
 
@@ -789,10 +786,9 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 }
 
 // Requires a clip to be set
-void CInsetWindow::draw_fixes(Graphics* gdi, const CRect& area)
+void CInsetWindow::draw_fixes(Graphics* gdi)
 {
-	const Gdiplus::Color color(145, 143, 134);
-	const SolidBrush brush(color);
+	const SolidBrush brush(geo_color);
 	const auto& fixes_visual = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_visual;
 	const auto& fixes_instrument = radar->CurrentConfig->getActiveProfile().approach_insets.fixes_instrument;
 
@@ -903,5 +899,65 @@ void CInsetWindow::draw_extended_centreline(Graphics* gdi, const CPosition& Thre
 		Pt2 = projectPoint(tickTop);
 
 		gdi->DrawLine(&extended_centreline_pen, Pt1, Pt2);
+	}
+}
+
+void CInsetWindow::draw_geo(Graphics* gdi)
+{
+	const Pen pen(geo_color);
+
+	if (layers.ranges_1 || layers.ranges_2)
+	{
+		const auto count = layers.ranges_1 * 3 + layers.ranges_2 * 2;
+		// Ring every 2 miles, centred on the airport
+		const auto center = AptPositions[icao];
+		const auto two_miles = BetterHarversine(center, 90.0, 2 * 1852.0);
+
+		const auto center_px = projectPoint(center);
+		const auto two_miles_px = projectPoint(two_miles);
+
+		const float radius = sqrtf(powf(two_miles_px.X - center_px.X, 2) + powf(two_miles_px.Y - center_px.Y, 2));
+
+		// Maybe this should be configurable?? Brussels has 5, regionals seem happy with 3
+		for (int i = 1; i <= count; ++i)
+		{
+			gdi->DrawEllipse(
+				&pen,
+				center_px.X - i * radius,
+				center_px.Y - i * radius,
+				i * radius * 2.0f,
+				i * radius * 2.0f
+			);
+		}
+	}
+
+	if (!layers.ctr && !layers.tma) return;
+	// TODO a lot of these elements are each time 2 coords forming a line, together a polygon
+	// Might be better if we somehow merge them based on matching coords and draw it once as a polygon instead of many lines
+	for (CSectorElement elem = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_LOW_ARTC);
+		elem.IsValid();
+		elem = radar->GetPlugIn()->SectorFileElementSelectNext(elem, SECTOR_ELEMENT_LOW_ARTC))
+	{
+		const std::string name = elem.GetName();
+		const bool draw_ctr = (layers.ctr && name.find("CTR") != std::string::npos);
+		const bool draw_tma = (layers.tma && name.find("TMA") != std::string::npos);
+
+		if (!draw_ctr && !draw_tma) continue;
+
+		std::vector<PointF> pts;
+		CPosition pos;
+		for (int i = 0; elem.GetPosition(&pos, i); ++i)
+		{
+			pts.emplace_back(projectPoint(pos));
+		}
+
+		if (draw_ctr)
+		{
+			gdi->DrawPolygon(&pen, pts.data(), pts.size());
+		}
+		else if (draw_tma)
+		{
+			gdi->DrawPolygon(&pen, pts.data(), pts.size());
+		}
 	}
 }

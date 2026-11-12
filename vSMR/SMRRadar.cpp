@@ -7,7 +7,9 @@
 #include "PlaneShapeBuilder.h"
 #include "SMRPlugin.hpp"
 #include "util.hpp"
+#include "InsetWindow.h"
 
+// TODO most of these should end up not being static ideally...
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
 string TagBeingDragged;
@@ -24,8 +26,6 @@ bool customCursor; // use SMR version or default windows mouse symbol
 WNDPROC gSourceProc;
 HWND pluginWindow;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-map<int, CInsetWindow*> appWindows;
 
 inline double closest(std::vector<double> const& vec, double value)
 {
@@ -623,7 +623,7 @@ CSMRRadar::CSMRRadar()
 
 	// Loading up the config file
 	if (CurrentConfig == nullptr)
-		CurrentConfig = new CConfig(ConfigPath);
+		CurrentConfig = std::make_unique<CConfig>(ConfigPath);
 
 	if (ColorManager == nullptr)
 		ColorManager = new CColorManager();
@@ -634,8 +634,8 @@ CSMRRadar::CSMRRadar()
 	// Setting up the data for the 2 approach windows
 	appWindowDisplays[1] = false;
 	appWindowDisplays[2] = false;
-	appWindows[1] = new CInsetWindow(APPWINDOW_ONE, this);
-	appWindows[2] = new CInsetWindow(APPWINDOW_TWO, this);
+	appWindows[1] = std::make_unique<CInsetWindow>(APPWINDOW_ONE, this);
+	appWindows[2] = std::make_unique<CInsetWindow>(APPWINDOW_TWO, this);
 
 	Logger::info("Loading profile");
 
@@ -667,7 +667,6 @@ CSMRRadar::~CSMRRadar()
 	}
 	// Shutting down GDI+
 	GdiplusShutdown(m_gdiplusToken);
-	delete CurrentConfig;
 }
 
 void CSMRRadar::OnAirportRunwayActivityChanged()
@@ -3290,7 +3289,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			continue;
 
 		int appWindowId = it->first;
-		appWindows[appWindowId]->render(hDC, this, &graphics, mouseLocation, DistanceTools);
+		appWindows[appWindowId]->render(hDC, &graphics, mouseLocation, DistanceTools);
 	}
 
 	dc.Detach();

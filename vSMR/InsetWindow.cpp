@@ -574,7 +574,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 					// Drawing the rectangle
 
 					const RectF RimcasLabelRect(TagBackgroundRect.X, TagBackgroundRect.Y - rimcas_height,
-					                            TagBackgroundRect.Width, TagBackgroundRect.Height);
+					                            TagBackgroundRect.Width, rimcas_height);
 					const auto brush = SolidBrush(RimcasLabelColor);
 					gdi->FillRectangle(&brush, RimcasLabelRect);
 					TagBackgroundRect.Y -= rimcas_height;

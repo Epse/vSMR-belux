@@ -17,6 +17,8 @@ CInsetWindow::CInsetWindow(int Id, CSMRRadar* radar)
 	lf.lfHeight = topbar_height;
 	lf.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
 	VERIFY(title_font.CreateFontIndirectA(&lf));
+
+	layers = radar->CurrentConfig->getActiveProfile().approach_insets.default_layers;
 }
 
 CInsetWindow::~CInsetWindow()
@@ -116,6 +118,11 @@ bool CInsetWindow::OnMoveScreenObject(const char* sObjectId, POINT Pt, RECT Area
 	}
 
 	return true;
+}
+
+void CInsetWindow::ReloadProfile()
+{
+	layers = radar->CurrentConfig->getActiveProfile().approach_insets.default_layers;
 }
 
 PointF CInsetWindow::projectPoint(const CPosition& pos)
@@ -731,7 +738,7 @@ void CInsetWindow::render(HDC hDC, CSMRRadar* radar_screen, Graphics* gdi, POINT
 	radar_screen->AddScreenObject(m_Id, "topbar", TopBar, true, "");
 
 	const auto old_font = dc.SelectObject(&title_font);
-	const string Toptext = "INSET " + std::to_string(m_Id - APPWINDOW_BASE);
+	const string Toptext = "INSET ";
 	CRect titleRect(TopBar);
 	titleRect.OffsetRect(2, 0);
 	dc.DrawText(Toptext.c_str(), titleRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER);

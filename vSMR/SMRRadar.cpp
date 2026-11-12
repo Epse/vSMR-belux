@@ -2,6 +2,7 @@
 #include "Resource.h"
 #include "SMRRadar.hpp"
 #include <cmath>
+#include <ranges>
 #include <boost/geometry.hpp>
 #include "PlaneShapeBuilder.h"
 #include "SMRPlugin.hpp"
@@ -772,6 +773,11 @@ void CSMRRadar::LoadProfile(string profileName)
 
 	// Reloading the fonts
 	this->LoadCustomFont();
+
+	for (const auto& val : appWindows | views::values)
+	{
+		val->ReloadProfile();
+	}
 }
 
 void CSMRRadar::OnAsrContentLoaded(bool Loaded)
@@ -2032,7 +2038,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 	Logger::info(string(__FUNCSIG__));
 	if (strcmp(sCommandLine, ".smr reload") == 0)
 	{
-		CurrentConfig = new CConfig(ConfigPath);
+		CurrentConfig->reload();
 		LoadProfile(CurrentConfig->getActiveProfileName());
 		airport_elevation = UIHelper::get_airport_elevation(ActiveAirport, DllPath).value_or(airport_elevation);
 		return true;

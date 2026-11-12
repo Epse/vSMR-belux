@@ -1,4 +1,6 @@
 #pragma once
+#include "stdafx.h"
+
 #include <EuroScopePlugIn.h>
 #include <map>
 #include <optional>
@@ -7,6 +9,7 @@
 #include <vector>
 #include <rapidjson/document.h>
 
+#include "layers.hpp"
 #include "TagTypes.hpp"
 
 #define ensure_has_int(_v, __f, msg) if (!(_v).HasMember(__f) || !(_v)[__f].IsInt()) throw std::runtime_error(msg)
@@ -19,6 +22,7 @@
 #define get_uint_or_except(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsInt()) ? throw std::runtime_error(error_message) : clamp_uint((value)[field].GetInt()))
 #define get_byte_or_except(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsInt()) ? throw std::runtime_error(error_message) : clamp_byte((value)[field].GetInt()))
 #define get_bool_or_except(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsBool()) ? throw std::runtime_error(error_message) : (value)[field].GetBool())
+#define get_bool_or_true(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsBool()) ? true : (value)[field].GetBool())
 #define get_object_or_except(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsObject()) ? throw std::runtime_error(error_message) : (value)[field].GetObj())
 #define get_array_or_except(value, field, error_message) ((!(value).HasMember(field) || !(value)[field].IsArray()) ? throw std::runtime_error(error_message) : (value)[field].GetArray())
 
@@ -186,6 +190,7 @@ struct ApproachInsetsConfig
 	Gdiplus::Color background_color;
 	std::vector<std::string> fixes_visual;
 	std::vector<std::string> fixes_instrument;
+	Layers default_layers;
 };
 
 struct Sid
@@ -277,4 +282,6 @@ private:
 	static MapConfig parse_map(const rapidjson::Value& value);
 
 	static std::map<std::string, MapConfig> parse_maps(const rapidjson::Value& value);
+
+	static Layers parse_layers(const rapidjson::Value& value);
 };

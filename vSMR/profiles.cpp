@@ -228,8 +228,10 @@ AirborneTargetConfig ProfileParser::parse_airborne_targets(const rapidjson::Valu
 	return {
 		.problem = parse_color(get_object_or_except(value, "problem", "Expected problem color in targets.airborne")),
 		.assumed = parse_color(get_object_or_except(value, "assumed", "Expected assumed color in targets.airborne")),
-		.unassumed = parse_color(get_object_or_except(value, "unassumed", "Expected unassumed color in targets.airborne")),
-		.incoming_coordination = parse_color(get_object_or_except(value, "incoming_coordination", "Expected incoming_coordination color in targets.airborne")),
+		.unassumed = parse_color(get_object_or_except(value, "unassumed",
+		                                              "Expected unassumed color in targets.airborne")),
+		.incoming_coordination = parse_color(get_object_or_except(value, "incoming_coordination",
+		                                                          "Expected incoming_coordination color in targets.airborne")),
 	};
 }
 
@@ -265,8 +267,13 @@ ApproachInsetsConfig ProfileParser::parse_insets(const rapidjson::Value& value)
 			get_object_or_except(value, "runway_color", "Approach insets expected runway_color")),
 		.background_color = parse_color(
 			get_object_or_except(value, "background_color", "Approach insets expected background_color")),
-		.fixes_visual = parse_strings(get_array_or_except(value, "fixes_visual", "Insets config requires fixes_visual")),
-		.fixes_instrument = parse_strings(get_array_or_except(value, "fixes_instrument", "Insets config requires fixes_instrument")),
+		.fixes_visual =
+		parse_strings(get_array_or_except(value, "fixes_visual", "Insets config requires fixes_visual")),
+		.fixes_instrument = parse_strings(
+			get_array_or_except(value, "fixes_instrument", "Insets config requires fixes_instrument")),
+		.default_layers = value.HasMember("default_layers")
+			                  ? parse_layers(get_object_or_except(value, "default_layers", "default layers if present must be object"))
+			                  : Layers::init(),
 	};
 }
 
@@ -343,4 +350,16 @@ std::map<std::string, MapConfig> ProfileParser::parse_maps(const rapidjson::Valu
 	}
 
 	return maps;
+}
+
+Layers ProfileParser::parse_layers(const rapidjson::Value& value)
+{
+	return {
+		.vfr_fixes = get_bool_or_true(value, "vfr_fixes", "vfr_fixes should be bool"),
+		.ifr_fixes = get_bool_or_true(value, "ifr_fixes", "ifr_fixes should be bool"),
+		.ctr = get_bool_or_true(value, "ctr", "ctr should be bool"),
+		.tma = get_bool_or_true(value, "tma", "tma should be bool"),
+		.ranges_1 = get_bool_or_true(value, "ranges_1", "ranges_1 should be bool"),
+		.ranges_2 = get_bool_or_true(value, "ranges_2", "ranges_2 should be bool"),
+	};
 }

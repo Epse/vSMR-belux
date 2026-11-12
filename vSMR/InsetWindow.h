@@ -1,27 +1,17 @@
 #pragma once
+#include "stdafx.h"
+
 #include "SMRRadar.hpp"
 #include "EuroScopePlugIn.h"
 #include <string>
 #include <map>
+
+#include "layers.hpp"
 #include "Logger.h"
 
 using namespace std;
 using namespace EuroScopePlugIn;
 
-struct Layers
-{
-	bool vfr_fixes : 1;
-	bool ifr_fixes : 1;
-	bool ctr : 1;
-	bool tma : 1;
-	bool ranges_1 : 1;
-	bool ranges_2 : 1;
-
-	constexpr static Layers init()
-	{
-		return {.vfr_fixes = true, .ifr_fixes = true, .ctr = true , .tma = true, .ranges_1 = true, .ranges_2 = true};
-	}
-};
 
 class CInsetWindow
 {
@@ -45,6 +35,8 @@ public:
 	virtual PointF projectPoint(const CPosition& pos);
 	virtual void OnClickScreenObject(const char * sItemString, POINT Pt, int Button);
 	virtual bool OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Area, bool released);
+
+	void ReloadProfile();
 	
 private:
 	static constexpr unsigned int topbar_height = 15;

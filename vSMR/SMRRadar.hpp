@@ -12,7 +12,6 @@
 #include "CallsignLookup.hpp"
 #include "Config.hpp"
 #include "Rimcas.hpp"
-#include "InsetWindow.h"
 #include <memory>
 #include <asio/io_service.hpp>
 #include <thread>
@@ -52,6 +51,8 @@ struct ContextMenuData
 	std::string callsign;
 };
 
+class CInsetWindow; // Some nonsense imo, but due to circular references there's no way around this.
+
 using namespace SMRSharedData;
 
 class CSMRRadar :
@@ -66,6 +67,8 @@ private:
 	int32_t airport_elevation = 0; /// Elevation in ft for current airport. Valid after ASR loaded.
 	std::optional<ContextMenuData> context_menu_for = {};
 	POINT context_menu_pos = POINT{ 0, 0 };
+	map<int, std::unique_ptr<CInsetWindow>> appWindows;
+
 	void draw_context_menu(HDC hdc);
 	void manually_correlate(const char* system_id);
 	void manually_release(const char* system_id);
@@ -138,7 +141,7 @@ public:
 	map<string, clock_t> RecentlyAutoMovedTags;
 
 	CRimcas * RimcasInstance = nullptr;
-	CConfig * CurrentConfig = nullptr;
+	std::unique_ptr<CConfig> CurrentConfig = nullptr;
 
 	map<int, Gdiplus::Font *> customFonts;
 	int currentFontSize = 1;

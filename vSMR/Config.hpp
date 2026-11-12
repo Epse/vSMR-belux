@@ -13,6 +13,8 @@ public:
 	CConfig(const string& configPath);
 	virtual ~CConfig();
 
+	void reload();
+
 	const Profile& getActiveProfile() const
 	{
 		return *active_profile;

@@ -1,23 +1,17 @@
 #pragma once
+#include "stdafx.h"
+
 #include "SMRRadar.hpp"
 #include "EuroScopePlugIn.h"
 #include <string>
 #include <map>
+
+#include "layers.hpp"
 #include "Logger.h"
 
 using namespace std;
 using namespace EuroScopePlugIn;
 
-struct Layers
-{
-	bool vfr_fixes : 1;
-	bool ifr_fixes : 1;
-
-	constexpr static Layers init()
-	{
-		return { true, true };
-	}
-};
 
 class CInsetWindow
 {
@@ -36,11 +30,13 @@ public:
 
 	map<string, double> m_TagAngles;
 
-	virtual void render(HDC Hdc, CSMRRadar * radar_screen, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools);
+	virtual void render(HDC Hdc, Graphics* gdi, POINT mouseLocation, multimap<string, string> distance_tools);
 	virtual void setAirport(string icao);
 	virtual PointF projectPoint(const CPosition& pos);
 	virtual void OnClickScreenObject(const char * sItemString, POINT Pt, int Button);
 	virtual bool OnMoveScreenObject(const char * sObjectId, POINT Pt, RECT Area, bool released);
+
+	void ReloadProfile();
 	
 private:
 	static constexpr unsigned int topbar_height = 15;
@@ -55,9 +51,12 @@ private:
 
 	CFont button_font;
 	CFont title_font;
+	const Gdiplus::Color geo_color = Gdiplus::Color(145, 143, 134);
 
-	void draw_fixes(Graphics* gdi, const CRect& area);
+	void draw_fixes(Graphics* gdi);
 
 	void draw_extended_centreline(Graphics* gdi, const CPosition& Threshold, const CPosition& OtherEnd, const bool flip_side = false);
+
+	void draw_geo(Graphics* gdi);
 };
 

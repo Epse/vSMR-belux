@@ -2,11 +2,14 @@
 #include "Resource.h"
 #include "SMRRadar.hpp"
 #include <cmath>
+#include <ranges>
 #include <boost/geometry.hpp>
 #include "PlaneShapeBuilder.h"
 #include "SMRPlugin.hpp"
 #include "util.hpp"
+#include "InsetWindow.h"
 
+// TODO most of these should end up not being static ideally...
 ULONG_PTR m_gdiplusToken;
 CPoint mouseLocation(0, 0);
 string TagBeingDragged;
@@ -23,8 +26,6 @@ bool customCursor; // use SMR version or default windows mouse symbol
 WNDPROC gSourceProc;
 HWND pluginWindow;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-map<int, CInsetWindow*> appWindows;
 
 inline double closest(std::vector<double> const& vec, double value)
 {
@@ -622,7 +623,7 @@ CSMRRadar::CSMRRadar()
 
 	// Loading up the config file
 	if (CurrentConfig == nullptr)
-		CurrentConfig = new CConfig(ConfigPath);
+		CurrentConfig = std::make_unique<CConfig>(ConfigPath);
 
 	if (ColorManager == nullptr)
 		ColorManager = new CColorManager();
@@ -633,8 +634,8 @@ CSMRRadar::CSMRRadar()
 	// Setting up the data for the 2 approach windows
 	appWindowDisplays[1] = false;
 	appWindowDisplays[2] = false;
-	appWindows[1] = new CInsetWindow(APPWINDOW_ONE, this);
-	appWindows[2] = new CInsetWindow(APPWINDOW_TWO, this);
+	appWindows[1] = std::make_unique<CInsetWindow>(APPWINDOW_ONE, this);
+	appWindows[2] = std::make_unique<CInsetWindow>(APPWINDOW_TWO, this);
 
 	Logger::info("Loading profile");
 
@@ -666,7 +667,6 @@ CSMRRadar::~CSMRRadar()
 	}
 	// Shutting down GDI+
 	GdiplusShutdown(m_gdiplusToken);
-	delete CurrentConfig;
 }
 
 void CSMRRadar::OnAirportRunwayActivityChanged()
@@ -772,6 +772,11 @@ void CSMRRadar::LoadProfile(string profileName)
 
 	// Reloading the fonts
 	this->LoadCustomFont();
+
+	for (const auto& val : appWindows | views::values)
+	{
+		val->ReloadProfile();
+	}
 }
 
 void CSMRRadar::OnAsrContentLoaded(bool Loaded)
@@ -1242,6 +1247,10 @@ void CSMRRadar::OnClickScreenObject(int ObjectType, const char* sObjectId, POINT
 			GetPlugIn()->OpenPopupList(Area, "Inset Layers", 1);
 			GetPlugIn()->AddPopupListElement("VFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.vfr_fixes);
 			GetPlugIn()->AddPopupListElement("IFR Fixes", "", ObjectType, false, appWindows[appWindowId]->layers.ifr_fixes);
+			GetPlugIn()->AddPopupListElement("CTR", "", ObjectType, false, appWindows[appWindowId]->layers.ctr);
+			GetPlugIn()->AddPopupListElement("TMA", "", ObjectType, false, appWindows[appWindowId]->layers.tma);
+			GetPlugIn()->AddPopupListElement("Range Rings 1", "", ObjectType, false, appWindows[appWindowId]->layers.ranges_1);
+			GetPlugIn()->AddPopupListElement("Range Rings 2", "", ObjectType, false, appWindows[appWindowId]->layers.ranges_2);
 		}
 		return;
 	}
@@ -1641,6 +1650,22 @@ void CSMRRadar::OnFunctionCall(int FunctionId, const char* sItemString, POINT Pt
 		{
 			appWindows[id]->layers.ifr_fixes = !appWindows[id]->layers.ifr_fixes;
 		}
+		else if (strcmp(sItemString, "CTR") == 0)
+		{
+			appWindows[id]->layers.ctr = !appWindows[id]->layers.ctr;
+		}
+		else if (strcmp(sItemString, "TMA") == 0)
+		{
+			appWindows[id]->layers.tma = !appWindows[id]->layers.tma;
+		}
+		else if (strcmp(sItemString, "Range Rings 1") == 0)
+		{
+			appWindows[id]->layers.ranges_1 = !appWindows[id]->layers.ranges_1;
+		}
+		else if (strcmp(sItemString, "Range Rings 2") == 0)
+		{
+			appWindows[id]->layers.ranges_2 = !appWindows[id]->layers.ranges_2;
+		}
 		else
 		{
 			appWindowDisplays[id] = !appWindowDisplays[id];
@@ -2012,7 +2037,7 @@ bool CSMRRadar::OnCompileCommand(const char* sCommandLine)
 	Logger::info(string(__FUNCSIG__));
 	if (strcmp(sCommandLine, ".smr reload") == 0)
 	{
-		CurrentConfig = new CConfig(ConfigPath);
+		CurrentConfig->reload();
 		LoadProfile(CurrentConfig->getActiveProfileName());
 		airport_elevation = UIHelper::get_airport_elevation(ActiveAirport, DllPath).value_or(airport_elevation);
 		return true;
@@ -3264,7 +3289,7 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 			continue;
 
 		int appWindowId = it->first;
-		appWindows[appWindowId]->render(hDC, this, &graphics, mouseLocation, DistanceTools);
+		appWindows[appWindowId]->render(hDC, &graphics, mouseLocation, DistanceTools);
 	}
 
 	dc.Detach();

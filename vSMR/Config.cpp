@@ -15,6 +15,23 @@ CConfig::CConfig(const string& configPath)
 	set_active_profile("Default");
 }
 
+void CConfig::reload()
+{
+	const auto current_profile_name = active_profile->name;
+	loadConfig();
+
+	for (size_t i = 0; i < profiles.size(); ++i)
+	{
+		if (profiles[i].name == current_profile_name)
+		{
+			active_profile = &profiles[i];
+			return;
+		}
+	}
+
+	active_profile = &profiles[0];
+}
+
 void CConfig::loadConfig()
 {
 	stringstream ss;

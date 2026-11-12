@@ -411,7 +411,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 			ColorTagType = TagTypes::Arrival;
 		}
 
-		if (reportedGs > 50)
+		if (is_airborne(&rt))
 		{
 			TagType = TagTypes::Airborne;
 
@@ -488,50 +488,10 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 		// We need to figure out if the tag color changes according to RIMCAS alerts, or not
 		bool rimcasLabelOnly = radar->CurrentConfig->getActiveProfile().rimcas.rimcas_label_only;
 
-		Color definedBackgroundColor = LabelsSettings.background_color(ColorTagType);
-		if (TagType == TagTypes::Departure)
-		{
-			if (!TagReplacingMap["sid"].empty())
-			{
-				definedBackgroundColor = radar->CurrentConfig->sid_color(
-					TagReplacingMap["sid"], radar->getActiveAirport()).value_or(definedBackgroundColor);
-			}
-			if (!TagReplacingMap["sid"].empty())
-			{
-				definedBackgroundColor = radar->CurrentConfig->sid_color(
-					TagReplacingMap["sid"], radar->getActiveAirport()).value_or(definedBackgroundColor);
-			}
-
-			if (fp.GetFlightPlanData().GetPlanType()[0] == 'I' && TagReplacingMap["asid"].empty() && ColorTagType ==
-				TagTypes::Departure)
-			{
-				definedBackgroundColor = LabelsSettings.departure.nosid_color;
-			}
-		}
-
-		if (TagReplacingMap["actype"] == "NoFPL" && ColorTagType == TagTypes::Departure)
-		{
-			definedBackgroundColor = LabelsSettings.departure.nofpl_color;
-		}
-
-		Color TagBackgroundColor = radar->RimcasInstance->GetAircraftColor(rt.GetCallsign(),
-			definedBackgroundColor,
-			LabelsSettings.background_color_on_runway(ColorTagType),
-			radar->CurrentConfig->getActiveProfile().rimcas.background_color_stage_one,
-			radar->CurrentConfig->getActiveProfile().rimcas.background_color_stage_two);
-
-		if (rimcasLabelOnly)
-			TagBackgroundColor = radar->RimcasInstance->GetAircraftColor(rt.GetCallsign(),
-				definedBackgroundColor,
-				LabelsSettings.background_color_on_runway(ColorTagType));
-
 		RectF TagBackgroundRect(TagCenter.X - (TagWidth / 2), TagCenter.Y - (TagHeight / 2),
 		                        TagWidth, TagHeight);
 
 		{
-			SolidBrush TagBackgroundBrush(TagBackgroundColor);
-			gdi->FillRectangle(&TagBackgroundBrush, TagBackgroundRect);
-
 			SolidBrush FontColor(radar->ColorManager->get_corrected_color("label",
 				LabelsSettings.text_color(ColorTagType)));
 			SolidBrush SquawkErrorColor(radar->ColorManager->get_corrected_color("label",

@@ -8,7 +8,7 @@ inline bool is_mlat(const EuroScopePlugIn::CRadarTarget* rt)
 
 inline bool is_airborne(const EuroScopePlugIn::CRadarTarget* rt)
 {
-	return rt->GetGS() > 50;
+	return rt->GetPosition().GetReportedGS() > 50;
 }
 inline bool is_airborne(const EuroScopePlugIn::CRadarTargetPositionData* rt)
 {

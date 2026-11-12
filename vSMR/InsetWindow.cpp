@@ -333,7 +333,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 			CRect TargetArea(RtPoint.X - 4.0f, RtPoint.Y - 4.0f, RtPoint.X + 4.0f, RtPoint.Y + 4.0f);
 			TargetArea.NormalizeRect();
 			radar->AddScreenObject(DRAWING_AC_SYMBOL_APPWINDOW_BASE + (m_Id - APPWINDOW_BASE), rt.GetCallsign(),
-			                              TargetArea, false, radar->GetBottomLine(rt.GetCallsign()).c_str());
+			                       TargetArea, false, radar->GetBottomLine(rt.GetCallsign()).c_str());
 		}
 
 		if (mouseWithin(mouseLocation, {
@@ -417,7 +417,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 
 			// Is "use_departure_arrival_coloring" enabled? if not, then use the airborne colors
 			bool useDepArrColors = radar->CurrentConfig->getActiveProfile().labels.airborne.
-			                                     use_departure_arrival_coloring;
+			                              use_departure_arrival_coloring;
 			if (!useDepArrColors)
 			{
 				ColorTagType = TagTypes::Airborne;
@@ -425,7 +425,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 		}
 
 		bool AcisCorrelated = radar->IsCorrelated(radar->GetPlugIn()->FlightPlanSelect(rt.GetCallsign()),
-		                                                 rt);
+		                                          rt);
 		if (!AcisCorrelated && reportedGs >= 3)
 		{
 			TagType = TagTypes::Uncorrelated;
@@ -493,7 +493,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 
 		{
 			SolidBrush FontColor(radar->ColorManager->get_corrected_color("label",
-				LabelsSettings.text_color(ColorTagType)));
+			                                                              LabelsSettings.text_color(ColorTagType)));
 			SolidBrush SquawkErrorColor(radar->ColorManager->get_corrected_color("label",
 				LabelsSettings.squawk_error_color));
 			SolidBrush RimcasTextColor(radar->CurrentConfig->getActiveProfile().rimcas.alert_text_color);
@@ -534,7 +534,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 					);
 
 					radar->AddScreenObject(TagClickableMap[element], rt.GetCallsign(), item_rect, false,
-					                              radar->GetBottomLine(rt.GetCallsign()).c_str());
+					                       radar->GetBottomLine(rt.GetCallsign()).c_str());
 
 					widthOffset += mRect.GetRight();
 				}
@@ -545,7 +545,8 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 			// Drawing the leader line
 			const auto pen = Pen(radar->ColorManager->get_corrected_color("symbol", Color::White));
 			gdi->DrawLine(&pen, RtPoint,
-						  PointF(TagBackgroundRect.X + TagBackgroundRect.Width / 2, TagBackgroundRect.Y + TagBackgroundRect.Height / 2));
+			              PointF(TagBackgroundRect.X + TagBackgroundRect.Width / 2,
+			                     TagBackgroundRect.Y + TagBackgroundRect.Height / 2));
 
 			// If we use a RIMCAS label only, we display it, and adapt the rectangle
 			RectF oldCrectSave = TagBackgroundRect;
@@ -573,7 +574,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 					// Drawing the rectangle
 
 					const RectF RimcasLabelRect(TagBackgroundRect.X, TagBackgroundRect.Y - rimcas_height,
-					                      TagBackgroundRect.Width, TagBackgroundRect.Height);
+					                            TagBackgroundRect.Width, TagBackgroundRect.Height);
 					const auto brush = SolidBrush(RimcasLabelColor);
 					gdi->FillRectangle(&brush, RimcasLabelRect);
 					TagBackgroundRect.Y -= rimcas_height;
@@ -585,8 +586,8 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 					stformat.SetAlignment(StringAlignment::StringAlignmentCenter);
 					gdi->DrawString(rimcasw.c_str(), rimcasw.length(),
 					                radar->customFonts[radar->currentFontSize],
-					                PointF( TagBackgroundRect.X + TagBackgroundRect.Width / 2.0f, TagBackgroundRect.Y), 
-						&stformat, &RimcasTextColor);
+					                PointF(TagBackgroundRect.X + TagBackgroundRect.Width / 2.0f, TagBackgroundRect.Y),
+					                &stformat, &RimcasTextColor);
 				}
 			}
 
@@ -651,8 +652,8 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 		gdi->MeasureString(text.c_str(), -1, radar->customFonts[radar->currentFontSize], TextPos, &measure_rect);
 
 		CRect ClickableRect = {
-			static_cast<LONG>(TextPos.X) - 2, 
-			static_cast<LONG>(TextPos.Y), 
+			static_cast<LONG>(TextPos.X) - 2,
+			static_cast<LONG>(TextPos.Y),
 			static_cast<LONG>(TextPos.X + measure_rect.Width) + 2,
 			static_cast<LONG>(TextPos.Y + measure_rect.Height)
 		};
@@ -665,7 +666,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 			gdi->DrawString(text.c_str(), -1, radar->customFonts[radar->currentFontSize], TextPos, &text_brush);
 
 			radar->AddScreenObject(RIMCAS_DISTANCE_TOOL, string(kv.first + "," + kv.second).c_str(),
-			                              ClickableRect, false, "");
+			                       ClickableRect, false, "");
 		}
 	}
 
@@ -776,7 +777,8 @@ void CInsetWindow::draw_fixes(Graphics* gdi)
 		const std::string name = se.GetName();
 		const wstring wname(name.begin(), name.end());
 		const auto found_visual = layers.vfr_fixes && ranges::find(fixes_visual, name) != fixes_visual.end();
-		const auto found_instrument = layers.ifr_fixes && ranges::find(fixes_instrument, name) != fixes_instrument.end();
+		const auto found_instrument = layers.ifr_fixes && ranges::find(fixes_instrument, name) != fixes_instrument.
+			end();
 
 		if (!found_visual && !found_instrument) continue;
 
@@ -799,6 +801,48 @@ void CInsetWindow::draw_fixes(Graphics* gdi)
 			gdi->FillRectangle(&brush, rect);
 			gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + square_size / 2 + 2}, &format, &brush);
 		}
+	}
+
+	const auto try_draw_manual_fix = [this, gdi, &f, &brush, &triangle, &format
+		](const std::string& text, const bool is_visual)
+	{
+		// Fast bailout
+		if (text.find(':') == std::string::npos) return;
+
+		const auto parts = split(text, ':');
+		if (parts.size() != 3) return;
+
+		CPosition pos;
+		if (!pos.LoadFromStrings(parts[2].c_str(), parts[1].c_str())) return;
+		const auto point = projectPoint(pos);
+
+		const wstring wname(parts[0].begin(), parts[0].end());
+
+		if (is_visual)
+		{
+			triangle[0] = {point.X, point.Y - triangle_size / 2};
+			triangle[1] = {point.X - triangle_size / 2, point.Y + triangle_size / 2};
+			triangle[2] = {point.X + triangle_size / 2, point.Y + triangle_size / 2};
+
+			gdi->FillPolygon(&brush, triangle, 3);
+			gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + triangle_size / 2 + 2}, &format, &brush);
+		}
+		else
+		{
+			const RectF rect{point.X - square_size / 2, point.Y - square_size / 2, square_size, square_size};
+			gdi->FillRectangle(&brush, rect);
+			gdi->DrawString(wname.c_str(), -1, &f, {point.X, point.Y + square_size / 2 + 2}, &format, &brush);
+		}
+	};
+
+	// Let's check for custom fixes!
+	for (const auto& text : fixes_visual)
+	{
+		try_draw_manual_fix(text, true);
+	}
+	for (const auto& text : fixes_instrument)
+	{
+		try_draw_manual_fix(text, false);
 	}
 
 	if (fixes_instrument.empty() || !layers.ifr_fixes)
@@ -902,8 +946,8 @@ void CInsetWindow::draw_geo(Graphics* gdi)
 	// TODO a lot of these elements are each time 2 coords forming a line, together a polygon
 	// Might be better if we somehow merge them based on matching coords and draw it once as a polygon instead of many lines
 	for (CSectorElement elem = radar->GetPlugIn()->SectorFileElementSelectFirst(SECTOR_ELEMENT_LOW_ARTC);
-		elem.IsValid();
-		elem = radar->GetPlugIn()->SectorFileElementSelectNext(elem, SECTOR_ELEMENT_LOW_ARTC))
+	     elem.IsValid();
+	     elem = radar->GetPlugIn()->SectorFileElementSelectNext(elem, SECTOR_ELEMENT_LOW_ARTC))
 	{
 		const std::string name = elem.GetName();
 		const bool draw_ctr = (layers.ctr && name.find("CTR") != std::string::npos);

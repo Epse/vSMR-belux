@@ -302,9 +302,6 @@ void CSMRRadar::draw_target(TagDrawingContext& tdc, CRadarTarget& rt, const bool
 				0)
 				color = tdc.squawk_error_color->Clone();
 
-			if (RimcasInstance->getAlert(rt.GetCallsign()) != CRimcas::NoAlert)
-				color = &FontColor;
-
 			// Ground tag colors
 			if (strcmp(element.c_str(), "PUSH") == 0)
 				color = tdc.ground_push_color;

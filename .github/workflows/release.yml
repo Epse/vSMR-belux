@@ -28,7 +28,7 @@ jobs:
       run: './validate_aircraft.ps1'
       shell: pwsh
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: "check-aircraft"
     steps:
     - uses: actions/checkout@v5

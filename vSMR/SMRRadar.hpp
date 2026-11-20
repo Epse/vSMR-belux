@@ -376,4 +376,11 @@ public:
 	bool is_problem(CRadarTarget* rt) const;
 
 	Gdiplus::Color airborne_target_color(CRadarTarget* rt) const;
+
+	bool is_airborne(const CRadarTargetPositionData* pos) const;
+	bool is_airborne(const CRadarTarget* rt) const
+	{
+		const auto pos = rt->GetPosition();
+		return is_airborne(&pos);
+	}
 };

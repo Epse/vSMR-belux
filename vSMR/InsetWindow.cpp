@@ -411,7 +411,7 @@ void CInsetWindow::render(HDC hDC, Graphics* gdi, POINT mouseLocation,
 			ColorTagType = TagTypes::Arrival;
 		}
 
-		if (is_airborne(&rt))
+		if (radar->is_airborne(&rt))
 		{
 			TagType = TagTypes::Airborne;
 

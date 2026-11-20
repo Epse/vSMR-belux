@@ -3510,3 +3510,13 @@ Gdiplus::Color CSMRRadar::airborne_target_color(CRadarTarget* rt) const
 
 	return CurrentConfig->getActiveProfile().targets.airborne.unassumed;
 }
+
+bool CSMRRadar::is_airborne(const CRadarTargetPositionData* pos) const
+{
+	if (pos->GetReportedGS() > 50) return true;
+
+	// We use 100ft as the margin. This is not exact, but for reference the threshold of EBBR 10 is 70ft below EBBR ARP
+	if (pos->GetPressureAltitude() > airport_elevation + 100) return true;
+
+	return false;
+}

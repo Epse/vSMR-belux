@@ -3498,6 +3498,13 @@ bool CSMRRadar::is_problem(CRadarTarget* rt) const
 	return false;
 }
 
+void CSMRRadar::OnAsrContentToBeClosed(void)
+{
+	delete RimcasInstance;
+	static_cast<CSMRPlugin*>(GetPlugIn())->OnScreenClosed(this);
+	delete this;
+};
+
 Gdiplus::Color CSMRRadar::airborne_target_color(CRadarTarget* rt) const
 {
 	const auto fp = rt->GetCorrelatedFlightPlan();

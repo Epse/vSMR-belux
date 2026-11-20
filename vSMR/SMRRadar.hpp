@@ -27,6 +27,7 @@
 #include "PlaneShapeBuilder.h"
 #include "util.hpp"
 #include "profiles.hpp"
+#include "SMRPlugin.hpp"
 
 using namespace std;
 using namespace Gdiplus;
@@ -365,13 +366,7 @@ public:
 	void EuroScopePlugInExitCustom();
 
 	//  This gets called before OnAsrContentToBeSaved()
-	// -> we can't delete CurrentConfig just yet otherwise we can't save the active profile
-	inline void OnAsrContentToBeClosed(void) override
-	{
-		delete RimcasInstance;
-		//delete CurrentConfig;
-		delete this;
-	};
+	void OnAsrContentToBeClosed(void) override;
 
 	bool is_problem(CRadarTarget* rt) const;
 

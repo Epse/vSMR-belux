@@ -67,4 +67,6 @@ public:
 	std::optional<std::string> type_for(const std::string& callsign) const;
 
 	void OnAirportRunwayActivityChanged() override;
+
+	void OnScreenClosed(CSMRRadar* radar);
 };

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SMRPlugin.hpp"
 #include <time.h>
+#include <set>
 
 bool Logger::ENABLED;
 string Logger::DLL_PATH;
@@ -65,7 +66,7 @@ bool startThreadvStrips = true;
 using namespace SMRPluginSharedData;
 char recv_buf[1024];
 
-vector<CSMRRadar*> RadarScreensOpened;
+std::set<CSMRRadar*> RadarScreensOpened;
 
 /*
 This might be subject to race conditions, but MIN is not critical so who even cares
@@ -761,7 +762,7 @@ CRadarScreen * CSMRPlugin::OnRadarScreenCreated(const char * sDisplayName, bool 
 	Logger::info(string(__FUNCSIG__));
 	if (!strcmp(sDisplayName, MY_PLUGIN_VIEW_AVISO)) {
 		auto* rd = new CSMRRadar();
-		RadarScreensOpened.push_back(rd);
+		RadarScreensOpened.insert(rd);
 		return rd;
 	}
 
@@ -790,6 +791,11 @@ void CSMRPlugin::OnAirportRunwayActivityChanged()
 	{
 		radar_screen_opened->OnAirportRunwayActivityChanged();
 	}
+}
+
+void CSMRPlugin::OnScreenClosed(CSMRRadar* radar)
+{
+	RadarScreensOpened.erase(radar);
 }
 
 //---EuroScopePlugInExit-----------------------------------------------
